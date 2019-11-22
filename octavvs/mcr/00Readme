@@ -1,0 +1,16 @@
+This folder contais of several file 
+1) Main program mcr_als_with_all.py
+2) Function ftir_function.py
+3) GUI mcr_final.ui and mcr_final.py
+4) widget for matplotlib (canvas) mplwidget.py 
+
+Version : 2019/03/21
+
+
+Last edited on 2019/08/21
+1) Main Program mcr_als_and_local.py
+2) function ftir_function.py
+3) ui - mcr_final_loc.ui
+   ui - mcr_final.ui
+4) the ui with .py extensions are created by translate the .ui to .py
+

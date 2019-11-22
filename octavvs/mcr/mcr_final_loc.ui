@@ -1,0 +1,959 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1920</width>
+    <height>1080</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>1</horstretch>
+    <verstretch>1</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>OCTAVVS MCR-ALS</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_22" stretch="3,4">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_12" stretch="0,1,0,0,1">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+            <item>
+             <widget class="QComboBox" name="comboBoxSingMult">
+              <item>
+               <property name="text">
+                <string>Single file</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Multiple files</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonLoad">
+              <property name="text">
+               <string>Load </string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelDirectory">
+            <property name="text">
+             <string>Directory</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,2,0,1">
+            <item>
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>Filter</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditKeyword">
+              <property name="readOnly">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>Save suffix</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditSuffix">
+              <property name="text">
+               <string>_purest</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Filename</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditFilename">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,1,0,1">
+            <item>
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>File number</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditFileNumber">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_5">
+              <property name="text">
+               <string>of</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditTotal">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,1,0,1,0,1,0">
+            <item>
+             <widget class="QLabel" name="label_6">
+              <property name="text">
+               <string>Wavenumbers</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditLength">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_12">
+              <property name="text">
+               <string>Size: </string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditWidth">
+              <property name="inputMask">
+               <string notr="true"/>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>x</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditHeight"/>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_8">
+              <property name="text">
+               <string>pixels</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0">
+          <item>
+           <widget class="MplWidget" name="plot_specta" native="true"/>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonExpandSpectra">
+            <property name="text">
+             <string>Expand</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,0,0,2,0,1,0">
+            <item>
+             <widget class="QLabel" name="label_9">
+              <property name="text">
+               <string>Visualization</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxMethod">
+              <item>
+               <property name="text">
+                <string>Total intensity</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Maximum amplitude</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Wavenumber </string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_10">
+              <property name="text">
+               <string>Colors</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxCmaps">
+              <item>
+               <property name="text">
+                <string>jet</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>copper</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>gray</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>hsv</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>hot</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>cool</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>summer</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>winter</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>autumn</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Set1</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>gnuplot</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>rainbow</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>jet</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>seismic</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>pink</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>spring</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Reds</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_11">
+              <property name="text">
+               <string>Wavenumber</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditWavenumber"/>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_13">
+              <property name="text">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <item>
+             <widget class="QLabel" name="labelMinwn">
+              <property name="text">
+               <string>1000</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="horizontalSliderWavenumber">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="maximum">
+               <number>10000</number>
+              </property>
+              <property name="singleStep">
+               <number>1</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelMaxwn">
+              <property name="text">
+               <string>1530</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonLocal">
+          <property name="text">
+           <string>Select region-of-interest for MCR-ALS</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,1">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_13" stretch="0,0">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetNoConstraint</enum>
+            </property>
+            <item>
+             <widget class="Mpl_Proj" name="plot_visual" native="true"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonExpandProjection">
+              <property name="text">
+               <string>Expand</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_14" stretch="0,0">
+            <item>
+             <widget class="WhiteLightWidget" name="plot_whitelight" native="true"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonWhitelight">
+              <property name="text">
+               <string>Load white light image</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_15" stretch="3,1">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_7" stretch="1,1">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,1">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_16" stretch="0,1,0">
+              <item>
+               <widget class="QLabel" name="label_22">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>SVD </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="MplWidget" name="plotSVD" native="true"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonExpandSVD">
+                <property name="text">
+                 <string>Expand</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0,1,0">
+              <item>
+               <widget class="QLabel" name="labelInitial">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Initial spectra*</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="MplWidget" name="plotInitSpec" native="true"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonExpandInitSpect">
+                <property name="text">
+                 <string>Expand</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="1,1">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,1,0">
+              <item>
+               <widget class="QLabel" name="label_15">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Purest concentrations</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="MplWidget" name="plotPurestConc" native="true"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonExpandPurConc">
+                <property name="text">
+                 <string>Expand</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,1,0">
+              <item>
+               <widget class="QLabel" name="label_14">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Purest spectra</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="MplWidget" name="plotPurestSpectra" native="true"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonExpandPurSp">
+                <property name="text">
+                 <string>Expand</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="5,3">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <widget class="QLabel" name="label_26">
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Numerical and physical parameters</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_9">
+              <item>
+               <widget class="QLabel" name="label_25">
+                <property name="text">
+                 <string>Number of components</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="spinBoxSVDComp">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>40</number>
+                </property>
+                <property name="value">
+                 <number>8</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonSVD">
+                <property name="text">
+                 <string>SVD</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_13"/>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="2,2,1,1,0">
+              <item>
+               <widget class="QLabel" name="label_34">
+                <property name="text">
+                 <string>Initial estimation</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBoxInitial">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Spectra</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Concentrations</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_30">
+                <property name="text">
+                 <string>Noise</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEditNoisePercent">
+                <property name="text">
+                 <string>10</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_38">
+                <property name="text">
+                 <string>%</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_15">
+              <item>
+               <widget class="QLabel" name="label_33">
+                <property name="text">
+                 <string>Regression algorithm</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBoxRegressor">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Non-negatively constrained least squares</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_16">
+              <item>
+               <widget class="QLabel" name="label_28">
+                <property name="text">
+                 <string>Max. iterations</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEditPurIter">
+                <property name="text">
+                 <string>700</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_29">
+                <property name="text">
+                 <string>Tolerance</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEditTol">
+                <property name="text">
+                 <string>0.1</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_35">
+                <property name="text">
+                 <string>%</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_17">
+              <item>
+               <widget class="QLabel" name="label_36">
+                <property name="text">
+                 <string>Iteration</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEdit_Niter"/>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_37">
+                <property name="text">
+                 <string>MSError</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEdit_Error"/>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_39">
+                <property name="text">
+                 <string>%</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_18">
+              <item>
+               <widget class="QLabel" name="label_32">
+                <property name="text">
+                 <string>Status</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEditStatus">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_19">
+              <item>
+               <widget class="QCheckBox" name="checkBoxSaveInit">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Save initial spectra</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="checkBoxSavePurest">
+                <property name="text">
+                 <string>Save purest spectra</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QProgressBar" name="progressBar">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="value">
+               <number>0</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="1,1">
+              <item>
+               <widget class="QPushButton" name="pushButtonPurestCal">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::WheelFocus</enum>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::RightToLeft</enum>
+                </property>
+                <property name="text">
+                 <string>Run</string>
+                </property>
+                <property name="checkable">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonStop">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_11" stretch="1,0,1">
+            <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>78</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_31">
+              <property name="font">
+               <font>
+                <pointsize>14</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Credits;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Molecular Ecology, Microbial Ecology &lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;and Evolutionary Genetics &lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;&amp;amp;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Computational Biology&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;and Biological Physics, Lund University&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <action name="actionLocal_MCR_ALS">
+   <property name="text">
+    <string>Local MCR-ALS</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MplWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/mcr/mpl.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>WhiteLightWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Mpl_Proj</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/mcr/mpl.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>comboBoxSingMult</tabstop>
+  <tabstop>pushButtonLoad</tabstop>
+  <tabstop>lineEditKeyword</tabstop>
+  <tabstop>lineEditSuffix</tabstop>
+  <tabstop>lineEditFilename</tabstop>
+  <tabstop>lineEditFileNumber</tabstop>
+  <tabstop>lineEditTotal</tabstop>
+  <tabstop>lineEditLength</tabstop>
+  <tabstop>lineEditWidth</tabstop>
+  <tabstop>lineEditHeight</tabstop>
+  <tabstop>pushButtonExpandSpectra</tabstop>
+  <tabstop>comboBoxCmaps</tabstop>
+  <tabstop>lineEditWavenumber</tabstop>
+  <tabstop>horizontalSliderWavenumber</tabstop>
+  <tabstop>pushButtonLocal</tabstop>
+  <tabstop>pushButtonExpandProjection</tabstop>
+  <tabstop>pushButtonWhitelight</tabstop>
+  <tabstop>spinBoxSVDComp</tabstop>
+  <tabstop>pushButtonSVD</tabstop>
+  <tabstop>comboBoxInitial</tabstop>
+  <tabstop>comboBoxRegressor</tabstop>
+  <tabstop>lineEditPurIter</tabstop>
+  <tabstop>lineEditTol</tabstop>
+  <tabstop>lineEditNoisePercent</tabstop>
+  <tabstop>lineEdit_Niter</tabstop>
+  <tabstop>lineEdit_Error</tabstop>
+  <tabstop>lineEditStatus</tabstop>
+  <tabstop>checkBoxSaveInit</tabstop>
+  <tabstop>checkBoxSavePurest</tabstop>
+  <tabstop>pushButtonPurestCal</tabstop>
+  <tabstop>pushButtonStop</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

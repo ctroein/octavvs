@@ -1,0 +1,1290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1920</width>
+    <height>1080</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string> OCTAVVS Preprocessing</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="1" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,1,0,1">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0,1,0,1">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QComboBox" name="comboBoxSingMult">
+            <item>
+             <property name="text">
+              <string>Single file</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Directory</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Directory, recursive</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonLoad">
+            <property name="text">
+             <string>Load</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelDirectory">
+          <property name="text">
+           <string>Directory</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="2" column="3">
+           <widget class="QLineEdit" name="lineEditSaveExt">
+            <property name="toolTip">
+             <string>Extension added before .mat in output files.</string>
+            </property>
+            <property name="text">
+             <string>_prep</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Save suffix</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Filter</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Filename</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="3">
+           <widget class="QLineEdit" name="lineEditFilename">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEditKeyword">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Filter to determine what files are loaded from directories.&lt;/p&gt;&lt;p&gt;Can also be used to filter subdirectories in recursive mode, eg Slide*/*.mat&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>*.mat</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_2" columnstretch="2,3,2,2,0,2,1">
+          <item row="4" column="6">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>pixels</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="5">
+           <widget class="QLineEdit" name="lineEditHeight"/>
+          </item>
+          <item row="4" column="4">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>x</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4" colspan="3">
+           <widget class="QPushButton" name="pushButtonShowFiles">
+            <property name="text">
+             <string>Show/edit list</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QLineEdit" name="lineEditWidth"/>
+          </item>
+          <item row="2" column="3">
+           <widget class="QLineEdit" name="lineEditTotal">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>Size:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>of</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="lineEditLength">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="spinBoxFileNumber">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="keyboardTracking">
+             <bool>false</bool>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Wavenums</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>File</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_24" stretch="1,2,1,1,0,1">
+          <item>
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Visualization</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxMethod">
+            <item>
+             <property name="text">
+              <string>Total intensity</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Maximum</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Wavenumber</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="LineDouble" name="lineEditWavenumber">
+            <property name="text">
+             <string>1655</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_19">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Colors</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxCmaps">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>hot</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>copper</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>cool</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>rainbow</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>jet</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>terrain</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>gnuplot</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_22">
+          <item>
+           <widget class="QLabel" name="labelMinwn">
+            <property name="text">
+             <string>1000</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSlider" name="horizontalSliderWavenumber">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelMaxwn">
+            <property name="text">
+             <string>4000</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <widget class="WhiteLightWidget" name="plot_whitelight" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <property name="spacing">
+              <number>9</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="ProjectionWidget" name="plot_visual" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <property name="spacing">
+              <number>9</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButtonWhitelight">
+            <property name="toolTip">
+             <string>Automatically loaded if file.jpg is found in the same directory as file.mat.</string>
+            </property>
+            <property name="text">
+             <string>Load white light image</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButtonExpandProjection">
+            <property name="text">
+             <string>Enlarge</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="10,1,0,0">
+          <item>
+           <widget class="QLabel" name="label_14">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Raw spectra</string>
+            </property>
+           </widget>
+          </item>
+          <item alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>Spectra:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxSpectra">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of spectra to visualize.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="keyboardTracking">
+             <bool>false</bool>
+            </property>
+            <property name="maximum">
+             <number>40</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBoxAutopick">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select spectra from a K-means clustering.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Auto-pick</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="RawPlotWidget" name="plot_spectra" native="true">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="verticalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>13</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0,1,0,0,0,0,0,1,0,0,1">
+        <property name="leftMargin">
+         <number>5</number>
+        </property>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,1">
+          <item>
+           <widget class="QCheckBox" name="checkBoxAC">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Atmospheric correction, designed to remove spectral contributions from H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O and CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; by subtracting an atmospheric reference spectrum (times an appropriate factor) in each of two H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O regions and, optionally, one CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; region.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>Atmospheric correction</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelACInfo">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Estimated mean magnitude of the corrections, relative to the level in the corrected regions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::AutoText</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,2,2,1,3">
+          <item>
+           <widget class="QCheckBox" name="checkBoxSpline">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Replace data in the CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; region (2245-2445 cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;) with a smooth curve. Otherwise apply the same type of correction as in the H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O regions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Spline at CO₂</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBoxLocalPeak">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Attempt to refine the correction in a small sliding window to account for fluctuations in H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O peak intensities.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Local peak corr.</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBoxSmoothCorrected">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Apply a weak denoising filter to the H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O regions of the spectrum.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Smoothing</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonACLoadReference">
+            <property name="text">
+             <string>Load ref.</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditACReference"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="ACPlotWidget" name="plot_AC" native="true">
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="4,1,0">
+          <item>
+           <widget class="QCheckBox" name="checkBoxSC">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clustered Resonant Mie Scattering Correction; see the article by Troein, Siregar, Op De Beeck et al for details and consult the thesis of Paul Bassan for a description of the basic algorithm.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>Scattering correction (CRMieSC)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonSCRefresh">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Update</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="pushButtonSCStop">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Stop</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBarSC">
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="1,1,1,4">
+          <item>
+           <widget class="QLabel" name="label_36">
+            <property name="text">
+             <string>Reference</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxReference">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reference spectrum used to initialize the RMieSC algorithm; choose a non-scattered spectrum from a sample as similar as possible to that studied.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Casein</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Lignin</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Matrigel</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Other</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonLoadOther">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load your own reference spectrum. This should be a MATLAB matrix called 'AB' with two columns: wavenumber and intensity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Load other</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditReferenceName">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="2,2,0,2,0,0">
+          <item>
+           <widget class="QLabel" name="label_38">
+            <property name="text">
+             <string>Max iterations</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxNIteration">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Iterations of the RMieSC algorithm; a value of 10-20 may be required for good convergence.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>999</number>
+            </property>
+            <property name="singleStep">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>30</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBoxClusters">
+            <property name="text">
+             <string>Clusters</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxNclusScat">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of clusters to divide the spectra into when computing new reference spectra. This must be set high enough that the spectra in each cluster are practically identical, in which case it will confer robustness to the correction. A value of 0 disables clustering; the spectra are then corrected individually which takes a very long time and gives less robust results.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>100</number>
+            </property>
+            <property name="singleStep">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>30</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBoxStabilize">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;With this option, the scattering correction is stabilized by two means: first fittiing a common reference spectrum to the whole image before fitting with clustering, and in later iterations updating reference spectra with mixing between previous and new.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Stabilize</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonSCAdvanced">
+            <property name="text">
+             <string>Advanced</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_19"/>
+        </item>
+        <item>
+         <widget class="SCPlotWidget" name="plot_SC" native="true">
+          <layout class="QHBoxLayout" name="horizontalLayout_8">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBoxSGF">
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="text">
+           <string>Denoising (Savitzky-Golay) filter</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="2,1,2,1">
+          <item>
+           <widget class="QLabel" name="label_16">
+            <property name="text">
+             <string>Window size</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxWindowLength">
+            <property name="keyboardTracking">
+             <bool>false</bool>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="singleStep">
+             <number>2</number>
+            </property>
+            <property name="value">
+             <number>9</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_17">
+            <property name="text">
+             <string>Polynomial order</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxPolyOrder">
+            <property name="keyboardTracking">
+             <bool>false</bool>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="singleStep">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>3</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="SGFPlotWidget" name="plot_SGF" native="true">
+          <layout class="QHBoxLayout" name="horizontalLayout_10">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>13</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,2,0,0,2,0,2,0,0">
+        <item>
+         <widget class="QCheckBox" name="checkBoxSR">
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="text">
+           <string>Spectral region</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_6" columnstretch="1,4,1">
+          <item row="1" column="1">
+           <widget class="QSlider" name="horizontalSliderMax">
+            <property name="value">
+             <number>99</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" rowspan="2">
+           <widget class="LineDouble" name="lineEditMinwn">
+            <property name="text">
+             <string>800</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSlider" name="horizontalSliderMin">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" rowspan="2">
+           <widget class="LineDouble" name="lineEditMaxwn">
+            <property name="text">
+             <string>4000</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="SRPlotWidget" name="plot_SR" native="true">
+          <property name="mouseTracking">
+           <bool>true</bool>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_11">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="0,2,1,1">
+          <item>
+           <widget class="QLabel" name="label_15">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Baseline correction</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxBaseline">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>None</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>rubberband</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>concave rb</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>AsLS</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>arPLS</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelItersBC">
+            <property name="text">
+             <string>Iters</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxItersBC">
+            <property name="keyboardTracking">
+             <bool>false</bool>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>100</number>
+            </property>
+            <property name="value">
+             <number>10</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_23" stretch="0,4,2,0,4,2">
+          <item>
+           <widget class="QLabel" name="labelLambda">
+            <property name="text">
+             <string>&amp;lambda;</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSlider" name="horizontalSliderLambda">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="maximum">
+             <number>80</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="LineDouble" name="lineEditLambda">
+            <property name="text">
+             <string>1000</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelP">
+            <property name="text">
+             <string>p</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSlider" name="horizontalSliderP">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="maximum">
+             <number>50</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="LineDouble" name="lineEditP">
+            <property name="text">
+             <string>0.01</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="BCPlotWidget" name="plot_BC" native="true">
+          <layout class="QHBoxLayout" name="horizontalLayout_12">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="2,3,1,0">
+          <item>
+           <widget class="QLabel" name="label_9">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Normalization</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxNormMethod">
+            <item>
+             <property name="text">
+              <string>None</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Area</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Wavenumber</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Mean</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Maximum</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="LineDouble" name="lineEditNormWavenum">
+            <property name="text">
+             <string>1655</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_18">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="NormPlotWidget" name="plot_Norm" native="true"/>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_13">
+          <item>
+           <widget class="QPushButton" name="pushButtonSaveParameters">
+            <property name="text">
+             <string>Save parameters</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonLoadParameters">
+            <property name="text">
+             <string>Load parameters</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonRun">
+            <property name="text">
+             <string>Run</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="pushButtonRunStop">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Stop</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBarRun">
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LineDouble</class>
+   <extends>QLineEdit</extends>
+   <header location="global">octavvs/miccs/linedouble.h</header>
+   <slots>
+    <slot>setValue(float)</slot>
+    <slot>setRange(float,float)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>WhiteLightWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ProjectionWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/projectionwidget.h</header>
+   <container>1</container>
+   <slots>
+    <slot>setCmap(QString)</slot>
+    <slot>popOut()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>RawPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BCPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SCPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ACPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SGFPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SRPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NormPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+   <slots>
+    <signal>clicked()</signal>
+    <slot>popOut()</slot>
+   </slots>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>comboBoxSingMult</tabstop>
+  <tabstop>pushButtonLoad</tabstop>
+  <tabstop>lineEditKeyword</tabstop>
+  <tabstop>lineEditSaveExt</tabstop>
+  <tabstop>lineEditFilename</tabstop>
+  <tabstop>spinBoxFileNumber</tabstop>
+  <tabstop>lineEditTotal</tabstop>
+  <tabstop>pushButtonShowFiles</tabstop>
+  <tabstop>lineEditLength</tabstop>
+  <tabstop>lineEditWidth</tabstop>
+  <tabstop>lineEditHeight</tabstop>
+  <tabstop>comboBoxMethod</tabstop>
+  <tabstop>lineEditWavenumber</tabstop>
+  <tabstop>comboBoxCmaps</tabstop>
+  <tabstop>horizontalSliderWavenumber</tabstop>
+  <tabstop>pushButtonWhitelight</tabstop>
+  <tabstop>pushButtonExpandProjection</tabstop>
+  <tabstop>spinBoxSpectra</tabstop>
+  <tabstop>checkBoxAutopick</tabstop>
+  <tabstop>checkBoxAC</tabstop>
+  <tabstop>checkBoxSpline</tabstop>
+  <tabstop>checkBoxLocalPeak</tabstop>
+  <tabstop>checkBoxSmoothCorrected</tabstop>
+  <tabstop>checkBoxSC</tabstop>
+  <tabstop>pushButtonSCRefresh</tabstop>
+  <tabstop>pushButtonSCStop</tabstop>
+  <tabstop>comboBoxReference</tabstop>
+  <tabstop>pushButtonLoadOther</tabstop>
+  <tabstop>lineEditReferenceName</tabstop>
+  <tabstop>spinBoxNIteration</tabstop>
+  <tabstop>checkBoxClusters</tabstop>
+  <tabstop>spinBoxNclusScat</tabstop>
+  <tabstop>checkBoxStabilize</tabstop>
+  <tabstop>pushButtonSCAdvanced</tabstop>
+  <tabstop>checkBoxSGF</tabstop>
+  <tabstop>spinBoxWindowLength</tabstop>
+  <tabstop>spinBoxPolyOrder</tabstop>
+  <tabstop>checkBoxSR</tabstop>
+  <tabstop>lineEditMinwn</tabstop>
+  <tabstop>horizontalSliderMin</tabstop>
+  <tabstop>horizontalSliderMax</tabstop>
+  <tabstop>lineEditMaxwn</tabstop>
+  <tabstop>comboBoxBaseline</tabstop>
+  <tabstop>spinBoxItersBC</tabstop>
+  <tabstop>horizontalSliderLambda</tabstop>
+  <tabstop>lineEditLambda</tabstop>
+  <tabstop>horizontalSliderP</tabstop>
+  <tabstop>lineEditP</tabstop>
+  <tabstop>comboBoxNormMethod</tabstop>
+  <tabstop>lineEditNormWavenum</tabstop>
+  <tabstop>pushButtonSaveParameters</tabstop>
+  <tabstop>pushButtonLoadParameters</tabstop>
+  <tabstop>pushButtonRun</tabstop>
+  <tabstop>pushButtonRunStop</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+ <designerdata>
+  <property name="gridDeltaX">
+   <number>10</number>
+  </property>
+  <property name="gridDeltaY">
+   <number>10</number>
+  </property>
+  <property name="gridSnapX">
+   <bool>true</bool>
+  </property>
+  <property name="gridSnapY">
+   <bool>true</bool>
+  </property>
+  <property name="gridVisible">
+   <bool>true</bool>
+  </property>
+ </designerdata>
+</ui>

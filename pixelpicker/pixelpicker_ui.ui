@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1108</width>
+    <height>490</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Pixel picker</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,0">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+        <item>
+         <widget class="WhiteLightWidget" name="plot_whitelight" native="true"/>
+        </item>
+        <item>
+         <widget class="ProjectionWidget" name="plot_visual" native="true">
+          <layout class="QHBoxLayout" name="horizontalLayout_6">
+           <property name="spacing">
+            <number>9</number>
+           </property>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1,1,2,0,1,0,1">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Imaging</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBoxVisual">
+          <item>
+           <property name="text">
+            <string>Total intensity</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Max intensity</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Wavenumber</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="LineDouble" name="lineEditWn"/>
+        </item>
+        <item>
+         <widget class="QSlider" name="horizontalSliderWn">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Colors</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBoxCmaps">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <item>
+           <property name="text">
+            <string>hot</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>copper</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>cool</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>rainbow</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>jet</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>terrain</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>gnuplot</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Annotation</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBoxAnnotation">
+          <property name="editable">
+           <bool>false</bool>
+          </property>
+          <item>
+           <property name="text">
+            <string>Foreground</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Background</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Halo</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QPushButton" name="pushButtonLoadWL">
+          <property name="text">
+           <string>Load white light image</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonLoadSpectra">
+          <property name="text">
+           <string>Load spectra</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonClear">
+          <property name="text">
+           <string>Clear</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonLoad">
+          <property name="text">
+           <string>Load annotations</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonSave">
+          <property name="text">
+           <string>Save annotations</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LineDouble</class>
+   <extends>QLineEdit</extends>
+   <header location="global">miccs/linedouble.h</header>
+   <slots>
+    <slot>setValue(float)</slot>
+    <slot>setRange(float,float)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>ProjectionWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">pixelwidgets.h</header>
+   <container>1</container>
+   <slots>
+    <slot>setCmap(QString)</slot>
+    <slot>popOut()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>WhiteLightWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">pixelwidgets.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>comboBoxVisual</tabstop>
+  <tabstop>lineEditWn</tabstop>
+  <tabstop>horizontalSliderWn</tabstop>
+  <tabstop>comboBoxCmaps</tabstop>
+  <tabstop>comboBoxAnnotation</tabstop>
+  <tabstop>pushButtonLoadWL</tabstop>
+  <tabstop>pushButtonLoadSpectra</tabstop>
+  <tabstop>pushButtonClear</tabstop>
+  <tabstop>pushButtonSave</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
