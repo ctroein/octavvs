@@ -9,10 +9,17 @@ PATH=~/anaconda3/bin/:$PATH oct_make_icons
 At this point, test the software. We need to write a series of test cases, especially as we don't have any automated tests.
 
 
-To release a new version and upgrade to it:
+To release a new version and upgrade to it (test server):
 Update the version number in setup.py
 rm -r dist build
 PATH=~/anaconda3/bin/:$PATH python setup.py bdist_wheel
 PATH=~/anaconda3/bin/:$PATH twine upload -u ctroein --repository-url https://test.pypi.org/legacy/ dist/*
 PATH=~/anaconda3/bin/:$PATH pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein
+
+To release a new version and upgrade to it:
+Update the version number in setup.py
+rm -r dist build
+PATH=~/anaconda3/bin/:$PATH python setup.py bdist_wheel
+PATH=~/anaconda3/bin/:$PATH twine upload -u ctroein dist/*
+PATH=~/anaconda3/bin/:$PATH pip install -U octavvs-ctroein
 
