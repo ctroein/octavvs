@@ -17,7 +17,7 @@ setuptools.setup(
     description="Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="http://miccs.info",
+    url="https://github.com/ctroein/octavvs",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -19,23 +19,22 @@ MCR-ALS.
 ## Installation on Windows/Mac
 
 To install OCTAVVS on Windows or Mac, start by downloading Python 3.7 (or newer) from
-[Python.org](https://www.python.org/downloads/). (It should also be possible
-to use Conda as described for Linux.)
+[Python.org](https://www.python.org/downloads/). (It is also possible
+to use Conda as described for Linux, below.)
 
 When you have installed Python, get a command prompt:
 
 * On Windows: Windows key + "r", type "cmd"
-* On Mac: ???
+* On Mac: open Terminal
 
-Then ask ``pip`` to download and install octavvs and its requirements:
-``pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein[noconda]``
-
+Then tell ``pip`` to download and install octavvs and its requirements:
+``pip install -U octavvs[noconda]``
 
 ## Installation on Linux (or with Conda on other systems)
 
-Alternatively, and possibly required on Linux because of an issue with
-PyQt5: Install the Python 3.7 (or newer) version of
-[Miniconda](https://docs.conda.io/en/latest/miniconda.html) or
+Alternatively (and apparently required on at least some Linux distributions because
+of issues with PyQt5): Install the Python 3.7 (or newer) version
+of [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or
 [Anaconda](https://www.anaconda.com/distribution/). In the last installation
 step, conda will want to add its path to $PATH in your .bashrc; doing so
 could potentially break things (on OpenSUSE it's been known to conflict with
@@ -43,8 +42,8 @@ KDE), so you may want to manually control the $PATH instead.
 
 Thus to install the PyQt5 package: ``PATH=~/miniconda3/bin:$PATH conda install pyqt``
 
-Then install Octavvs without pulling in the incompatible pyqt5 package with pip:
-``pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein``
+Then install Octavvs with pip (without pulling in the incompatible pyqt5 package):
+``pip install -U octavvs``
 
 If you accidentally install the pip pyqt5 package, the easiest way to get
 rid of it is to ``pip uninstall pyqt5`` and then
