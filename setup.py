@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="octavvs",
-    version="0.0.15",
+    version="0.0.16",
     author="Syahril Siregar, Carl Troein, Michiel Op De Beeck et al.",
     author_email="carl@thep.lu.se",
     description="Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data",
@@ -29,7 +29,7 @@ setuptools.setup(
         'statsmodels', 'pyshortcuts', 'opencv-python'],
     extras_require={'noconda': ['pyqt5']},
     include_package_data = True,
-    package_data={ '': ['*.ui', '*.mat', '*.ico'] },
+    package_data={ '': ['*.ui', '*.mat', '*.ico', '*.icns'] },
     entry_points={'console_scripts':
         ['oct_preprocessing = octavvs.preprocessing:main',
         'oct_mcr_als = octavvs.mcr_als:main',

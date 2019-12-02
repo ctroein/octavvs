@@ -58,5 +58,5 @@ console.
 The location of the octavvs scripts will depend on your operating system and
 where you installed Python. The files will be located in the directory
 ``lib/python3.7/site-packages/octavvs`` but the executable scripts
-``oct_preprocessing``, ``oct_mcr_als_`` and ``oct_clustering`` will be
+``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering`` will be
 located in ``bin`` and should be possible to run straight from the console.
