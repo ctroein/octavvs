@@ -13,7 +13,7 @@ from time import monotonic
 import numpy as np
 import sklearn.linear_model
 import sklearn.cluster
-import statsmodels.multivariate.pca
+#import statsmodels.multivariate.pca
 from scipy.interpolate import PchipInterpolator
 from scipy.signal import hilbert, savgol_filter, tukey
 from scipy.io import loadmat, savemat
