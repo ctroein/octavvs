@@ -16,7 +16,7 @@ spectra using the MCR-ALS algorithm.
 **clustering** performs K-means clustering on the concentrations inferred by
 MCR-ALS.
 
-## Installation on Windows/Mac
+## Installation on Windows and Mac
 
 To install OCTAVVS on Windows or Mac, start by downloading Python 3.7 (or newer) from
 [Python.org](https://www.python.org/downloads/). (It is also possible
@@ -27,8 +27,16 @@ When you have installed Python, get a command prompt:
 * On Windows: Windows key + "r", type "cmd"
 * On Mac: open Terminal
 
-Then tell ``pip`` to download and install octavvs and its requirements:
-``pip install -U octavvs[noconda]``
+Then use ``pip`` to download and install pyqt5 and octavvs and its requirements:  
+``pip install pyqt5``  
+``pip install octavvs``
+
+## Upgrading to the latest version
+
+Information about the most recent version of OCTAVVS can be found on
+[its PyPI project page](https://pypi.org/project/octavvs/).
+To upgrade to the latest version:  
+``pip install -U octavvs``
 
 ## Installation on Linux (or with Conda on other systems)
 
@@ -40,10 +48,8 @@ step, conda will want to add its path to $PATH in your .bashrc; doing so
 could potentially break things (on OpenSUSE it's been known to conflict with
 KDE), so you may want to manually control the $PATH instead.
 
-Thus to install the PyQt5 package: ``PATH=~/miniconda3/bin:$PATH conda install pyqt``
-
-Then install Octavvs with pip (without pulling in the incompatible pyqt5 package):
-``pip install -U octavvs``
+Then install PyQt5 using conda: ``conda install pyqt``  
+Install/upgrade Octavvs using pip as above: ``pip install -U octavvs``
 
 If you accidentally install the pip pyqt5 package, the easiest way to get
 rid of it is to ``pip uninstall pyqt5`` and then
@@ -52,11 +58,26 @@ rid of it is to ``pip uninstall pyqt5`` and then
 ## Finding and using octavvs
 
 The easiest way to access the Octavvs scripts is through desktop shortcuts
-which will be created by running the ``oct_make_icons`` script in the
+which may be created by running the ``oct_make_icons`` script in the
 console.
 
 The location of the octavvs scripts will depend on your operating system and
-where you installed Python. The files will be located in the directory
+where you installed Python. Within the Python (or Conda) directory, the files will be located in
 ``lib/python3.7/site-packages/octavvs`` but the executable scripts
 ``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering`` will be
 located in ``bin`` and should be possible to run straight from the console.
+
+## Test data
+
+Test data from two 64x64 images of Paxillus hyphae growing on lignin can be
+[downloaded here](http://cbbp.thep.lu.se/~carl/octavvs/octavvs_test_data.zip) (zip archive, 47 MB).
+
+## Bug reports and code repository
+
+Developers may want to access the OCTAVVS code through the [OCTAVVS GitHub
+page](https://github.com/ctroein/octavvs), where bugs and other issues can
+also be reported.
+
+Non-technical users may prefer to send questions, bug reports and other
+requests by email to corresponding author Carl Troein <carl@thep.lu.se>.
+

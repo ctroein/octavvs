@@ -1,25 +1,28 @@
+For PATH convenience, in ~/.bashrc:
+alias startconda='export PATH=~/"anaconda3/bin:$PATH"'
+
 To build and install the package:
 rm -r dist build
-PATH=~/anaconda3/bin/:$PATH python setup.py bdist_wheel
-PATH=~/anaconda3/bin/:$PATH pip install -U dist/*.whl
+python setup.py bdist_wheel
+pip install -U dist/*.whl
 
 To make icons if you haven't already:
-PATH=~/anaconda3/bin/:$PATH oct_make_icons
+oct_make_icons
 
-At this point, test the software. We need to write a series of test cases, especially as we don't have any automated tests.
-
+At this point, test the software. We need to write a series of test cases,
+especially as we don't have any automated tests.
 
 To release a new version and upgrade to it (test server):
 Update the version number in setup.py
-rm -r dist build
-PATH=~/anaconda3/bin/:$PATH python setup.py bdist_wheel
-PATH=~/anaconda3/bin/:$PATH twine upload -u ctroein --repository-url https://test.pypi.org/legacy/ dist/*
-PATH=~/anaconda3/bin/:$PATH pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein
+rm -r dist build &&
+python setup.py bdist_wheel &&
+twine upload -u ctroein --repository-url https://test.pypi.org/legacy/ dist/* &&
+pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein
 
 To release a new version and upgrade to it:
 Update the version number in setup.py
-rm -r dist build
-PATH=~/anaconda3/bin/:$PATH python setup.py bdist_wheel
-PATH=~/anaconda3/bin/:$PATH twine upload -u ctroein dist/*
-PATH=~/anaconda3/bin/:$PATH pip install -U octavvs-ctroein
+rm -r dist build &&
+python setup.py bdist_wheel && 
+twine upload -u ctroein dist/* &&
+pip install -U octavvs-ctroein
 
