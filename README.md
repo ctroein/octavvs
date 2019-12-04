@@ -18,9 +18,11 @@ MCR-ALS.
 
 ## Installation on Windows and Mac
 
-To install OCTAVVS on Windows or Mac, start by downloading Python 3.7 (or newer) from
-[Python.org](https://www.python.org/downloads/). (It is also possible
-to use Conda as described for Linux, below.)
+To install OCTAVVS on Windows or Mac, start by downloading Python version
+3.8 (or any version from 3.6 and onwards) from
+[Python.org](https://www.python.org/downloads/). (It is also possible to use
+Conda as described for Linux, below.) When installing Python, check the box
+for adding Python to your path.
 
 When you have installed Python, get a command prompt:
 
