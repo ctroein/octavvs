@@ -1012,8 +1012,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                                                   options=MyMainWindow.fileOptions)
         if fileName:
             p = PrepParameters()
-            p.load(fileName)
-            self.setParameters(p)
+            try:
+                p.load(fileName)
+                self.setParameters(p)
+            except Exception as e:
+                self.showLoadErrorMessage(self, fileName, repr(e), traceback.format_exc())
+
 
 
     def runBatch(self):
@@ -1067,12 +1071,18 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
 def main():
-    app = QApplication.instance()
-    if not app:
-        app = QApplication(sys.argv)
-    window = MyMainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    try:
+        app = QApplication.instance()
+        if not app:
+            app = QApplication(sys.argv)
+        window = MyMainWindow()
+        window.show()
+        res = app.exec_()
+    except Exception:
+        traceback.print_exc()
+        print('Press some key to quit')
+        input()
+    sys.exit(res)
 
 if __name__ == '__main__':
     main()

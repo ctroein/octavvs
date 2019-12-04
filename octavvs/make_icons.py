@@ -17,7 +17,7 @@ def main():
     proj = 'OCTAVVS '
 
     for cmd, nom in executables.items():
-        icon = os.path.join(os.path.split(__file__)[0], 'prep', 'octavvs_prep.ico')
+        icon = os.path.join(os.path.split(__file__)[0], 'prep', 'octavvs_prep')
         script = os.path.join(os.path.split(sys.argv[0])[0], cmd)
 
         make_shortcut(script, name=proj+nom, icon=icon,
