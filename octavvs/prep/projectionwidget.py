@@ -220,10 +220,11 @@ class ProjectionWidget(FigureCanvas):
                 p = self.newRect(k)
                 self.popsel[k] = p
                 self.popax.add_patch(p)
+            fig.show()
 
         elif self.refreshplots:
             self.popimg.set_data(self.projection)
-            self.popcb.set_clim(vmin=self.projection.min(), vmax=self.projection.max())
+            self.popcb.mappable.set_clim(vmin=self.projection.min(), vmax=self.projection.max())
             setext = True
 
         if setext:

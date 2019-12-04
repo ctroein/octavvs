@@ -9,6 +9,7 @@ import glob
 import os
 import pandas as pd
 import cv2
+import traceback
 from os.path import basename, dirname
 from datetime import datetime
 from pkg_resources import resource_filename
@@ -28,6 +29,7 @@ from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
 from .mcr import ftir_function as ff
 from .miccs import correction as mc
+from .miccs import exceptiondialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
 Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
@@ -114,6 +116,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.comboBoxCmaps.currentTextChanged.connect(self.roiDialog.setCmap)
         self.loadedFile.connect(self.roiDialog.resetAll)
 
+        exceptiondialog.install(self)
 
     def closeEvent(self, event):
         self.roiDialog.close()
@@ -1643,12 +1646,18 @@ class single_report(QThread):
 
 
 def main():
-    app = QApplication.instance()
-    if not app:
-        app = QApplication(sys.argv)
-    window = MyMainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    try:
+        app = QApplication.instance()
+        if not app:
+            app = QApplication(sys.argv)
+        window = MyMainWindow()
+        window.show()
+        res = app.exec_()
+    except Exception:
+        traceback.print_exc()
+        print('Press some key to quit')
+        input()
+    sys.exit(res)
 
 if __name__ == '__main__':
     main()

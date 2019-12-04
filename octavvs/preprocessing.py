@@ -18,6 +18,7 @@ matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepData, PrepWorker, ABCWorker, PrepParameters
+from .miccs import exceptiondialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
 Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(__name__, "prep/scadvanced.ui"))[0]
@@ -236,6 +237,19 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.updateWavenumberRange()
         self.bcMethod()
 
+        exceptiondialog.install(self)
+
+    def showDetailedErrorMessage(self, err, details):
+        "Show an error dialog with details"
+        q = QMessageBox(self)
+        q.setIcon(QMessageBox.Critical)
+        q.setWindowTitle("Error")
+        q.setText(err)
+        q.setTextFormat(Qt.PlainText)
+        q.setDetailedText(details)
+        q.addButton('OK', QMessageBox.AcceptRole)
+        return q.exec()
+
     def closeEvent(self, event):
         self.worker.halt = True
         self.abcWorker.haltBC = True
@@ -269,7 +283,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.wavenumberEdit()
         self.srMinEdit()
         self.srMaxEdit()
-
 
     def loadFolder(self):
         assert self.rmiescRunning == 0
@@ -448,6 +461,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
+        "Error message from loading a file in the worker thread, with abort option"
         q = self.loadErrorBox(file, (err, details if details else None))
         q.addButton('Skip file', QMessageBox.AcceptRole)
         q.addButton('Abort', QMessageBox.AcceptRole)
@@ -950,7 +964,11 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                                                   "Setting files (*.pjs);;All files (*)",
                                                   options=MyMainWindow.fileOptions)
         if filename:
-            self.getParameters().save(filename)
+            try:
+                self.getParameters().save(filename)
+            except Exception as e:
+                self.showDetailedErrorMessage("Error saving settings to "+filename+": "+repr(e),
+                                              traceback.format_exc())
 
     def setParameters(self, p):
         self.spinBoxSpectra.setValue(0)
@@ -1007,17 +1025,17 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.spinBoxSpectra.setValue(p.spectraCount)
 
     def loadParameters(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Load preprocessing settings", "",
+        filename, _ = QFileDialog.getOpenFileName(self, "Load preprocessing settings", "",
                                                   "Settings files (*.pjs);;All files (*)",
                                                   options=MyMainWindow.fileOptions)
-        if fileName:
+        if filename:
             p = PrepParameters()
             try:
-                p.load(fileName)
+                p.load(filename)
                 self.setParameters(p)
             except Exception as e:
-                self.showLoadErrorMessage(self, fileName, repr(e), traceback.format_exc())
-
+                self.showDetailedErrorMessage("Error loading settings from "+filename+": "+repr(e),
+                                              traceback.format_exc())
 
 
     def runBatch(self):

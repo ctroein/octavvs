@@ -5,15 +5,16 @@ import os
 import pandas as pd
 import cv2
 import collections
+import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
 
 #from PyQt5.QtCore import *
 #from PyQt5.QtGui import QFileDialog
-from PyQt5 import QtWidgets
+#from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
-from PyQt5.Qt import QMainWindow,qApp,  QTimer
-from PyQt5.QtCore import (QCoreApplication, QObject, QRunnable, QThread, QThreadPool,pyqtSignal, pyqtSlot)
+from PyQt5.Qt import QMainWindow, qApp #, QTimer
+#from PyQt5.QtCore import (QCoreApplication, QObject, QRunnable, QThread, QThreadPool,pyqtSignal, pyqtSlot)
 from PyQt5 import uic
 
 import numpy as np
@@ -21,9 +22,10 @@ from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from matplotlib.cm import ScalarMappable
-from .mcr import ftir_function as ff
+#from matplotlib.cm import ScalarMappable
 
+from .mcr import ftir_function as ff
+from .miccs import exceptiondialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
 
@@ -58,6 +60,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEditHeight.returnPressed.connect(self.ValidationX)
         self.lineEditWidth.returnPressed.connect(self.ValidationY)
 
+        exceptiondialog.install(self)
 
     def closeEvent(self, event):
         msgBox = QMessageBox()
@@ -1066,14 +1069,19 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
 
-
 def main():
-    app = QApplication.instance()
-    if not app:
-        app = QApplication(sys.argv)
-    window = MyMainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    try:
+        app = QApplication.instance()
+        if not app:
+            app = QApplication(sys.argv)
+        window = MyMainWindow()
+        window.show()
+        res = app.exec_()
+    except Exception:
+        traceback.print_exc()
+        print('Press some key to quit')
+        input()
+    sys.exit(res)
 
 if __name__ == '__main__':
     main()
