@@ -206,7 +206,7 @@ class ProjectionWidget(FigureCanvas):
 
     def popOut(self):
         setext = True
-        fig = plt.figure(self.objectName())
+        fig = plt.figure(self.objectName(), tight_layout=dict(pad=.6))
         if self.popfig != fig:
             self.popfig = fig
             fig.canvas.mpl_connect('button_press_event', self.onclick)
