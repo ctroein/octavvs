@@ -542,9 +542,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
         clusters = clusters.copy()
 
     if progressCallback:
+        # Compute the number of progress steps
         progressA = 0
         if clusters is None:
-            progressB = 1 + (iterations > 0) * len(app)
+            progressB = 1 + (iterations > 1) * len(app)
         else:
             progressB = 0
             prev = 1
@@ -556,9 +557,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
 
     corrected = None # Just to get rid of warnings in the editor; will be set on iteration 0
 
+    # Set parameters for automatic iteration control
     if renormalize:
-        autoupadd = 3
-        automax = 3
+        autoupadd = 3  # Residual going up counts as residual going down too little this many times
+        automax = 3    # Stop when residual has gone down too little this many times
     else:
         autoupadd = 1
         automax = 5
