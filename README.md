@@ -22,26 +22,26 @@ OCCTAVS needs a working Python 3 environment with various packages. The
 easiest way to get this is through the Conda package management system.
 
 Download and install the Python 3.7 (or newer) version of
-[Miniconda](https://docs.conda.io/en/latest/miniconda.html). During the
-installation, Conda will ask about adding its programs to the path. Say yes
-to this unless you have reason not to (but see below if you are using Linux).
+[Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+During the installation, Conda may ask about adding its programs to the path,
+to which you should probably say no (except on Mac?).
 
-When you have installed Conda, get a command prompt:
+After installing Conda:
+* On Windows: Start a Conda console (found in the Start menu).
+* On Mac: If you added conda to the path, start Terminal. (Otherwise: ??? Remains to be investigated and explained.)
+* On Linux: Start a shell and set the path to include the Conda bin directory. See note at the bottom of this page.
 
-* On Windows: Windows key + "r", type "cmd"
-* On Mac: open Terminal
-
-Make sure that PyQt5 is installed: ``conda install pyqt``  
+From that console, install PyQt5: ``conda install pyqt``
 
 Then install OCTAVVS using pip: ``pip install octavvs``  
-If pip isn't found, try ``pip3 install octavvs`` instead.
+(If pip isn't found, try ``pip3 install octavvs`` instead.)
 
 ## Finding and using OCTAVVS
 
 The easiest way to access the OCTAVVS tools is through desktop shortcuts
 which may be created by running the ``oct_make_icons`` script from the command prompt.
 This works on Windows and Linux but has been known to fail on some Mac OS X versions
-(icons may look broken, clicking on them may do nothing).
+where icons may look broken and/or clicking on them may do nothing.
 
 In any case, the three scripts ``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering``
 should be possible to run straight from the command line.
@@ -75,6 +75,5 @@ also be reported.
 On some Linux distributions, notably OpenSUSE, allowing Conda to modify your
 $PATH will cause problems with KDE when logging in. If this applies to you,
 a suggested workaround is to change the path manually when needed. An alias
-in .bashrc can be convenient:
+in .bashrc can be convenient:  
 ``alias startconda='export PATH=~/miniconda3/bin:"$PATH"'``
-
