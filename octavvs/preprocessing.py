@@ -239,6 +239,10 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         exceptiondialog.install(self)
 
+        argsFileList = sys.argv[1:]
+        if argsFileList != [] :
+            self.updateFileList(argsFileList,False) #Loads files passed as arguments
+
     def showDetailedErrorMessage(self, err, details):
         "Show an error dialog with details"
         q = QMessageBox(self)
