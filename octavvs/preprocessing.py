@@ -4,6 +4,7 @@ import fnmatch
 import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
+import argparse
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QErrorMessage, QInputDialog, QDialog
 from PyQt5.QtWidgets import QStyle, QProxyStyle, QMessageBox
@@ -48,7 +49,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     fileOptions = QFileDialog.Options() | QFileDialog.DontUseNativeDialog
 
-    def __init__(self,parent=None):
+    def __init__(self, parent=None, files=None):
         super(MyMainWindow, self).__init__(parent)
         qApp.installEventFilter(self)
         self.setupUi(self)
@@ -239,9 +240,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         exceptiondialog.install(self)
 
-        argsFileList = sys.argv[1:]
-        if argsFileList != [] :
-            self.updateFileList(argsFileList,False) #Loads files passed as arguments
+        if files is not None and files != []:
+            self.updateFileList(files, False) # Load files passed as arguments
 
     def showDetailedErrorMessage(self, err, details):
         "Show an error dialog with details"
@@ -1103,13 +1103,17 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.errorMsg.showMessage(err)
         self.toggleRunning(0)
 
-
 def main():
+    parser = argparse.ArgumentParser(
+            description='Graphical application for preprocessing of hyperspectral data.')
+    parser.add_argument('files', metavar='file', type=str, nargs='*',
+                        help='initial hyperspectral images to load')
+    args = parser.parse_args()
     try:
         app = QApplication.instance()
         if not app:
             app = QApplication(sys.argv)
-        window = MyMainWindow()
+        window = MyMainWindow(files=args.files)
         window.show()
         res = app.exec_()
     except Exception:
