@@ -21,8 +21,5 @@ pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein
 
 To release a new version and upgrade to it:
 Update the version number in setup.py
-rm -r dist build &&
-python setup.py bdist_wheel && 
-twine upload -u ctroein dist/* &&
-pip install -U octavvs
+rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u ctroein dist/* && pip install -U octavvs
 
