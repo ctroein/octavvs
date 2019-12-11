@@ -9,8 +9,13 @@ Created on Tue Sep 17 03:28:27 2019
 import os
 import sys
 from pyshortcuts import make_shortcut
+import argparse
 
 def main():
+    parser = argparse.ArgumentParser(
+            description='Creates icons for the OCTAVVS scripts.')
+    _ = parser.parse_args()
+
     executables = {'oct_preprocessing': 'Preprocessing',
                    'oct_mcr_als': 'MCR-ALS',
                    'oct_clustering': 'Clustering'}

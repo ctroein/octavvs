@@ -8,6 +8,7 @@ import collections
 import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
+import argparse
 
 #from PyQt5.QtCore import *
 #from PyQt5.QtGui import QFileDialog
@@ -1070,6 +1071,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+            description='Graphical application for clustering of MCR-ALS output.')
+    args = parser.parse_args()
     try:
         app = QApplication.instance()
         if not app:

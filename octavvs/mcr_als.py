@@ -13,6 +13,7 @@ import traceback
 from os.path import basename, dirname
 from datetime import datetime
 from pkg_resources import resource_filename
+import argparse
 
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
@@ -1646,6 +1647,9 @@ class single_report(QThread):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+            description='Graphical application for MCR-ALS analysis of hyperspectral data.')
+    args = parser.parse_args()
     try:
         app = QApplication.instance()
         if not app:
