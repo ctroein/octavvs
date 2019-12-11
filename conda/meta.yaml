@@ -1,0 +1,64 @@
+{% set name = "octavvs" %}
+{% set version = "0.0.25" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  - folder: .
+    url: https://pypi.io/packages/source/p/pyshortcuts/pyshortcuts-1.7.tar.gz
+  - folder: .
+    url: file://../dist/{{ name }}-{{ version }}.tar.gz
+#    url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+
+build:
+  number: 0
+  entry_points:
+    - oct_preprocessing = octavvs.preprocessing:main
+    - oct_mcr_als = octavvs.mcr_als:main
+    - oct_clustering = octavvs.clustering:main
+    - oct_make_icons = octavvs.make_icons:main
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+
+requirements:
+  host:
+    - pip
+    - python
+  run:
+    - matplotlib
+    - numpy
+    - opencv
+    - pyqt
+    - pandas
+    - pillow
+    - python
+    - scipy
+    - scikit-learn
+
+test:
+  imports:
+    - octavvs
+    - octavvs.mcr
+    - octavvs.miccs
+    - octavvs.miccs.reference
+    - octavvs.prep
+    - octavvs.pymcr_new
+  commands:
+    - oct_preprocessing --help
+    - oct_mcr_als --help
+    - oct_clustering --help
+    - oct_make_icons --help
+
+about:
+  home: https://github.com/ctroein/octavvs
+  license: MIT
+  license_family: MIT
+  license_file: 
+  summary: Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data
+  doc_url: 
+  dev_url: 
+
+extra:
+  recipe-maintainers:
+    - ctroein

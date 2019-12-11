@@ -21,8 +21,7 @@ MCR-ALS.
 OCCTAVS needs a working Python 3 environment with various packages. The
 easiest way to get this is through the Conda package management system.
 
-Download and install the Python 3.7 (or newer) version of
-[Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+Download and install the Python 3.7 version of [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 During the installation, Conda may ask about adding its programs to the path,
 to which you should probably say no (except on Mac?).
 
@@ -31,10 +30,7 @@ After installing Conda:
 * On Mac: If you added conda to the path, start Terminal. (Otherwise: ??? Remains to be investigated and explained.)
 * On Linux: Start a shell and set the path to include the Conda bin directory. See note at the bottom of this page.
 
-From that console, install PyQt5: ``conda install pyqt``
-
-Then install OCTAVVS using pip: ``pip install octavvs``  
-(If pip isn't found, try ``pip3 install octavvs`` instead.)
+From that console, install OCTAVVS and its dependencies: ``conda install -c ctroein octavvs``
 
 ## Finding and using OCTAVVS
 
@@ -43,12 +39,13 @@ which may be created by running the ``oct_make_icons`` script from the command p
 This works on Windows and Linux but has been known to fail on some Mac OS X versions
 where icons may look broken and/or clicking on them may do nothing.
 
-In any case, the three scripts ``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering``
-should be possible to run straight from the command line.
+Regardless of whether the icons are created, the three scripts
+``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering``
+should be possible to run straight from the console (Conda console or terminal window, as described above).
 
-The location of the OCTAVVS scripts will depend on your operating system and
-where you installed Conda / Python. Within the Conda directory, the files will be located in
-``lib/python3.7/site-packages/octavvs`` but the scripts mentioned above will be in ``bin``.
+The location of the OCTAVVS scripts will depend on where you installed Conda.
+Within the Conda directory, the files will be located in ``lib/python3.7/site-packages/octavvs``
+but the scripts mentioned above will be in ``bin``.
 
 ## Test data
 
@@ -57,9 +54,11 @@ Test data from two 64x64 images of _Paxillus_ hyphae growing on lignin can be
 
 ## Upgrading to the latest version
 
-Information about the most recent version of OCTAVVS can be found on
-[its PyPI project page](https://pypi.org/project/octavvs/).  
-To upgrade to the latest version: ``pip install -U octavvs``
+Information about the most recent release of OCTAVVS can be found on its
+[Anaconda Cloud page](https://anaconda.org/ctroein/octavvs), with more details on its
+[GitHub page](https://github.com/ctroein/octavvs).
+
+To upgrade, do ``conda update octavvs``
 
 ## Bug reports and code repository
 
@@ -68,6 +67,15 @@ Questions, bug reports and other feedback may be sent to corresponding author Ca
 Developers can access the OCTAVVS code through the [OCTAVVS GitHub
 page](https://github.com/ctroein/octavvs), where bugs and other issues can
 also be reported.
+
+
+## Installation through pip
+
+Users familiar with Python could also install OCTAVVS through pip as an alternative to Anaconda.
+Note that pyqt and opencv sometimes don't work when installed through pip, depending on your system etc.
+
+New releases will be made to the [project page on PyPI](https://pypi.org/project/octavvs/) in parallel with
+releases to Anaconda Cloud.
 
 
 ## Linux path problem

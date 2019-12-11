@@ -1,25 +1,21 @@
 For PATH convenience, in ~/.bashrc:
 alias startconda='export PATH=~/"anaconda3/bin:$PATH"'
 
-To build and install the package:
-rm -r dist build
-python setup.py bdist_wheel
-pip install -U dist/*.whl
+To only build and pip-install the package locally, use
+./inst-local.sh
 
 To make icons if you haven't already:
 oct_make_icons
 
-At this point, test the software. We need to write a series of test cases,
+At this point, test the software. We need to create a series of test cases,
 especially as we don't have any automated tests.
 
-To release a new version and upgrade to it (test server):
+To build and release a new version and upgrade to it:
 Update the version number in setup.py
-rm -r dist build &&
-python setup.py bdist_wheel &&
-twine upload -u ctroein --repository-url https://test.pypi.org/legacy/ dist/* &&
-pip install -U --extra-index-url https://test.pypi.org/simple octavvs-ctroein
+rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u ctroein dist/* && sleep 5 && pip install -U octavvs
 
-To release a new version and upgrade to it:
-Update the version number in setup.py
-rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u ctroein dist/* && pip install -U octavvs
+To build the conda package (after the above):
+conda-build --numpy=1.17 conda
+Follow the instructions to upload
+conda build clean
 
