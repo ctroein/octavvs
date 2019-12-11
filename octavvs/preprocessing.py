@@ -7,7 +7,7 @@ from pkg_resources import resource_filename
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QErrorMessage, QInputDialog, QDialog
 from PyQt5.QtWidgets import QStyle, QProxyStyle, QMessageBox
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QSettings
 from PyQt5.Qt import QMainWindow, qApp
 from PyQt5 import uic
 
@@ -54,8 +54,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.data = PrepData()
+        self.settings = QSettings('MICCS', 'OCTAVVS Preprocessing')
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch
-        self.previousDirectory = None  # For directory dialogs
 
         # Avoid repeating spinboxes
         self.spinBoxFileNumber.setStyle(NoRepeatStyle())
@@ -295,11 +295,11 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
             foldername = QFileDialog.getExistingDirectory(
                     self, "Load spectra from directory",
-                    directory=self.previousDirectory,
+                    directory=self.settings.value('spectraDir', None),
                     options=MyMainWindow.fileOptions)
             if not foldername:
                 return
-            self.previousDirectory = foldername
+            self.settings.setValue('spectraDir', foldername)
 
             filenames = []
             pattern = self.lineEditKeyword.text()
@@ -324,17 +324,20 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                 return
             filenames.sort()
         else:
-            fileName, _ = QFileDialog.getOpenFileName(self, "Open Matrix File", "",
-                                                      "Matrix File (*.mat *.txt)",
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open Matrix File",
+                                                      filter="Matrix File (*.mat *.txt)",
+                                                      directory=self.settings.value('spectraDir', None),
                                                       options=MyMainWindow.fileOptions)
             if not fileName:
                 return
             filenames = [ fileName ]
             foldername = dirname(fileName)
+            self.settings.setValue('spectraDir', foldername)
 
         if self.updateFileList(filenames, False):
             self.data.foldername = foldername
             self.labelDirectory.setText(foldername)
+            self.settings.setValue('whitelightDir', foldername)
 
     # Helper function for updateFileList
     def updateFileListInfo(self, filenames):
@@ -488,10 +491,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     # Image visualization
     def loadWhite(self):
         fileName, _ = QFileDialog.getOpenFileName(self,
-                                                  "Load white light image", "",
-                                                  "Image files (*.jpg *.png);;All files (*)",
+                                                  "Load white light image",
+                                                  filter="Image files (*.jpg *.png);;All files (*)",
+                                                  directory=self.settings.value('whitelightDir', None),
                                                   options=MyMainWindow.fileOptions)
         self.plot_whitelight.load(fileName)
+        self.settings.setValue('whitelightDir', dirname(fileName))
 
     def imageProjection(self):
         meth = self.comboBoxMethod.currentIndex()
@@ -547,10 +552,11 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         startdir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),
                                                  'miccs', 'reference'))
         ref, _ = QFileDialog.getOpenFileName(self, "Load atmospheric reference spectrum",
-                                             startdir,
-                                             "Matrix File (*.mat)",
+                                             directory=self.settings.value('atmRefDir', startdir),
+                                             filter="Matrix File (*.mat)",
                                              options=MyMainWindow.fileOptions)
         self.lineEditACReference.setText(ref)
+        self.settings.setValue('atmRefDir', dirname(ref))
         self.updateAC()
 
     def updateAC(self):
@@ -599,10 +605,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     # SC, Scattering correction
     def loadOtherReference(self):
-        ref, _ = QFileDialog.getOpenFileName(self, "Open Matrix File", "",
-                                             "Matrix File (*.mat)",
+        ref, _ = QFileDialog.getOpenFileName(self, "Open Matrix File",
+                                             filter="Matrix File (*.mat)",
+                                             directory=self.settings.value('scRefDir', None),
                                              options=MyMainWindow.fileOptions)
         self.lineEditReferenceName.setText(ref)
+        self.settings.setValue('scRefDir', dirname(ref))
         self.comboBoxReference.setCurrentIndex(3)
 
     def scClustersToggle(self):
@@ -964,12 +972,14 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         return p
 
     def saveParameters(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Save preprocessing settings", "",
-                                                  "Setting files (*.pjs);;All files (*)",
+        filename, _ = QFileDialog.getSaveFileName(self, "Save preprocessing settings",
+                                                  filter="Setting files (*.pjs);;All files (*)",
+                                                  directory=self.settings.value('settingsDir', None),
                                                   options=MyMainWindow.fileOptions)
         if filename:
             try:
                 self.getParameters().save(filename)
+                self.settings.setValue('settingsDir', dirname(filename))
             except Exception as e:
                 self.showDetailedErrorMessage("Error saving settings to "+filename+": "+repr(e),
                                               traceback.format_exc())
@@ -1029,11 +1039,13 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.spinBoxSpectra.setValue(p.spectraCount)
 
     def loadParameters(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Load preprocessing settings", "",
-                                                  "Settings files (*.pjs);;All files (*)",
+        filename, _ = QFileDialog.getOpenFileName(self, "Load preprocessing settings",
+                                                  filter="Settings files (*.pjs);;All files (*)",
+                                                  directory=self.settings.value('settingsDir', None),
                                                   options=MyMainWindow.fileOptions)
         if filename:
             p = PrepParameters()
+            directory=self.settings.setValue('settingsDir', dirname(filename)),
             try:
                 p.load(filename)
                 self.setParameters(p)
@@ -1050,7 +1062,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         params = self.getParameters()
 
         foldername = QFileDialog.getExistingDirectory(self, "Select save directory",
-                                                      directory=self.previousDirectory,
+                                                      directory=self.settings.value('spectraDir', None),
                                                       options=MyMainWindow.fileOptions)
         if not foldername:
             return
