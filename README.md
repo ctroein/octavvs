@@ -62,10 +62,10 @@ Test data from two 64x64 images of _Paxillus_ hyphae growing on lignin can be
 ## Upgrading to the latest version
 
 Information about the most recent release of OCTAVVS can be found on its
-[Anaconda Cloud page](https://anaconda.org/ctroein/octavvs), as well as on
-its [PyPI page](https://pypi.org/project/octavvs).
+[PyPI page](https://pypi.org/project/octavvs), as well as on its
+[Anaconda Cloud page](https://anaconda.org/ctroein/octavvs).
 
-To upgrade, do ``conda update octavvs``
+To upgrade to the most recent version, do ``conda update octavvs`` in the Conda console / Terminal.
 
 ## Bug reports and code repository
 

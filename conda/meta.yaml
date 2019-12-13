@@ -1,11 +1,11 @@
-{% set data = load_setup_py_data() %}
+#{% set data = load_setup_py_data() %}
 {% set name = "octavvs" %}
 {% set version = "0.0.27" %}
 #{% set version = data.get('version') %}
 
 package:
   name: "{{ name|lower }}"
-  version: "{{ data.get('version') }}"
+  version: "{{ version }}"
 
 source:
   - folder: .
@@ -61,11 +61,15 @@ about:
   license: MIT
   license_family: MIT
   license_file: 
-#  summary: Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data
-  summary: {{ data.get('description') }}
+  summary: Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data
+#  summary: {{ data.get('description') }}
   doc_url: 
   dev_url: 
-  description: '{{ data.get('long_description').replace("'", "''") }}'
+#  description: '{{ data.get('long_description').replace("'", "''") }}'
+  description: 'OCTAVVS is a set of graphical tools for high-throughput preprocessing and analysis of vibrational spectroscopy data.
+  
+                More information can be found on the [OCTAVVS PyPI page](https://pypi.org/project/octavvs).
+                '
 
 extra:
   recipe-maintainers:
