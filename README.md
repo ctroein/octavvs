@@ -22,30 +22,37 @@ OCCTAVS needs a working Python 3 environment with various packages. The
 easiest way to get this is through the Conda package management system.
 
 Download and install the Python 3.7 version of [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
-During the installation, Conda may ask about adding its programs to the path,
-to which you should probably say no (except on Mac?).
+There are some platform-specific differences during installation:
 
-After installing Conda:
-* On Windows: Start a Conda console (found in the Start menu).
-* On Mac: If you added conda to the path, start Terminal. (Otherwise: ??? Remains to be investigated and explained.)
-* On Linux: Start a shell and set the path to include the Conda bin directory. See note at the bottom of this page.
+* On **Windows**: The default options are good (no need to have Conda modify your path).  
+After installation, start a Conda console (found in the Start menu).
 
-From that console, install OCTAVVS and its dependencies: ``conda install -c ctroein octavvs``
+* On **Mac OS X**: The default options are good. (But _if_ you choose to not
+let Conda modify your path, you can specify the full path to the commands
+in the following steps.)  
+After installation, start Terminal.  
+
+* On **Linux**: Make the Miniconda .sh package executable and run it. When it asks about
+running conda init, it wants to modify your $PATH in .bashrc. This can be fine, but on some
+Linux distributions (notably OpenSUSE) it breaks KDE when logging in. A suggested workaround
+is to change $PATH manually when needed. An alias in .bashrc can be convenient:  
+``alias startconda='export PATH=~/miniconda3/bin:"$PATH"'``
+
+From the console, install OCTAVVS and its dependencies: ``conda install -c ctroein octavvs``
 
 ## Finding and using OCTAVVS
 
 The easiest way to access the OCTAVVS tools is through desktop shortcuts
-which may be created by running the ``oct_make_icons`` script from the command prompt.
-This works on Windows and Linux but has been known to fail on some Mac OS X versions
-where icons may look broken and/or clicking on them may do nothing.
+which are created by running the ``oct_make_icons`` script from the command prompt.
+(We are not entirely sure if this works on all Mac OS X versions)
 
-Regardless of whether the icons are created, the three scripts
+Regardless of whether you created icons, the three scripts
 ``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering``
-should be possible to run straight from the console (Conda console or terminal window, as described above).
+can be run straight from the console (Conda console or terminal window, as described above).
 
 The location of the OCTAVVS scripts will depend on where you installed Conda.
-Within the Conda directory, the files will be located in ``lib/python3.7/site-packages/octavvs``
-but the scripts mentioned above will be in ``bin``.
+Within the Conda directory, the three scripts will be in ``bin`` whereas
+the actual Python code will be located in ``lib/python3.7/site-packages/octavvs``.
 
 ## Test data
 
@@ -55,33 +62,22 @@ Test data from two 64x64 images of _Paxillus_ hyphae growing on lignin can be
 ## Upgrading to the latest version
 
 Information about the most recent release of OCTAVVS can be found on its
-[Anaconda Cloud page](https://anaconda.org/ctroein/octavvs), with more details on its
-[GitHub page](https://github.com/ctroein/octavvs).
+[Anaconda Cloud page](https://anaconda.org/ctroein/octavvs), as well as on
+its [PyPI page](https://pypi.org/project/octavvs).
 
 To upgrade, do ``conda update octavvs``
 
 ## Bug reports and code repository
 
-Questions, bug reports and other feedback may be sent to corresponding author Carl Troein <carl@thep.lu.se>.
+The main project homepage is its [GitHub page](https://github.com/ctroein/octavvs),
+where developers can access the OCTAVVS code and submit bug reports and patches etc.
 
-Developers can access the OCTAVVS code through the [OCTAVVS GitHub
-page](https://github.com/ctroein/octavvs), where bugs and other issues can
-also be reported.
+Questions, bug reports and other feedback may be sent to corresponding author Carl Troein <carl@thep.lu.se>.
 
 
 ## Installation through pip
 
-Users familiar with Python could also install OCTAVVS through pip as an alternative to Anaconda.
+Users familiar with Python could also install OCTAVVS through pip as an alternative to Anaconda,
+as new releases will be made to PyPI in parallel with releases to Anaconda Cloud.
 Note that pyqt and opencv sometimes don't work when installed through pip, depending on your system etc.
 
-New releases will be made to the [project page on PyPI](https://pypi.org/project/octavvs/) in parallel with
-releases to Anaconda Cloud.
-
-
-## Linux path problem
-
-On some Linux distributions, notably OpenSUSE, allowing Conda to modify your
-$PATH will cause problems with KDE when logging in. If this applies to you,
-a suggested workaround is to change the path manually when needed. An alias
-in .bashrc can be convenient:  
-``alias startconda='export PATH=~/miniconda3/bin:"$PATH"'``

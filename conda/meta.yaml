@@ -1,19 +1,25 @@
+{% set data = load_setup_py_data() %}
 {% set name = "octavvs" %}
-{% set version = "0.0.25" %}
+{% set version = "0.0.27" %}
+#{% set version = data.get('version') %}
 
 package:
   name: "{{ name|lower }}"
-  version: "{{ version }}"
+  version: "{{ data.get('version') }}"
 
 source:
   - folder: .
     url: https://pypi.io/packages/source/p/pyshortcuts/pyshortcuts-1.7.tar.gz
   - folder: .
-    url: file://../dist/{{ name }}-{{ version }}.tar.gz
+#    path: .
+#    path: ../dist/{{ name }}-{{ version }}.tar.gz
+#    url: file://../dist/{{ name }}-{{ version }}.tar.gz
+    url: http://cbbp.thep.lu.se/~carl/octavvs-dist/{{ name }}-{{ version }}.tar.gz
 #    url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
 
 build:
   number: 0
+  noarch: python
   entry_points:
     - oct_preprocessing = octavvs.preprocessing:main
     - oct_mcr_als = octavvs.mcr_als:main
@@ -55,9 +61,11 @@ about:
   license: MIT
   license_family: MIT
   license_file: 
-  summary: Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data
+#  summary: Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data
+  summary: {{ data.get('description') }}
   doc_url: 
   dev_url: 
+  description: '{{ data.get('long_description').replace("'", "''") }}'
 
 extra:
   recipe-maintainers:
