@@ -5,6 +5,7 @@ import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
 import argparse
+from io import BytesIO
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QErrorMessage, QInputDialog, QDialog
 from PyQt5.QtWidgets import QStyle, QProxyStyle, QMessageBox
@@ -324,8 +325,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                 return
             filenames.sort()
         else:
-            fileName, _ = QFileDialog.getOpenFileName(self, "Open Matrix File",
-                                                      filter="Matrix File (*.mat *.txt)",
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open hyperspectral image",
+                                                      filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3 *.4 *.5 *.6 *.7 *.8 *.9);;All files (*)",
                                                       directory=self.settings.value('spectraDir', None),
                                                       options=MyMainWindow.fileOptions)
             if not fileName:
@@ -349,7 +350,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def loadFile(self, file):
         "Load a file or return (error message, traceback) from trying"
         try:
-            self.data.readmat(file)
+            self.data.readMatrix(file)
             return
         except (RuntimeError, FileNotFoundError) as e:
             return (str(e), None)
@@ -464,7 +465,10 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.clearSC()
         self.imageProjection()
         self.selectSpectra()
-        self.plot_whitelight.load(os.path.splitext(file)[0]+'.jpg')
+        if self.data.image is not None:
+            self.plot_whitelight.load(BytesIO(self.data.image[0]), self.data.image[1])
+        else:
+            self.plot_whitelight.load(os.path.splitext(file)[0]+'.jpg')
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
@@ -477,9 +481,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     def updateDimensions(self, dimnum):
         if dimnum == 0:
-            self.data.setwidth(self.lineEditWidth.text())
+            self.data.setWidth(self.lineEditWidth.text())
         else:
-            self.data.setheight(self.lineEditHeight.text())
+            self.data.setHeight(self.lineEditHeight.text())
         self.lineEditWidth.setText(str(self.data.wh[0]))
         self.lineEditHeight.setText(str(self.data.wh[1]))
         try:
@@ -490,13 +494,14 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     # Image visualization
     def loadWhite(self):
-        fileName, _ = QFileDialog.getOpenFileName(self,
+        filename, _ = QFileDialog.getOpenFileName(self,
                                                   "Load white light image",
                                                   filter="Image files (*.jpg *.png);;All files (*)",
                                                   directory=self.settings.value('whitelightDir', None),
                                                   options=MyMainWindow.fileOptions)
-        self.plot_whitelight.load(fileName)
-        self.settings.setValue('whitelightDir', dirname(fileName))
+        if filename != "":
+            self.plot_whitelight.load(filename)
+            self.settings.setValue('whitelightDir', dirname(filename))
 
     def imageProjection(self):
         meth = self.comboBoxMethod.currentIndex()
@@ -553,7 +558,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                                                  'miccs', 'reference'))
         ref, _ = QFileDialog.getOpenFileName(self, "Load atmospheric reference spectrum",
                                              directory=self.settings.value('atmRefDir', startdir),
-                                             filter="Matrix File (*.mat)",
+                                             filter="Matrix file (*.mat)",
                                              options=MyMainWindow.fileOptions)
         self.lineEditACReference.setText(ref)
         self.settings.setValue('atmRefDir', dirname(ref))
@@ -605,8 +610,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     # SC, Scattering correction
     def loadOtherReference(self):
-        ref, _ = QFileDialog.getOpenFileName(self, "Open Matrix File",
-                                             filter="Matrix File (*.mat)",
+        ref, _ = QFileDialog.getOpenFileName(self, "Open reference spectrum",
+                                             filter="Matrix file (*.mat)",
                                              directory=self.settings.value('scRefDir', None),
                                              options=MyMainWindow.fileOptions)
         self.lineEditReferenceName.setText(ref)
@@ -1045,7 +1050,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
                                                   options=MyMainWindow.fileOptions)
         if filename:
             p = PrepParameters()
-            directory=self.settings.setValue('settingsDir', dirname(filename)),
+            self.settings.setValue('settingsDir', dirname(filename)),
             try:
                 p.load(filename)
                 self.setParameters(p)

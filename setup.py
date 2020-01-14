@@ -26,7 +26,6 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     install_requires=['numpy', 'scipy', 'matplotlib', 'sklearn', 'pyshortcuts', 'opencv-python', 'pandas', 'pillow'],
-    extras_require={'noconda': ['pyqt5']},
     package_data={ '': ['*.ui', '*.mat', '*.ico', '*.icns'] },
     entry_points={'console_scripts':
         ['oct_preprocessing = octavvs.preprocessing:main',

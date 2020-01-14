@@ -20,13 +20,13 @@ class WhiteLightWidget(FigureCanvas):
         FigureCanvas.updateGeometry(self)
         self.img = None
 
-    def load(self, filename):
+    def load(self, filename, format=None):
         self.ax.clear()
         self.ax.set_axis_off()
         self.img = None
         if filename is not None:
             try:
-                self.img = plt.imread(filename)
+                self.img = plt.imread(filename, format=format)
                 self.ax.imshow(self.img)
             except FileNotFoundError:
                 pass

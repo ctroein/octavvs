@@ -14,7 +14,7 @@ import numpy as np
 import scipy.signal, scipy.io
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from ..miccs import baseline, correction
+from ..miccs import baseline, correction, opusreader
 
 class PrepParameters:
     """
@@ -79,7 +79,8 @@ class PrepParameters:
 
 class PrepData:
     """
-    The list of current files and the raw data loaded from a Matlab file in the preprocessing GUI.
+    The list of current files and the raw data loaded from a hyperspectral image
+    file in the preprocessing GUI.
     """
     def __init__(self):
         self.foldername = '' # Root dir
@@ -90,8 +91,9 @@ class PrepData:
         self.wmax = 4000
         self.raw = np.empty((0,0)) # data in order (pixel, wavenumber)
         self.wh = (0, 0)  # Width and height in pixels
+        self.image = None # Image loaded from raw data file
 
-    def setwidth(self, w):
+    def setWidth(self, w):
         try:
             w = int(w)
         except ValueError:
@@ -104,49 +106,62 @@ class PrepData:
         self.wh = (w, h)
         return True
 
-    def setheight(self, h):
-        if self.setwidth(h):
+    def setHeight(self, h):
+        if self.setWidth(h):
             self.wh = (self.wh[1], self.wh[0])
             return True
         return False
 
-    def readmat(self, filename):
+    def readMatrix(self, filename):
         """
         Read data from a file, with some error checking. The object is modified
         only if the file is successfully loaded.
         """
         wh = None
-        if filename[-4:] == '.txt':
-            ss = np.loadtxt(filename)
-        else:
-            s = scipy.io.loadmat(filename)
-            info = scipy.io.whosmat(filename)
-            ss = s[info[0][0]]
-            if 'wh' in s:
-                wh = s['wh'].flatten()
-
-        if ss.ndim != 2 or ss.shape[0] < 10 or ss.shape[1] < 2:
-            raise RuntimeError('file does not appear to describe an FTIR image matrix')
-        d = -1 if ss[0,0] < ss[-1,0] else 1
-        wn = ss[::d,0]
-        if (np.diff(wn) >= 0).any():
-            raise RuntimeError('wavenumbers must be sorted')
-        npix = ss.shape[1] - 1
-        if wh is not None:
-            if len(wh) != 2:
-                raise RuntimeError('Image size in "wh" must have length 2')
-            wh = (int(wh[0]), int(wh[1]))
-            if wh[0] * wh[1] != npix:
-                raise RuntimeError('Image size in "wh" does not match data size')
-            self.wh = wh
-        elif npix != self.wh[0] * self.wh[1]:
-            res = int(np.sqrt(npix))
-            if npix == res * res:
-                self.wh = (res, res)
+        fext = os.path.splitext(filename)[1].lower()
+        opusformat = False
+        if fext in ['.txt', '.csv', '.mat']:
+            if fext == '.mat':
+                s = scipy.io.loadmat(filename)
+                info = scipy.io.whosmat(filename)
+                ss = s[info[0][0]]
+                if 'wh' in s:
+                    wh = s['wh'].flatten()
             else:
-                self.wh = (npix, 1)
-        self.raw = ss[::d,1:].T
-        self.wavenumber = wn
+                ss = np.loadtxt(filename)
+
+            if ss.ndim != 2 or ss.shape[0] < 10 or ss.shape[1] < 2:
+                raise RuntimeError('file does not appear to describe an FTIR image matrix')
+            d = -1 if ss[0,0] < ss[-1,0] else 1
+            raw = ss[::d,1:].T
+            wn = ss[::d,0]
+            if (np.diff(wn) >= 0).any():
+                raise RuntimeError('wavenumbers must be sorted')
+            npix = ss.shape[1] - 1
+            if wh is not None:
+                if len(wh) != 2:
+                    raise RuntimeError('Image size in "wh" must have length 2')
+                wh = (int(wh[0]), int(wh[1]))
+                if wh[0] * wh[1] != npix:
+                    raise RuntimeError('Image size in "wh" does not match data size')
+                self.wh = wh
+            elif npix != self.wh[0] * self.wh[1]:
+                res = int(np.sqrt(npix))
+                if npix == res * res:
+                    self.wh = (res, res)
+                else:
+                    self.wh = (npix, 1)
+            self.raw = raw
+            self.wavenumber = wn
+            self.image = None
+
+        else:
+            reader = opusreader.OpusReader(filename)
+            self.raw = reader.AB
+            self.wavenumber = reader.wavenum
+            self.wh = reader.wh
+            self.image = reader.image
+
         self.wmin = self.wavenumber.min()
         self.wmax = self.wavenumber.max()
         self.curFile = filename
@@ -181,7 +196,7 @@ class PrepWorker(QObject):
             file = data.filenames[num]
             if file == data.curFile:
                 return True
-            data.readmat(file)
+            data.readMatrix(file)
         except (RuntimeError, FileNotFoundError) as e:
             self.loadFailed.emit(file, str(e), '')
         except Exception as e:
