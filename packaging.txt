@@ -11,8 +11,10 @@ At this point, test the software. We need to create a series of test cases,
 especially as we don't have any automated tests.
 
 To build and release a new version:
-Update the version number in setup.py
+Update the version number in setup.py and conda/meta.yaml
 rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u ctroein dist/*
+git tag vX.Y.Z
+git push --tags
 
 To build the conda package (after the above):
 conda-build --numpy=1.17 conda
