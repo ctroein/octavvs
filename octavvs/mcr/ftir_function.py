@@ -7,7 +7,6 @@ import scipy.io as sio
 #from scipy.signal import savgol_filter, wiener
 #import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-#import cv2
 #from skimage import filters
 #from sklearn.cluster import SpectralClustering, KMeans
 #from scipy.sparse import spdiags, csc_matrix

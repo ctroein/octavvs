@@ -8,7 +8,6 @@ import csv
 import glob
 import os
 import pandas as pd
-import cv2
 import traceback
 from os.path import basename, dirname
 from datetime import datetime
@@ -25,6 +24,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error as msea
 import scipy as sc
+import skimage
 
 from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
@@ -513,9 +513,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.SVDPlot()
         else:
             nx, ny = int(self.lineEditWidth.text()),int(self.lineEditHeight.text())
-            mask = np.ones((ny,nx))
-            self.roi = cv2.fillPoly(mask, [np.array(self.coord)], 0)
-            self.roi = 1 - self.roi
+
+            self.roi = np.zeros((nx, ny))
+            vertex_row_coords, vertex_col_coords = np.array(self.coord).T
+            fill_row_coords, fill_col_coords = skimage.draw.polygon(
+                    vertex_row_coords, vertex_col_coords, self.roi.shape)
+            self.roi[fill_row_coords, fill_col_coords] = 1
             self.rem = self.roi * self.projection
             img_d = np.reshape(self.rem,(nx*ny,1))
             self.ind =  np.where(img_d > 0)[0]
@@ -792,12 +795,15 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def runsingle_roi(self):
         self.comboBoxInitial.setCurrentIndex(0)
         nx, ny = int(self.lineEditHeight.text()),int(self.lineEditWidth.text())
-        mask = np.ones((nx,ny))
+#        mask = np.ones((nx,ny))
         max_iter = int(self.lineEditPurIter.text())
         tol_error = float(self.lineEditTol.text())
 
-        self.roi = cv2.fillPoly(mask, [np.array(self.coord)], 0)
-        self.roi = 1 - self.roi
+        self.roi = np.zeros((nx, ny))
+        vertex_row_coords, vertex_col_coords = np.array(self.coord).T
+        fill_row_coords, fill_col_coords = skimage.draw.polygon(
+                vertex_row_coords, vertex_col_coords, self.roi.shape)
+        self.roi[fill_row_coords, fill_col_coords] = 1
         self.rem = self.roi * self.projection
 
         img_d = np.reshape(self.rem,(int(nx*ny),1))

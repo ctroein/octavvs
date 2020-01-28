@@ -3,7 +3,6 @@ import csv
 import glob
 import os
 import pandas as pd
-import cv2
 import collections
 import traceback
 from os.path import basename, dirname
@@ -249,8 +248,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
     def readfile(self,fileName):
+        self.img = None
         try:
-            self.img = cv2.imread(fileName.replace(fileName.split('0')[-1],'.jpg'))
+            self.img = plt.imread(os.path.splitext(fileName)[0]+'.jpg')
         except:
             pass
 
@@ -301,7 +301,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         if self.img is not None:
             self.plot_White.canvas.ax.clear()
-            self.plot_White.canvas.ax.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
+            self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
             self.plot_White.canvas.draw()
 
@@ -358,11 +358,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def IMG(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","IMAGE (*.jpg)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self,"Open Image File", "",
+                          "Image (*.jpg *.jpeg *.bmp *.png .tif *.tiff)", options=options)
         if fileName:
-            self.img = cv2.imread(fileName)
+            self.img = plt.imread(fileName)
             self.plot_White.canvas.ax.clear()
-            self.plot_White.canvas.ax.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
+            self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
             self.plot_White.canvas.draw()
             self.Cvisualize()
@@ -621,7 +622,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         if self.comboBoxVisualize.currentIndex() == 0:
             if self.img is not None:
                 self.plotMultiVisual.canvas.ax.clear()
-                self.plotMultiVisual.canvas.ax.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
+                self.plotMultiVisual.canvas.ax.imshow(self.img)
                 self.plotMultiVisual.canvas.fig.tight_layout()
 
                 self.plotMultiVisual.canvas.draw()
@@ -660,7 +661,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         plt.close('Image Projection')
         plt.figure('Image Projection', tight_layout={'pad':.5})
         if self.comboBoxVisualize.currentIndex() == 0:
-            plt.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
+            plt.imshow(self.img)
             plt.show()
         else:
             plt.imshow(self.component,str(self.comboBoxCmaps.currentText()))
@@ -674,7 +675,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             ax = fig.gca()
             ax.clear()
             if self.comboBoxVisualize.currentIndex() == 0:
-                ax.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
+                ax.imshow(self.img)
             else:
                 ax.imshow(self.component,str(self.comboBoxCmaps.currentText()))
             fig.canvas.draw_idle()

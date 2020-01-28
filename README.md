@@ -67,6 +67,8 @@ Information about the most recent release of OCTAVVS can be found on its
 
 To upgrade to the most recent version, do ``conda update octavvs`` in the Conda console / Terminal.
 
+Information about released versions can be found [here](https://github.com/ctroein/octavvs/blob/master/HISTORY.md).
+
 ## Bug reports and code repository
 
 The main project homepage is its [GitHub page](https://github.com/ctroein/octavvs),

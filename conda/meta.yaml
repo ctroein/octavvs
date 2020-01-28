@@ -1,6 +1,6 @@
 #{% set data = load_setup_py_data() %}
 {% set name = "octavvs" %}
-{% set version = "0.0.28" %}
+{% set version = "0.0.29" %}
 #{% set version = data.get('version') %}
 
 package:
@@ -34,13 +34,14 @@ requirements:
   run:
     - matplotlib
     - numpy
-    - opencv
     - pyqt
     - pandas
     - pillow
     - python
     - scipy
     - scikit-learn
+    - scikit-image
+    - xlwt
 
 test:
   imports:
