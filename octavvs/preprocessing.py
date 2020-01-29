@@ -496,7 +496,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def loadWhite(self):
         filename, _ = QFileDialog.getOpenFileName(self,
                                                   "Load white light image",
-                                                  filter="Image files (*.jpg *.png);;All files (*)",
+                                                  filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
                                                   directory=self.settings.value('whitelightDir', None),
                                                   options=MyMainWindow.fileOptions)
         if filename != "":
