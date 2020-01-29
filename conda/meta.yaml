@@ -13,8 +13,8 @@ source:
   - folder: .
 #    path: .
 #    path: ../dist/{{ name }}-{{ version }}.tar.gz
-#    url: file://../dist/{{ name }}-{{ version }}.tar.gz
-    url: http://cbbp.thep.lu.se/~carl/octavvs-dist/{{ name }}-{{ version }}.tar.gz
+    url: file://../dist/{{ name }}-{{ version }}.tar.gz
+#    url: http://cbbp.thep.lu.se/~carl/octavvs-dist/{{ name }}-{{ version }}.tar.gz
 #    url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
 
 build:
@@ -30,14 +30,14 @@ build:
 requirements:
   host:
     - pip
-    - python
+    - python=3.7
   run:
     - matplotlib
-    - numpy
+    - numpy=1.17
     - pyqt
     - pandas
     - pillow
-    - python
+    - python=3.7
     - scipy
     - scikit-learn
     - scikit-image
@@ -63,7 +63,6 @@ about:
   license_family: MIT
   license_file: 
   summary: Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data
-#  summary: {{ data.get('description') }}
   doc_url: 
   dev_url: 
 #  description: '{{ data.get('long_description').replace("'", "''") }}'
