@@ -14,8 +14,8 @@ from PyQt5.QtCore import Qt
 def install(qwin):
     "installs a graphical exception handler that shows a message and doesn't terminate"
     def ehook(exctype, value, tb):
-        err = 'Unhandled exception: '+repr(value)
-        details = traceback.format_exception(exctype, value, tb)
+        err = 'Unhandled exception: ' + repr(value)
+        details = ''.join(traceback.format_exception(exctype, value, tb))
         print(err, '\n', details)
 
         q = QMessageBox(qwin)

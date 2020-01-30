@@ -1,4 +1,3 @@
-import sys
 import os
 import fnmatch
 import traceback
@@ -7,10 +6,10 @@ from pkg_resources import resource_filename
 import argparse
 from io import BytesIO
 
-from PyQt5.QtWidgets import QApplication, QFileDialog, QErrorMessage, QInputDialog, QDialog
-from PyQt5.QtWidgets import QStyle, QProxyStyle, QMessageBox
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt, QSettings
-from PyQt5.Qt import QMainWindow, qApp
+from PyQt5.QtWidgets import QFileDialog, QErrorMessage, QInputDialog, QDialog
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
+from PyQt5.Qt import qApp
 from PyQt5 import uic
 
 import numpy as np
@@ -19,44 +18,37 @@ import matplotlib
 matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
-from .prep.prepworker import PrepData, PrepWorker, ABCWorker, PrepParameters
+from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
 from .miccs import exceptiondialog
+from .miccs import SpectralData
+from .miccs import OctavvsMainWindow, NoRepeatStyle, run_octavvs_application
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
 Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(__name__, "prep/scadvanced.ui"))[0]
 
-class NoRepeatStyle(QProxyStyle):
-    def styleHint(self, hint, option=None, widget=None, returnData=None):
-        if hint == QStyle.SH_SpinBox_ClickAutoRepeatThreshold:
-            return 10000
-        else:
-            return super().styleHint(hint, option, widget, returnData)
 
 class DialogSCAdvanced(QDialog, Ui_DialogSCAdvanced):
     def __init__(self,parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-class MyMainWindow(QMainWindow, Ui_MainWindow):
+class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     closing = pyqtSignal()
-    startRmiesc = pyqtSignal(PrepData, dict)
+    startRmiesc = pyqtSignal(SpectralData, dict)
     startAC = pyqtSignal(np.ndarray, np.ndarray, dict)
     startBC = pyqtSignal(np.ndarray, np.ndarray, str, dict)
-    startBatch = pyqtSignal(PrepData, PrepParameters, str, bool)
+    startBatch = pyqtSignal(SpectralData, PrepParameters, str, bool)
 
     bcLambdaRange = np.array([0, 8])
     bcPRange = np.array([-5, 0])
 
-    fileOptions = QFileDialog.Options() | QFileDialog.DontUseNativeDialog
-
     def __init__(self, parent=None, files=None):
-        super(MyMainWindow, self).__init__(parent)
+        super().__init__('Preprocessing', parent)
         qApp.installEventFilter(self)
         self.setupUi(self)
 
-        self.data = PrepData()
-        self.settings = QSettings('MICCS', 'OCTAVVS Preprocessing')
+        self.data = SpectralData()
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch
 
         # Avoid repeating spinboxes
@@ -244,17 +236,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         if files is not None and files != []:
             self.updateFileList(files, False) # Load files passed as arguments
 
-    def showDetailedErrorMessage(self, err, details):
-        "Show an error dialog with details"
-        q = QMessageBox(self)
-        q.setIcon(QMessageBox.Critical)
-        q.setWindowTitle("Error")
-        q.setText(err)
-        q.setTextFormat(Qt.PlainText)
-        q.setDetailedText(details)
-        q.addButton('OK', QMessageBox.AcceptRole)
-        return q.exec()
-
     def closeEvent(self, event):
         self.worker.halt = True
         self.abcWorker.haltBC = True
@@ -326,7 +307,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             filenames.sort()
         else:
             fileName, _ = QFileDialog.getOpenFileName(self, "Open hyperspectral image",
-                                                      filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3 *.4 *.5 *.6 *.7 *.8 *.9);;All files (*)",
+                                                      filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3);;All files (*)",
                                                       directory=self.settings.value('spectraDir', None),
                                                       options=MyMainWindow.fileOptions)
             if not fileName:
@@ -356,16 +337,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             return (str(e), None)
         except Exception as e:
             return (repr(e), traceback.format_exc())
-
-    def loadErrorBox(self, file, err):
-        "Prepare an error dialog for failure to load a file"
-        q = QMessageBox(self)
-        q.setIcon(QMessageBox.Warning)
-        q.setWindowTitle("Error loading file")
-        q.setText("Failed to load '"+file+"':\n"+err[0])
-        q.setTextFormat(Qt.PlainText)
-        q.setDetailedText(err[1])
-        return q
 
     def updateFileList(self, filenames, avoidreload):
         """
@@ -494,11 +465,11 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     # Image visualization
     def loadWhite(self):
-        filename, _ = QFileDialog.getOpenFileName(self,
-                                                  "Load white light image",
-                                                  filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
-                                                  directory=self.settings.value('whitelightDir', None),
-                                                  options=MyMainWindow.fileOptions)
+        filename, _ = QFileDialog.getOpenFileName(
+                self, "Load white light image",
+                filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
+                directory=self.settings.value('whitelightDir', None),
+                options=MyMainWindow.fileOptions)
         if filename != "":
             self.plot_whitelight.load(filename)
             self.settings.setValue('whitelightDir', dirname(filename))
@@ -977,17 +948,18 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         return p
 
     def saveParameters(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Save preprocessing settings",
-                                                  filter="Setting files (*.pjs);;All files (*)",
-                                                  directory=self.settings.value('settingsDir', None),
-                                                  options=MyMainWindow.fileOptions)
+        filename = self.getSaveFile("Save preprocessing settings",
+                                    filter="Setting files (*.pjs);;All files (*)",
+                                    directory=self.settings.value('settingsDir', None),
+                                    suffix='pjs')
         if filename:
             try:
                 self.getParameters().save(filename)
                 self.settings.setValue('settingsDir', dirname(filename))
             except Exception as e:
-                self.showDetailedErrorMessage("Error saving settings to "+filename+": "+repr(e),
-                                              traceback.format_exc())
+                self.showDetailedErrorMessage(
+                            "Error saving settings to "+filename+": "+repr(e),
+                            traceback.format_exc())
 
     def setParameters(self, p):
         self.spinBoxSpectra.setValue(0)
@@ -1108,24 +1080,14 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.errorMsg.showMessage(err)
         self.toggleRunning(0)
 
+
 def main():
     parser = argparse.ArgumentParser(
             description='Graphical application for preprocessing of hyperspectral data.')
     parser.add_argument('files', metavar='file', type=str, nargs='*',
                         help='initial hyperspectral images to load')
     args = parser.parse_args()
-    try:
-        app = QApplication.instance()
-        if not app:
-            app = QApplication(sys.argv)
-        window = MyMainWindow(files=args.files)
-        window.show()
-        res = app.exec_()
-    except Exception:
-        traceback.print_exc()
-        print('Press some key to quit')
-        input()
-    sys.exit(res)
+    run_octavvs_application(MyMainWindow, files=args.files)
 
 if __name__ == '__main__':
     main()
