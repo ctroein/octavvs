@@ -515,7 +515,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             nx, ny = int(self.lineEditWidth.text()),int(self.lineEditHeight.text())
 
             self.roi = np.zeros((nx, ny))
-            vertex_row_coords, vertex_col_coords = np.array(self.coord).T
+            vertex_col_coords,vertex_row_coords = np.array(self.coord).T
             fill_row_coords, fill_col_coords = skimage.draw.polygon(
                     vertex_row_coords, vertex_col_coords, self.roi.shape)
             self.roi[fill_row_coords, fill_col_coords] = 1
