@@ -636,7 +636,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         if 'component_' in self.comboBoxVisualize.currentText():
             import re
             val = int(re.search(r'\d+', self.comboBoxVisualize.currentText()).group()) - 1
-            self.datap = self.df_conc.iloc[:,val].get_values()
+            self.datap = self.df_conc.iloc[:,val].to_numpy()
 
 #            global component
             self.component = np.reshape(self.datap,(int(self.lineEditHeight.text()),
@@ -647,7 +647,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.plotMultiVisual.canvas.draw()
 
 #            global datas
-            self.datas = self.df_spec.iloc[:,val].get_values()
+            self.datas = self.df_spec.iloc[:,val].to_numpy()
             self.plot_specta.canvas.ax.clear()
             self.plot_specta.canvas.ax.plot(self.wavenumber, self.datas)
             self.plot_specta.canvas.fig.tight_layout()
