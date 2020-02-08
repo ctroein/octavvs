@@ -31,7 +31,7 @@ from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
 from .mcr import ftir_function as ff
 from .miccs import correction as mc
-from .miccs import exceptiondialog
+from .miccs import ExceptionDialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
 Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
@@ -118,7 +118,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.comboBoxCmaps.currentTextChanged.connect(self.roiDialog.setCmap)
         self.loadedFile.connect(self.roiDialog.resetAll)
 
-        exceptiondialog.install(self)
+        ExceptionDialog.install(self)
 
     def closeEvent(self, event):
         self.roiDialog.close()

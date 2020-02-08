@@ -25,7 +25,7 @@ from matplotlib import colors
 #from matplotlib.cm import ScalarMappable
 
 from .mcr import ftir_function as ff
-from .miccs import exceptiondialog
+from .miccs import ExceptionDialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
 
@@ -60,7 +60,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEditHeight.returnPressed.connect(self.ValidationX)
         self.lineEditWidth.returnPressed.connect(self.ValidationY)
 
-        exceptiondialog.install(self)
+        ExceptionDialog.install(self)
 
     def closeEvent(self, event):
         msgBox = QMessageBox()

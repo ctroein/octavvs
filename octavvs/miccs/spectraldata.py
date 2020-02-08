@@ -10,6 +10,7 @@ import os.path
 import numpy as np
 import scipy.signal, scipy.io
 
+from .opusreader import OpusReader
 
 class SpectralData:
     """
@@ -53,7 +54,7 @@ class SpectralData:
         """
         wh = None
         fext = os.path.splitext(filename)[1].lower()
-        opusformat = False
+#        opusformat = False
         if fext in ['.txt', '.csv', '.mat']:
             if fext == '.mat':
                 s = scipy.io.loadmat(filename)

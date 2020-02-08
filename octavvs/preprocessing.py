@@ -19,8 +19,7 @@ matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
-from .miccs import exceptiondialog
-from .miccs import SpectralData
+from .miccs import ExceptionDialog, SpectralData
 from .miccs import OctavvsMainWindow, NoRepeatStyle, run_octavvs_application
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
@@ -225,7 +224,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.updateWavenumberRange()
         self.bcMethod()
 
-        exceptiondialog.install(self)
+        ExceptionDialog.install(self)
 
         if files is not None and files != []:
             self.updateFileList(files, False) # Load files passed as arguments
@@ -460,12 +459,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     # Image visualization
     def loadWhite(self):
-        filename, _ = QFileDialog.getOpenFileName(
-                self, "Load white light image",
-                filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
-                directory=self.settings.value('whitelightDir', None),
-                options=MyMainWindow.fileOptions)
-        if filename != "":
+        filename = self.getImageFileName(
+                title="Load white light image",
+                directory=self.settings.value('whitelightDir', None))
+        if filename:
             self.plot_whitelight.load(filename)
             self.settings.setValue('whitelightDir', dirname(filename))
 
@@ -943,18 +940,19 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         return p
 
     def saveParameters(self):
-        filename = self.getSaveFile("Save preprocessing settings",
-                                    filter="Setting files (*.pjs);;All files (*)",
-                                    directory=self.settings.value('settingsDir', None),
-                                    suffix='pjs')
+        filename = self.getSaveFileName(
+                "Save preprocessing settings",
+                filter="Setting files (*.pjs);;All files (*)",
+                directory=self.settings.value('settingsDir', None),
+                suffix='pjs')
         if filename:
             try:
                 self.getParameters().save(filename)
                 self.settings.setValue('settingsDir', dirname(filename))
             except Exception as e:
                 self.showDetailedErrorMessage(
-                            "Error saving settings to "+filename+": "+repr(e),
-                            traceback.format_exc())
+                        "Error saving settings to "+filename+": "+repr(e),
+                        traceback.format_exc())
 
     def setParameters(self, p):
         self.spinBoxSpectra.setValue(0)

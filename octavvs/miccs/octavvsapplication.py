@@ -9,8 +9,8 @@ Created on Wed Jan 29 21:07:55 2020
 import sys
 import traceback
 
-from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QApplication, QFileDialog, QErrorMessage, QInputDialog, QDialog, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog
+from PyQt5.QtWidgets import QErrorMessage, QInputDialog, QDialog, QMessageBox
 from PyQt5.QtCore import Qt, QSettings
 
 
@@ -46,12 +46,23 @@ class OctavvsMainWindow(QMainWindow):
         q.setDetailedText(err[1])
         return q
 
-    def getSaveFile(self, title, filter, directory, suffix):
+    def getSaveFileName(self, title, filter, directory, suffix):
+        "Show a file dialog and select a single outout file"
         saveDialog = QFileDialog(parent=self, caption=title, directory=directory, filter=filter)
         saveDialog.setAcceptMode(QFileDialog.AcceptSave)
         saveDialog.setDefaultSuffix(suffix)
         saveDialog.exec()
         file = saveDialog.selectedFiles()
+        return file[0] if len(file) == 1 else None
+
+    def getImageFileName(self, title, directory):
+        "Show a file dialog and select a single image file"
+        dialog = QFileDialog(
+                parent=self, caption=title, directory=directory,
+                filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",)
+        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.exec()
+        file = dialog.selectedFiles()
         return file[0] if len(file) == 1 else None
 
 
