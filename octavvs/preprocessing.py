@@ -221,12 +221,6 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.dialogSCAdvanced.lineEditSCamax.setRange(1., 4.)
         self.dialogSCAdvanced.lineEditSCdmin.setRange(.1, 100.)
         self.dialogSCAdvanced.lineEditSCdmax.setRange(.1, 100.)
-#        self.dialogSCAdvanced.lineEditSCamin.editingFinished.connect(self.dialogSCAdvanced.lineEditSCamin.validate)
-#        self.dialogSCAdvanced.lineEditSCamax.editingFinished.connect(self.dialogSCAdvanced.lineEditSCamax.validate)
-#        self.dialogSCAdvanced.lineEditSCdmin.editingFinished.connect(self.dialogSCAdvanced.lineEditSCdmin.validate)
-#        self.dialogSCAdvanced.lineEditSCdmax.editingFinished.connect(self.dialogSCAdvanced.lineEditSCdmax.validate)
-#        self.dialogSCAdvanced.comboBoxSCAlgo.currentTextChanged.connect(
-#                lambda t: self.dialogSCAdvanced.checkBoxSCLinear.setChecked(t == 'Bassan'))
 
         self.updateWavenumberRange()
         self.bcMethod()
@@ -306,10 +300,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 return
             filenames.sort()
         else:
-            fileName, _ = QFileDialog.getOpenFileName(self, "Open hyperspectral image",
-                                                      filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3);;All files (*)",
-                                                      directory=self.settings.value('spectraDir', None),
-                                                      options=MyMainWindow.fileOptions)
+            fileName, _ = QFileDialog.getOpenFileName(
+                        self, "Open hyperspectral image",
+                        filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3);;All files (*)",
+                        directory=self.settings.value('spectraDir', None),
+                        options=MyMainWindow.fileOptions)
             if not fileName:
                 return
             filenames = [ fileName ]
