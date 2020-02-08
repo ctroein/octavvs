@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error as msea
 import scipy as sc
 import skimage
+from skimage.draw import polygon
 
 from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
@@ -516,7 +517,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
             self.roi = np.zeros((nx, ny))
             vertex_col_coords,vertex_row_coords = np.array(self.coord).T
-            fill_row_coords, fill_col_coords = skimage.draw.polygon(
+            fill_row_coords, fill_col_coords = polygon(
                     vertex_row_coords, vertex_col_coords, self.roi.shape)
             self.roi[fill_row_coords, fill_col_coords] = 1
             self.rem = self.roi * self.projection
@@ -801,7 +802,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         self.roi = np.zeros((nx, ny))
         vertex_row_coords, vertex_col_coords = np.array(self.coord).T
-        fill_row_coords, fill_col_coords = skimage.draw.polygon(
+        fill_row_coords, fill_col_coords = polygon(
                 vertex_row_coords, vertex_col_coords, self.roi.shape)
         self.roi[fill_row_coords, fill_col_coords] = 1
         self.rem = self.roi * self.projection
