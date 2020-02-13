@@ -18,180 +18,63 @@
     <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,1,0,1">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0,1,0,1">
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,2,0,2">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QComboBox" name="comboBoxSingMult">
-            <item>
-             <property name="text">
-              <string>Single file</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Directory</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Directory, recursive</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonLoad">
-            <property name="text">
-             <string>Load</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelDirectory">
-          <property name="text">
-           <string>Directory</string>
+         <widget class="FileLoaderWidget" name="fileLoader" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>1</height>
+           </size>
           </property>
          </widget>
         </item>
         <item>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="2" column="3">
-           <widget class="QLineEdit" name="lineEditSaveExt">
-            <property name="toolTip">
-             <string>Extension added before .mat in output files.</string>
-            </property>
-            <property name="text">
-             <string>_prep</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QLabel" name="label_13">
-            <property name="text">
-             <string>Save suffix</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Filter</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Filename</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1" colspan="3">
-           <widget class="QLineEdit" name="lineEditFilename">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEditKeyword">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Filter to determine what files are loaded from directories.&lt;/p&gt;&lt;p&gt;Can also be used to filter subdirectories in recursive mode, eg Slide*/*.mat&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>*.mat</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <layout class="QHBoxLayout" name="horizontalLayout_25" stretch=""/>
         </item>
         <item>
-         <layout class="QGridLayout" name="gridLayout_2" columnstretch="2,3,2,2,0,2,1">
-          <item row="4" column="6">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>pixels</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="5">
-           <widget class="QLineEdit" name="lineEditHeight"/>
-          </item>
-          <item row="4" column="4">
-           <widget class="QLabel" name="label_7">
-            <property name="text">
-             <string>x</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="4" colspan="3">
-           <widget class="QPushButton" name="pushButtonShowFiles">
-            <property name="text">
-             <string>Show/edit list</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="3">
-           <widget class="QLineEdit" name="lineEditWidth"/>
-          </item>
-          <item row="2" column="3">
-           <widget class="QLineEdit" name="lineEditTotal">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>Size:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QLabel" name="label_10">
-            <property name="text">
-             <string>of</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QLineEdit" name="lineEditLength">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QSpinBox" name="spinBoxFileNumber">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="keyboardTracking">
-             <bool>false</bool>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>1</number>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1,1,1,0,1,0">
+          <item>
            <widget class="QLabel" name="label_4">
             <property name="text">
              <string>Wavenums</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label">
+          <item>
+           <widget class="QLineEdit" name="lineEditLength">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_6">
             <property name="text">
-             <string>File</string>
+             <string>Size:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditWidth"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>x</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditHeight"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>pixels</string>
             </property>
            </widget>
           </item>
@@ -1088,7 +971,7 @@
          </layout>
         </item>
         <item>
-         <widget class="NormPlotWidget" name="plot_Norm" native="true"/>
+         <widget class="NormPlotWidget" name="plot_norm" native="true"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
@@ -1152,7 +1035,7 @@
   <customwidget>
    <class>WhiteLightWidget</class>
    <extends>QWidget</extends>
-   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <header location="global">octavvs/miccs/whitelightwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -1211,19 +1094,14 @@
     <slot>popOut()</slot>
    </slots>
   </customwidget>
+  <customwidget>
+   <class>FileLoaderWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/miccs/fileloader.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>comboBoxSingMult</tabstop>
-  <tabstop>pushButtonLoad</tabstop>
-  <tabstop>lineEditKeyword</tabstop>
-  <tabstop>lineEditSaveExt</tabstop>
-  <tabstop>lineEditFilename</tabstop>
-  <tabstop>spinBoxFileNumber</tabstop>
-  <tabstop>lineEditTotal</tabstop>
-  <tabstop>pushButtonShowFiles</tabstop>
-  <tabstop>lineEditLength</tabstop>
-  <tabstop>lineEditWidth</tabstop>
-  <tabstop>lineEditHeight</tabstop>
   <tabstop>comboBoxMethod</tabstop>
   <tabstop>lineEditWavenumber</tabstop>
   <tabstop>comboBoxCmaps</tabstop>

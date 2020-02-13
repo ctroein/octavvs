@@ -911,7 +911,7 @@
   <customwidget>
    <class>WhiteLightWidget</class>
    <extends>QWidget</extends>
-   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <header location="global">octavvs/miccs/whitelightwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

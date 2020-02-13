@@ -411,7 +411,7 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
                     rho = d[k] * (n - 1.) * wn
                     #  Compute the extinction coefficients for each combination of a, b and d:
                     Q[n_row] = 2. - 4. / rho * np.sin(rho) + \
-                               4. / rho * rho * (1. - np.cos(rho))
+                               4. / (rho * rho) * (1. - np.cos(rho))
                     n_row += 1
 
     n_nonpca = 3 if linearcomponent else 2

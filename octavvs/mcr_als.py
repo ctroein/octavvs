@@ -25,12 +25,13 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error as msea
 import scipy as sc
 import skimage
+from skimage.draw import polygon
 
 from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
 from .mcr import ftir_function as ff
 from .miccs import correction as mc
-from .miccs import exceptiondialog
+from .miccs import ExceptionDialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
 Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
@@ -117,7 +118,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.comboBoxCmaps.currentTextChanged.connect(self.roiDialog.setCmap)
         self.loadedFile.connect(self.roiDialog.resetAll)
 
-        exceptiondialog.install(self)
+        ExceptionDialog.install(self)
 
     def closeEvent(self, event):
         self.roiDialog.close()
@@ -514,9 +515,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         else:
             nx, ny = int(self.lineEditWidth.text()),int(self.lineEditHeight.text())
 
-            self.roi = np.zeros((nx, ny))
-            vertex_row_coords, vertex_col_coords = np.array(self.coord).T
-            fill_row_coords, fill_col_coords = skimage.draw.polygon(
+            self.roi = np.zeros((ny, nx))
+            vertex_col_coords,vertex_row_coords = np.array(self.coord).T
+            fill_row_coords, fill_col_coords = polygon(
                     vertex_row_coords, vertex_col_coords, self.roi.shape)
             self.roi[fill_row_coords, fill_col_coords] = 1
             self.rem = self.roi * self.projection
@@ -794,14 +795,14 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     def runsingle_roi(self):
         self.comboBoxInitial.setCurrentIndex(0)
-        nx, ny = int(self.lineEditHeight.text()),int(self.lineEditWidth.text())
+        nx, ny = int(self.lineEditWidth.text()),int(self.lineEditHeight.text())
 #        mask = np.ones((nx,ny))
         max_iter = int(self.lineEditPurIter.text())
         tol_error = float(self.lineEditTol.text())
 
-        self.roi = np.zeros((nx, ny))
-        vertex_row_coords, vertex_col_coords = np.array(self.coord).T
-        fill_row_coords, fill_col_coords = skimage.draw.polygon(
+        self.roi = np.zeros((ny, nx))
+        vertex_col_coords, vertex_row_coords = np.array(self.coord).T
+        fill_row_coords, fill_col_coords = polygon(
                 vertex_row_coords, vertex_col_coords, self.roi.shape)
         self.roi[fill_row_coords, fill_col_coords] = 1
         self.rem = self.roi * self.projection
@@ -847,13 +848,10 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 #            self.pos = np.array([points % self.projection.shape[0], points // self.projection.shape[1]]).T
             self.pos = np.zeros((nr,2))
 
-            for i in range(0,nr):
-                self.pos[i,1] = int(self.ind[points[i]]/int(self.lineEditWidth.text()))
-                self.pos[i,0] = np.mod(self.ind[points[i]],int(self.lineEditHeight.text()))
-
-#            xs, ys = zip(*self.boundary)
-
-            self.plot_visual.addPoints(self.pos)
+            for i in range(0,self.nr):
+                self.pos[i,0] = self.ind[points[i]] % nx
+                self.pos[i,1] = self.ind[points[i]] // nx
+                self.plot_visual.addPoints(self.pos)
 #            self.plot_visual.canvas.ax.plot(self.pos[i,0],self.pos[i,1],marker='p', color = 'black')
 #            self.plot_visual.canvas.draw_idle()
 

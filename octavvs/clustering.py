@@ -25,7 +25,7 @@ from matplotlib import colors
 #from matplotlib.cm import ScalarMappable
 
 from .mcr import ftir_function as ff
-from .miccs import exceptiondialog
+from .miccs import ExceptionDialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
 
@@ -60,7 +60,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEditHeight.returnPressed.connect(self.ValidationX)
         self.lineEditWidth.returnPressed.connect(self.ValidationY)
 
-        exceptiondialog.install(self)
+        ExceptionDialog.install(self)
 
     def closeEvent(self, event):
         msgBox = QMessageBox()
@@ -636,7 +636,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         if 'component_' in self.comboBoxVisualize.currentText():
             import re
             val = int(re.search(r'\d+', self.comboBoxVisualize.currentText()).group()) - 1
-            self.datap = self.df_conc.iloc[:,val].get_values()
+            self.datap = self.df_conc.iloc[:,val].to_numpy()
 
 #            global component
             self.component = np.reshape(self.datap,(int(self.lineEditHeight.text()),
@@ -647,7 +647,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.plotMultiVisual.canvas.draw()
 
 #            global datas
-            self.datas = self.df_spec.iloc[:,val].get_values()
+            self.datas = self.df_spec.iloc[:,val].to_numpy()
             self.plot_specta.canvas.ax.clear()
             self.plot_specta.canvas.ax.plot(self.wavenumber, self.datas)
             self.plot_specta.canvas.fig.tight_layout()
@@ -967,23 +967,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.comboBoxCmaps.setCurrentIndex(0)
         self.horizontalSliderWavenumber.setSliderPosition(0)
         self.lineEditWavenumber.setText('')
-        self.comboBoxC1.setCurrentIndex(0)
-        self.comboBoxC2.setCurrentIndex(0)
-        self.comboBoxC3.setCurrentIndex(0)
-        self.comboBoxC4.setCurrentIndex(0)
-        self.comboBoxC5.setCurrentIndex(0)
-        self.comboBoxC6.setCurrentIndex(0)
-        self.comboBoxC7.setCurrentIndex(0)
-        self.comboBoxC8.setCurrentIndex(0)
-        self.comboBoxColorBig.setCurrentIndex(0)
-        self.lineEditA1.setText('')
-        self.lineEditA2.setText('')
-        self.lineEditA3.setText('')
-        self.lineEditA4.setText('')
-        self.lineEditA5.setText('')
-        self.lineEditA6.setText('')
-        self.lineEditA7.setText('')
-        self.lineEditA8.setText('')
+        self.Refresh()
         self.comboBoxMethodCluster.setCurrentIndex(0)
         self.spinBoxNcluster.setValue(8)
         self.lineEditAnotClus.setText('')
@@ -1027,13 +1011,13 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
     def Refresh(self):
         self.comboBoxC1.setCurrentIndex(0)
-        self.comboBoxC2.setCurrentIndex(0)
-        self.comboBoxC3.setCurrentIndex(0)
-        self.comboBoxC4.setCurrentIndex(0)
-        self.comboBoxC5.setCurrentIndex(0)
-        self.comboBoxC6.setCurrentIndex(0)
-        self.comboBoxC7.setCurrentIndex(0)
-        self.comboBoxC8.setCurrentIndex(0)
+        self.comboBoxC2.setCurrentIndex(1)
+        self.comboBoxC3.setCurrentIndex(2)
+        self.comboBoxC4.setCurrentIndex(3)
+        self.comboBoxC5.setCurrentIndex(4)
+        self.comboBoxC6.setCurrentIndex(5)
+        self.comboBoxC7.setCurrentIndex(6)
+        self.comboBoxC8.setCurrentIndex(7)
 
         self.lineEditA1.setText("")
         self.lineEditA2.setText("")

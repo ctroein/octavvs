@@ -10,6 +10,7 @@ import os.path
 import numpy as np
 import scipy.signal, scipy.io
 
+from .opusreader import OpusReader
 
 class SpectralData:
     """
@@ -52,8 +53,9 @@ class SpectralData:
         only if the file is successfully loaded.
         """
         wh = None
+        image = None
         fext = os.path.splitext(filename)[1].lower()
-        opusformat = False
+#        opusformat = False
         if fext in ['.txt', '.csv', '.mat']:
             if fext == '.mat':
                 s = scipy.io.loadmat(filename)
@@ -69,33 +71,33 @@ class SpectralData:
             d = -1 if ss[0,0] < ss[-1,0] else 1
             raw = ss[::d,1:].T
             wn = ss[::d,0]
-            if (np.diff(wn) >= 0).any():
-                raise RuntimeError('wavenumbers must be sorted')
-            npix = ss.shape[1] - 1
-            if wh is not None:
-                if len(wh) != 2:
-                    raise RuntimeError('Image size in "wh" must have length 2')
-                wh = (int(wh[0]), int(wh[1]))
-                if wh[0] * wh[1] != npix:
-                    raise RuntimeError('Image size in "wh" does not match data size')
-                self.wh = wh
-            elif npix != self.wh[0] * self.wh[1]:
-                res = int(np.sqrt(npix))
-                if npix == res * res:
-                    self.wh = (res, res)
-                else:
-                    self.wh = (npix, 1)
-            self.raw = raw
-            self.wavenumber = wn
-            self.image = None
-
         else:
             reader = OpusReader(filename)
-            self.raw = reader.AB
-            self.wavenumber = reader.wavenum
-            self.wh = reader.wh
-            self.image = reader.image
+            raw = reader.AB
+            wn = reader.wavenum
+            wh = reader.wh
+            image = reader.image
 
+        if (np.diff(wn) >= 0).any():
+            raise RuntimeError('wavenumbers must be sorted')
+        npix = raw.shape[0]
+        if wh is not None:
+            if len(wh) != 2:
+                raise RuntimeError('Image size in "wh" must have length 2')
+            wh = (int(wh[0]), int(wh[1]))
+            if wh[0] * wh[1] != npix:
+                raise RuntimeError('Image size in "wh" does not match data size')
+            self.wh = wh
+        elif npix != self.wh[0] * self.wh[1]:
+            res = int(np.sqrt(npix))
+            if npix == res * res:
+                self.wh = (res, res)
+            else:
+                self.wh = (npix, 1)
+        self.raw = raw
+        self.wavenumber = wn
         self.wmin = self.wavenumber.min()
         self.wmax = self.wavenumber.max()
+        self.image = image
         self.curFile = filename
+

@@ -1,5 +1,4 @@
 import os
-import fnmatch
 import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
@@ -19,8 +18,7 @@ matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
-from .miccs import exceptiondialog
-from .miccs import SpectralData
+from .miccs import SpectralData, FileLoader
 from .miccs import OctavvsMainWindow, NoRepeatStyle, run_octavvs_application
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
@@ -28,11 +26,11 @@ Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(__name__, "prep/scadvance
 
 
 class DialogSCAdvanced(QDialog, Ui_DialogSCAdvanced):
-    def __init__(self,parent=None):
+    def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
+class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
 
     closing = pyqtSignal()
     startRmiesc = pyqtSignal(SpectralData, dict)
@@ -44,15 +42,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     bcPRange = np.array([-5, 0])
 
     def __init__(self, parent=None, files=None):
-        super().__init__('Preprocessing', parent)
-        qApp.installEventFilter(self)
-        self.setupUi(self)
+        super().__init__(parent)
 
         self.data = SpectralData()
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch
 
         # Avoid repeating spinboxes
-        self.spinBoxFileNumber.setStyle(NoRepeatStyle())
         self.spinBoxItersBC.setStyle(NoRepeatStyle())
         self.spinBoxNclusScat.setStyle(NoRepeatStyle())
         self.spinBoxNIteration.setStyle(NoRepeatStyle())
@@ -60,12 +55,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.spinBoxSpectra.setStyle(NoRepeatStyle())
         self.spinBoxWindowLength.setStyle(NoRepeatStyle())
 
-        self.errorMsg = QErrorMessage(self)
-        self.errorMsg.setWindowModality(Qt.WindowModal)
+        self.fileLoader.setSuffix('_prep')
 
-        self.pushButtonLoad.clicked.connect(self.loadFolder)
-        self.spinBoxFileNumber.valueChanged.connect(self.selectFile)
-        self.pushButtonShowFiles.clicked.connect(self.showFileList)
         self.pushButtonWhitelight.clicked.connect(self.loadWhite)
 
         self.comboBoxMethod.currentIndexChanged.connect(self.imageProjection)
@@ -156,7 +147,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.bcPEdit()
 
         self.plot_BC.updated.connect(self.updateNorm)
-        self.plot_Norm.clicked.connect(self.plot_Norm.popOut)
+        self.plot_norm.clicked.connect(self.plot_norm.popOut)
         self.comboBoxNormMethod.currentIndexChanged.connect(self.updateNorm)
         self.lineEditNormWavenum.editingFinished.connect(self.updateNorm)
 
@@ -166,8 +157,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.pushButtonRun.clicked.connect(self.runBatch)
 
         # Defaults when no data loaded
-        self.wmin = 800
-        self.wmax = 4000
+        self.default_wmin = 800
+        self.default_wmax = 4000
         self.scSettings = {}
 
         self.worker = PrepWorker()
@@ -221,18 +212,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.dialogSCAdvanced.lineEditSCamax.setRange(1., 4.)
         self.dialogSCAdvanced.lineEditSCdmin.setRange(.1, 100.)
         self.dialogSCAdvanced.lineEditSCdmax.setRange(.1, 100.)
-#        self.dialogSCAdvanced.lineEditSCamin.editingFinished.connect(self.dialogSCAdvanced.lineEditSCamin.validate)
-#        self.dialogSCAdvanced.lineEditSCamax.editingFinished.connect(self.dialogSCAdvanced.lineEditSCamax.validate)
-#        self.dialogSCAdvanced.lineEditSCdmin.editingFinished.connect(self.dialogSCAdvanced.lineEditSCdmin.validate)
-#        self.dialogSCAdvanced.lineEditSCdmax.editingFinished.connect(self.dialogSCAdvanced.lineEditSCdmax.validate)
-#        self.dialogSCAdvanced.comboBoxSCAlgo.currentTextChanged.connect(
-#                lambda t: self.dialogSCAdvanced.checkBoxSCLinear.setChecked(t == 'Bassan'))
 
         self.updateWavenumberRange()
         self.bcMethod()
 
-        exceptiondialog.install(self)
-
+        self.post_setup()
         if files is not None and files != []:
             self.updateFileList(files, False) # Load files passed as arguments
 
@@ -258,8 +242,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.labelMinwn.setText("%.2f" % self.data.wmin)
         self.labelMaxwn.setText("%.2f" % self.data.wmax)
-        wmin = min(self.data.wmin, self.wmin)
-        wmax = max(self.data.wmax, self.wmax)
+        wmin = min(self.data.wmin, self.default_wmin)
+        wmax = max(self.data.wmax, self.default_wmax)
         self.lineEditWavenumber.setRange(wmin, wmax, default=.5*(wmin+wmax))
         self.lineEditMinwn.setRange(wmin, wmax, default=wmin)
         self.lineEditMaxwn.setRange(wmin, wmax, default=wmax)
@@ -270,155 +254,15 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.srMinEdit()
         self.srMaxEdit()
 
-    def loadFolder(self):
+
+    def loadFolder(self, *argv, **kwargs):
         assert self.rmiescRunning == 0
-        if self.comboBoxSingMult.currentIndex():
-            recurse = self.comboBoxSingMult.currentIndex() == 2
-
-            foldername = QFileDialog.getExistingDirectory(
-                    self, "Load spectra from directory",
-                    directory=self.settings.value('spectraDir', None),
-                    options=MyMainWindow.fileOptions)
-            if not foldername:
-                return
-            self.settings.setValue('spectraDir', foldername)
-
-            filenames = []
-            pattern = self.lineEditKeyword.text()
-            for root, dirs, files in os.walk(foldername):
-                self.labelDirectory.setText(root)
-                if '/' in pattern:
-                    files = [ os.path.join(root, f) for f in files ]
-                    files = fnmatch.filter(files, pattern)
-                    filenames += files
-                else:
-                    files = fnmatch.filter(files, pattern)
-                    filenames += [ os.path.join(root, f) for f in files ]
-#                self.lineEditTotal.setText(str(len(filenames)))
-                if not recurse:
-                    break;
-#            self.lineEditTotal.setText('' if self.data.filenames is None else
-#                                       str(len(self.data.filenames)))
-            if not filenames:
-                self.updateFileCount()
-                self.errorMsg.showMessage('No matching files found in directory "' +
-                                          foldername + '"')
-                return
-            filenames.sort()
-        else:
-            fileName, _ = QFileDialog.getOpenFileName(self, "Open hyperspectral image",
-                                                      filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3);;All files (*)",
-                                                      directory=self.settings.value('spectraDir', None),
-                                                      options=MyMainWindow.fileOptions)
-            if not fileName:
-                return
-            filenames = [ fileName ]
-            foldername = dirname(fileName)
-            self.settings.setValue('spectraDir', foldername)
-
-        if self.updateFileList(filenames, False):
-            self.data.foldername = foldername
-            self.labelDirectory.setText(foldername)
-            self.settings.setValue('whitelightDir', foldername)
-
-    # Helper function for updateFileList
-    def updateFileListInfo(self, filenames):
-        self.data.filenames = filenames
-        self.lineEditTotal.setText(str(len(filenames)))
-        self.spinBoxFileNumber.setMaximum(len(filenames))
-        self.spinBoxFileNumber.setEnabled(True)
-
-    def loadFile(self, file):
-        "Load a file or return (error message, traceback) from trying"
-        try:
-            self.data.readMatrix(file)
-            return
-        except (RuntimeError, FileNotFoundError) as e:
-            return (str(e), None)
-        except Exception as e:
-            return (repr(e), traceback.format_exc())
-
-    def updateFileList(self, filenames, avoidreload):
-        """
-        Updates the list of files and loads a file if possible
-        Parameters:
-            filenames: list of files from dialog/user
-            avoidreload: if possible, select the current file in the list without reload
-        Returns:
-            True if a file was loaded, False if the user cancelled
-        """
-        if avoidreload:
-            # Is the current file already in our list?
-            try:
-                ix = filenames.index(self.data.curFile)
-            except ValueError:
-                pass
-            else:
-                self.updateFileListInfo(filenames)
-                self.spinBoxFileNumber.setValue(ix+1)
-                return
-
-        skipall = False
-        while len(filenames):
-            err = self.loadFile(filenames[0])
-            if err is None:
-                self.updateFileListInfo(filenames)
-                self.updateFile(0)
-                return True
-
-            if not skipall:
-                q = self.loadErrorBox(filenames[0], err)
-                q.addButton('Abort', QMessageBox.RejectRole)
-                if len(filenames) > 1:
-                    q.addButton('Skip file', QMessageBox.AcceptRole)
-                    q.addButton('Skip all with errors', QMessageBox.AcceptRole)
-                ret = q.exec()
-                if ret == 0:
-                    break
-                elif ret == 2:
-                    skipall = True
-            filenames = filenames[1:]
-        return False
-
-    def showFileList(self):
-        s, ok = QInputDialog.getMultiLineText(self, 'Input files',
-                                            'Editable list of input files',
-                                            '\n'.join(self.data.filenames))
-        if ok:
-            fn = s.splitlines()
-            if fn:
-                self.updateFileList(fn, True)
-
-    def selectFile(self):
-        skipall = False
-        while True:
-            num = self.spinBoxFileNumber.value() - 1
-            if (num < 0 or num >= len(self.data.filenames) or
-                self.data.filenames[num] == self.data.curFile):
-                return
-            assert self.rmiescRunning == 0
-            err = self.loadFile(self.data.filenames[num])
-            if not err:
-                self.updateFile(num)
-                break
-            elif not skipall:
-                q = self.loadErrorBox(self.data.filenames[num], err)
-                q.addButton('Skip file', QMessageBox.AcceptRole)
-                q.addButton('Skip all with errors', QMessageBox.AcceptRole)
-                ret = q.exec()
-                if ret:
-                    skipall = True
-
-            del self.data.filenames[num]
-            self.updateFileListInfo(self.data.filenames)
+        super().loadFolder(*argv, **kwargs)
 
     @pyqtSlot(int)
     def updateFile(self, num):
-        file = self.data.filenames[num]
-        self.data.curFile = file
-        self.spinBoxFileNumber.setValue(num+1)
-        self.labelDirectory.setText(dirname(file))
-        self.lineEditFilename.setText(basename(file))
+        super().updateFile(num)
+
         self.lineEditWidth.setText(str(self.data.wh[0]))
         self.lineEditHeight.setText(str(self.data.wh[1]))
 
@@ -439,7 +283,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         if self.data.image is not None:
             self.plot_whitelight.load(BytesIO(self.data.image[0]), self.data.image[1])
         else:
-            self.plot_whitelight.load(os.path.splitext(file)[0]+'.jpg')
+            self.plot_whitelight.load(os.path.splitext(self.data.curFile)[0]+'.jpg')
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
@@ -465,14 +309,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     # Image visualization
     def loadWhite(self):
-        filename, _ = QFileDialog.getOpenFileName(
-                self, "Load white light image",
-                filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
-                directory=self.settings.value('whitelightDir', None),
-                options=MyMainWindow.fileOptions)
-        if filename != "":
+        filename = self.getImageFileName(title="Load white light image",
+                                         settingname='whitelightDir')
+        if filename:
             self.plot_whitelight.load(filename)
-            self.settings.setValue('whitelightDir', dirname(filename))
 
     def imageProjection(self):
         meth = self.comboBoxMethod.currentIndex()
@@ -481,36 +321,15 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.horizontalSliderWavenumber.setEnabled(iswn)
         self.plot_visual.setProjection(meth, -1-self.horizontalSliderWavenumber.value())
 
-    def sliderToBox(self, slider, box, ixfinder):
-        wn = self.plot_visual.getWavenumbers()
-        if wn is not None:
-            if (not box.hasAcceptableInput() or
-                    slider.value() != ixfinder(wn, box.value())):
-                box.setValue(wn[-1-slider.value()])
-        elif (not box.hasAcceptableInput() or
-                slider.value() != int(round(slider.maximum() *
-                (box.value() - self.wmin) / (self.wmax - self.wmin)))):
-            box.setValue(self.wmin + (self.wmax - self.wmin) *
-                         slider.value() / slider.maximum())
-
-    def boxToSlider(self, slider, box, ixfinder):
-        wn = self.plot_visual.getWavenumbers()
-        if wn is not None:
-            if box.hasAcceptableInput():
-                slider.setValue(ixfinder(wn, box.value()))
-            else:
-                box.setValue(wn[-1-slider.value()])
-        else:
-            slider.setValue(int(round(slider.maximum() *
-                  (box.value() - self.wmin) / (self.wmax - self.wmin))))
-
     def wavenumberSlide(self):
         self.sliderToBox(self.horizontalSliderWavenumber, self.lineEditWavenumber,
+                         lambda: self.plot_visual.getWavenumbers(),
                          lambda wn, val: len(wn)-1 - (np.abs(wn - val)).argmin())
         self.plot_visual.setProjection(2, -1-self.horizontalSliderWavenumber.value())
 
     def wavenumberEdit(self):
         self.boxToSlider(self.horizontalSliderWavenumber, self.lineEditWavenumber,
+                         lambda: self.plot_visual.getWavenumbers(),
                          lambda wn, val: len(wn)-1 - (np.abs(wn - val)).argmin())
 
     # Selection of spectra
@@ -525,8 +344,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     # AC, Atmospheric correction
     def loadACReference(self):
-        startdir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),
-                                                 'miccs', 'reference'))
+        startdir = os.path.realpath(os.path.join(
+                os.getcwd(), os.path.dirname(__file__), 'miccs', 'reference'))
         ref, _ = QFileDialog.getOpenFileName(self, "Load atmospheric reference spectrum",
                                              directory=self.settings.value('atmRefDir', startdir),
                                              filter="Matrix file (*.mat)",
@@ -651,9 +470,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def toggleRunning(self, newstate):
         onoff = not newstate
-        self.pushButtonLoad.setEnabled(onoff)
-        self.spinBoxFileNumber.setEnabled(onoff)
-        self.pushButtonShowFiles.setEnabled(onoff)
+        self.fileLoader.setEnabled(onoff)
         self.pushButtonRun.setEnabled(onoff)
         self.pushButtonSCRefresh.setEnabled(onoff)
         if newstate:
@@ -752,20 +569,24 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def srMinSlide(self):
         self.sliderToBox(self.horizontalSliderMin, self.lineEditMinwn,
+                         lambda: self.plot_SGF.getWavenumbers(),
                          lambda wn, val: wn[::-1].searchsorted(val, 'left'))
         self.updateSR()
 
     def srMinEdit(self):
         self.boxToSlider(self.horizontalSliderMin, self.lineEditMinwn,
+                         lambda: self.plot_SGF.getWavenumbers(),
                          lambda wn, val: wn[::-1].searchsorted(val, 'left'))
 
     def srMaxSlide(self):
         self.sliderToBox(self.horizontalSliderMax, self.lineEditMaxwn,
+                         lambda: self.plot_SGF.getWavenumbers(),
                          lambda wn, val: wn[::-1].searchsorted(val, 'right')-1)
         self.updateSR()
 
     def srMaxEdit(self):
         self.boxToSlider(self.horizontalSliderMax, self.lineEditMaxwn,
+                         lambda: self.plot_SGF.getWavenumbers(),
                          lambda wn, val: wn[::-1].searchsorted(val, 'right')-1)
 
     def bcName(self):
@@ -880,28 +701,28 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         wn = self.plot_BC.getWavenumbers()
         indata = self.plot_BC.getSpectra()
         if indata is None or len(indata) == 0:
-            self.plot_Norm.setData(wn, indata, indata)
+            self.plot_norm.setData(wn, indata, indata)
             return
         if not self.lineEditNormWavenum.hasAcceptableInput():
             self.lineEditNormWavenum.setValue()
         if meth == 'none':
-            self.plot_Norm.setData(wn, indata, indata)
+            self.plot_norm.setData(wn, indata, indata)
         elif meth == 'mean':
-            self.plot_Norm.setData(wn, indata, (indata.T / indata.mean(axis=1)).T)
+            self.plot_norm.setData(wn, indata, (indata.T / indata.mean(axis=1)).T)
         elif meth == 'area':
-            self.plot_Norm.setData(wn, indata, (indata.T / -np.trapz(indata, wn, axis=1)).T)
+            self.plot_norm.setData(wn, indata, (indata.T / -np.trapz(indata, wn, axis=1)).T)
         elif meth == 'wn':
             idx = (np.abs(wn-self.lineEditNormWavenum.value())).argmin()
-            self.plot_Norm.setData(wn, indata, (indata.T / indata[:, idx]).T)
+            self.plot_norm.setData(wn, indata, (indata.T / indata[:, idx]).T)
         elif meth == 'max':
-            self.plot_Norm.setData(wn, indata, (indata.T / indata.max(axis=1)).T)
+            self.plot_norm.setData(wn, indata, (indata.T / indata.max(axis=1)).T)
 
 
     # Loading and saving parameters
     def getParameters(self):
         p = PrepParameters()
-        p.fileFilter = self.lineEditKeyword.text()
-        p.saveExt = self.lineEditSaveExt.text()
+        self.fileLoader.saveParameters(p)
+
         p.plotMethod = self.comboBoxMethod.currentIndex()
         p.plotColors = self.comboBoxCmaps.currentText()
         p.plotWavenum = self.lineEditWavenumber.value()
@@ -948,23 +769,22 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         return p
 
     def saveParameters(self):
-        filename = self.getSaveFile("Save preprocessing settings",
-                                    filter="Setting files (*.pjs);;All files (*)",
-                                    directory=self.settings.value('settingsDir', None),
-                                    suffix='pjs')
+        filename = self.getSaveFileName(
+                "Save preprocessing settings",
+                filter="Setting files (*.pjs);;All files (*)",
+                settingname='settingsDir',
+                suffix='pjs')
         if filename:
             try:
                 self.getParameters().save(filename)
-                self.settings.setValue('settingsDir', dirname(filename))
             except Exception as e:
                 self.showDetailedErrorMessage(
-                            "Error saving settings to "+filename+": "+repr(e),
-                            traceback.format_exc())
+                        "Error saving settings to "+filename+": "+repr(e),
+                        traceback.format_exc())
 
     def setParameters(self, p):
         self.spinBoxSpectra.setValue(0)
-        self.lineEditKeyword.setText(p.fileFilter)
-        self.lineEditSaveExt.setText(p.saveExt)
+        self.fileLoader.loadParameters(p)
         self.comboBoxMethod.setCurrentIndex(p.plotMethod)
         self.comboBoxCmaps.setCurrentText(p.plotColors)
         self.lineEditWavenumber.setValue(p.plotWavenum)
@@ -1016,13 +836,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.spinBoxSpectra.setValue(p.spectraCount)
 
     def loadParameters(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Load preprocessing settings",
-                                                  filter="Settings files (*.pjs);;All files (*)",
-                                                  directory=self.settings.value('settingsDir', None),
-                                                  options=MyMainWindow.fileOptions)
+        filename = self.getLoadFileName("Load preprocessing settings",
+                                        filter="Settings files (*.pjs);;All files (*)",
+                                        settingname='settingsDir')
         if filename:
             p = PrepParameters()
-            self.settings.setValue('settingsDir', dirname(filename)),
             try:
                 p.load(filename)
                 self.setParameters(p)
@@ -1038,28 +856,33 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             return
         params = self.getParameters()
 
-        foldername = QFileDialog.getExistingDirectory(self, "Select save directory",
-                                                      directory=self.settings.value('spectraDir', None),
-                                                      options=MyMainWindow.fileOptions)
+        foldername = self.getDirectoryName("Select save directory",
+                                           settingname='spectraDir',
+                                           savesetting=False)
         if not foldername:
             return
         preservepath = False
-        if self.labelDirectory.text() == foldername:
+
+        print('foldername', foldername)
+        all_paths = { os.path.dirname(f) for f in self.data.filenames }
+        folder_within_input = any(p.startswith(foldername) for p in all_paths)
+
+        if folder_within_input:
             if params.saveExt == '':
-                self.errorMsg.showMessage('A save filename extension must be specified '+
-                                          'when saving files in the same directory')
+                self.errorMsg.showMessage('A filename save suffix must be specified '+
+                                          'when loading and saving files in the same directory')
                 return
-            elif self.spinBoxFileNumber.maximum() > 1:
+            elif len(self.data.filenames) > 1:
                 yn = QMessageBox.question(self, 'Identical directory',
                                           'Are you sure you want to '+
                                           'save output files in the input directory')
                 if yn != QMessageBox.Yes:
                     return
             preservepath = True
-        elif len({os.path.dirname(f) for f in self.data.filenames}) > 1:
+        elif len(all_paths) > 1:
             yn = QMessageBox.question(self, 'Multiple directories',
                       'Input files are in multiple directories. Should this directory structure '+
-                      'be preserved in the output directoy?')
+                      'be replicated in the output directory?')
             preservepath = yn == QMessageBox.Yes
 
         self.toggleRunning(2)
@@ -1086,9 +909,7 @@ def main():
             description='Graphical application for preprocessing of hyperspectral data.')
     parser.add_argument('files', metavar='file', type=str, nargs='*',
                         help='initial hyperspectral images to load')
-    args = parser.parse_args()
-    run_octavvs_application(MyMainWindow, files=args.files)
+    run_octavvs_application('Preprocessing', windowclass=MyMainWindow,
+                            parser=parser, parameters=['files'])
 
-if __name__ == '__main__':
-    main()
 

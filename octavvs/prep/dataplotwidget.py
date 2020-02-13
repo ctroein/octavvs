@@ -6,31 +6,7 @@ import matplotlib.pyplot as plt
 #import matplotlib.patches as patches
 import numpy as np
 #import random
-from ..miccs import copyfigure
 
-class WhiteLightWidget(FigureCanvas):
-    def __init__(self, parent=None):
-        self.fig = Figure()
-        self.ax = self.fig.add_subplot(111)
-        self.ax.set_axis_off()
-        self.ax.set_position([0,0,1,1])
-        FigureCanvas.__init__(self, self.fig)
-        self.setParent(parent)
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
-        self.img = None
-
-    def load(self, filename, format=None):
-        self.ax.clear()
-        self.ax.set_axis_off()
-        self.img = None
-        if filename is not None:
-            try:
-                self.img = plt.imread(filename, format=format)
-                self.ax.imshow(self.img)
-            except FileNotFoundError:
-                pass
-        self.draw_idle()
 
 
 class DataPlotWidget(FigureCanvas):
@@ -102,6 +78,8 @@ class RawPlotWidget(DataPlotWidget):
         for i in self.spectra:
             ax.plot(self.wavenumber, i, linewidth=1)
 
+class NormPlotWidget(RawPlotWidget):
+    pass
 
 class ACPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
@@ -248,12 +226,4 @@ class BCPlotWidget(DataPlotWidget):
 #            ax.plot(self.wavenumber, self.inspectra[s] - self.spectra[s],
 #                    color='gray', linewidth=1, label='Corrected' if not s else None)
             ax.legend()
-
-class NormPlotWidget(DataPlotWidget):
-    def __init__(self, parent=None):
-        DataPlotWidget.__init__(self, parent=None)
-
-    def draw_ax(self, ax):
-        for s in range(len(self.spectra)):
-            ax.plot(self.wavenumber, self.spectra[s], linewidth=1)
 

@@ -23,8 +23,8 @@ class PrepParameters:
     loading a file where some values are missing.
     """
     def __init__(self):
-        self.fileFilter = ''
-        self.saveExt = ''
+        self.fileFilter = '*.mat'
+        self.saveExt = '_prep'
         self.plotMethod = 0
         self.plotColors = ''
         self.plotWavenum = 0
@@ -158,23 +158,24 @@ class PrepWorker(QObject):
             clust = params.scClusters * (-1 if params.scStable else 1) if params.scClustering else 0
             algos = {'Konevskikh': True, 'Bassan': False}
 #            print(params.scAmin, params.scAmax, params.scResolution)
-            y = correction.rmiesc(wn, y, ref,
-                                     iterations=params.scIters,
-                                     clusters=clust,
-                                     n_components=params.scPCAMax if params.scPCADynamic else params.scPCA,
-                                     pcavariancelimit=params.scPCAVariance*.01 if params.scPCADynamic else 0,
-                                     a=np.linspace(params.scAmin, params.scAmax, params.scResolution),
-                                     d=np.linspace(params.scDmin, params.scDmax, params.scResolution),
-                                     bvals=params.scResolution,
-                                     konevskikh=algos[params.scAlgorithm],
-                                     linearcomponent=params.scLinear,
-                                     weighted=False,
-                                     autoiterations=params.scAutoIters,
-                                     targetrelresiduals=1-params.scMinImprov*.01,
-                                     progressCallback=self.emitProgress,
-                                     progressPlotCallback=self.progressPlot.emit,
-                                     verbose=True,
-                                     renormalize=params.scRenormalize)
+            y = correction.rmiesc(
+                    wn, y, ref,
+                    iterations=params.scIters,
+                    clusters=clust,
+                    n_components=params.scPCAMax if params.scPCADynamic else params.scPCA,
+                    pcavariancelimit=params.scPCAVariance*.01 if params.scPCADynamic else 0,
+                    a=np.linspace(params.scAmin, params.scAmax, params.scResolution),
+                    d=np.linspace(params.scDmin, params.scDmax, params.scResolution),
+                    bvals=params.scResolution,
+                    konevskikh=algos[params.scAlgorithm],
+                    linearcomponent=params.scLinear,
+                    weighted=False,
+                    autoiterations=params.scAutoIters,
+                    targetrelresiduals=1-params.scMinImprov*.01,
+                    progressCallback=self.emitProgress,
+                    progressPlotCallback=self.progressPlot.emit,
+                    verbose=True,
+                    renormalize=params.scRenormalize)
             self.done.emit(wn, yold, y)
         return y
 
@@ -240,9 +241,11 @@ class PrepWorker(QObject):
                     if params.bcMethod == 'rubberband':
                         y -= baseline.rubberband(wn, y, progressCallback=self.emitProgress)
                     elif params.bcMethod == 'concaverubberband':
-                        y -= baseline.concaverubberband(wn, y, iters=params.bcIters, progressCallback=self.emitProgress)
+                        y -= baseline.concaverubberband(
+                                wn, y, iters=params.bcIters, progressCallback=self.emitProgress)
                     elif params.bcMethod == 'asls':
-                        y -= baseline.asls(y, lam=params.bcLambda, p=params.bcP, progressCallback=self.emitProgress)
+                        y -= baseline.asls(y, lam=params.bcLambda,
+                                           p=params.bcP, progressCallback=self.emitProgress)
                     elif params.bcMethod == 'arpls':
                         y -= baseline.arpls(y, lam=params.bcLambda, progressCallback=self.emitProgress)
                     else:
