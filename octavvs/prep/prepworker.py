@@ -23,8 +23,8 @@ class PrepParameters:
     loading a file where some values are missing.
     """
     def __init__(self):
-        self.fileFilter = ''
-        self.saveExt = ''
+        self.fileFilter = '*.mat'
+        self.saveExt = '_prep'
         self.plotMethod = 0
         self.plotColors = ''
         self.plotWavenum = 0

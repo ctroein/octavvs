@@ -26,4 +26,3 @@ def add_clipboard_to_figures():
         return fig
     plt.figure = newfig
 
-add_clipboard_to_figures()
