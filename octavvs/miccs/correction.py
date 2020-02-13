@@ -645,17 +645,29 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                 if autoiterations:
                     ix = ix[unimproved[ix] <= automax]
                 if ix.size:
-                    model = compute_model(wn, ref[cl], n_components, a, d, bvals,
+                    model0 = compute_model(wn, ref[cl], n_components, a, d, bvals,
                                           konevskikh=konevskikh, linearcomponent=linearcomponent,
                                           variancelimit=pcavariancelimit)
+                    if iteration == 0 :
+                        specs = app[ix, :] - model0[0, :]
+                    else :
+                        specs = app[ix, :] - corrected[ix, :] #We use the previous corrected spectra as references for the least-squares
+                        #TODO : project it
+
+                    model = model0[1:, :] #Then we don't need the reference part of the model
+
                     if weights is None:
-                        cons = np.linalg.lstsq(model.T, app[ix, :].T, rcond=None)[0]
+                        cons = np.linalg.lstsq(model.T, specs.T, rcond=None)[0]
                     else:
-                        cons = np.linalg.lstsq(model.T * weights, app[ix, :].T * weights, rcond=None)[0]
-                    corrs = app[ix] - cons[1:, :].T @ model[1:, :]
+                        cons = np.linalg.lstsq(model.T * weights, specs.T * weights, rcond=None)[0]
+                    corrs = app[ix] - cons.T @ model
                     if renormalize:
                         corrs = corrs / cons[0, :, None]
-                    resids = ((corrs - model[0, :])**2).sum(1)
+
+                    if iteration == 0 :
+                        resids = ((corrs - model[0, :])**2).sum(1)
+                    else :
+                        resids = ((corrs - corrected[ix, :])**2).sum(1) #We compare to the previous correction, not the reference
 
                     if iteration == 0:
                         corrected = corrs
