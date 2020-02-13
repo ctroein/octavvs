@@ -678,9 +678,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                               (iteration, cl, len(ix), resids.mean(), nimprov, monotonic()-startt))
                 if progressCallback:
                     progressCallback(progressA + cl + 1, progressB)
-            progressA += progstep
-            if progressCallback and len(ref) < progstep:
-                progressCallback(progressA, progressB)
+            if progressCallback:
+                progressA += progstep
+                if len(ref) < progstep:
+                    progressCallback(progressA, progressB)
 #            print('progY',progressA,progressB)
 
     else:
