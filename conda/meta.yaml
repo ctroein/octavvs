@@ -1,6 +1,6 @@
 #{% set data = load_setup_py_data() %}
 {% set name = "octavvs" %}
-{% set version = "0.0.29" %}
+{% set version = "0.0.30" %}
 #{% set version = data.get('version') %}
 
 package:
@@ -14,6 +14,7 @@ source:
 #    path: .
 #    path: ../dist/{{ name }}-{{ version }}.tar.gz
     url: file://../dist/{{ name }}-{{ version }}.tar.gz
+#    url: file:///home/carl/src/octavvs/dist/{{ name }}-{{ version }}.tar.gz
 #    url: http://cbbp.thep.lu.se/~carl/octavvs-dist/{{ name }}-{{ version }}.tar.gz
 #    url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
 

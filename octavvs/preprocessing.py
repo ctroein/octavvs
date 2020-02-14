@@ -44,6 +44,8 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
     def __init__(self, parent=None, files=None):
         super().__init__(parent)
 
+        self.splitter.setSizes([1e5]*3)
+
         self.data = SpectralData()
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch
 

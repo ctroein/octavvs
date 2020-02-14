@@ -1,23 +1,23 @@
 For PATH convenience, in ~/.bashrc:
 alias startconda='export PATH=~/"anaconda3/bin:$PATH"'
 
-To only build and pip-install the package locally, use
-./inst-local.sh
-
-To make icons if you haven't already:
-oct_make_icons
-
-At this point, test the software. We need to create a series of test cases,
-especially as we don't have any automated tests.
+Test the software! We need to create a series of test cases, especially as
+we don't have any automated tests.
 
 To build and release a new version:
-Update the version number in setup.py and conda/meta.yaml
+bumpversion --new-version XX.YY.ZZ  or  bumpversion patch (or minor / major)
 rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u ctroein dist/*
-git tag vX.Y.Z
 git push --tags
 
 To build the conda package (after the above):
 conda-build --numpy=1.17 conda
 Follow the instructions to upload
 conda build clean
+
+
+To only build and pip-install the package locally, use
+./inst-local.sh
+
+To make icons if you haven't already:
+oct_make_icons
 
