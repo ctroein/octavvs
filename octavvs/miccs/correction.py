@@ -640,6 +640,13 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                 progressPlotCallback(ref, (iteration, iterations))
             ref[ref < 0] = 0
 
+            if iteration == 0 :
+                projs = [np.dot(app[i], ref[0].T)*(ref[0]/(ref[0] @ ref[0])) for i in range(len(app))]
+            else :
+                projs = [np.dot(app[i], corrected[i].T)*(corrected[i]/(corrected[i] @ corrected[i])) for i in range(len(app))]
+            projs = np.array(projs)
+            app_deref = app - projs
+
             for cl in range(len(ref)):
                 ix = np.where(labels == cl)[0] # Indexes of spectra in this cluster
                 if autoiterations:
@@ -648,34 +655,28 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     model0 = compute_model(wn, ref[cl], n_components, a, d, bvals,
                                           konevskikh=konevskikh, linearcomponent=linearcomponent,
                                           variancelimit=pcavariancelimit)
-                    if iteration == 0 :
-                        specs = app[ix, :] - model0[0, :]
-                    else :
-                        #specs = app[ix, :] - corrected[ix, :] #We use the previous corrected spectra as references for the least-squares
-                        specs = app[ix, :] - np.dot(corrected[ix, :], app[ix, :].T)@ app[ix, :] #We use the (projection of the) previous corrected 
-                                                                                                #spectra as references for the least-squares
 
-                        print(np.shape(corrected), np.shape(app))
-                        #plt.figure()
-                        #plt.plot(np.sqrt(corrected[0, :] @ app[0, :].T)*(corrected[0, :]/np.linalg.norm(corrected[0,:])), label="Proj")
-                        #plt.plot(app[0, :], label='App')
-                        #plt.plot(corrected[0, :], label='Prev')
-                        #plt.legend()
-                        #plt.show()
+                    print(np.shape(corrected), np.shape(app))
+                    plt.figure()
+                    plt.plot(projs[0], label="Proj")
+                    plt.plot(app[0, :] - projs[0], label='Difference')
+                    plt.plot(app[0, :], label='App')
+                    if iteration :
+                        plt.plot(corrected[0, :], label='Prev')
+                    plt.legend()
+                    plt.show()
+
                     model = model0[1:, :] #Then we don't need the reference part of the model
 
                     if weights is None:
-                        cons = np.linalg.lstsq(model.T, specs.T, rcond=None)[0]
+                        cons = np.linalg.lstsq(model.T, app_deref[ix].T, rcond=None)[0]
                     else:
-                        cons = np.linalg.lstsq(model.T * weights, specs.T * weights, rcond=None)[0]
+                        cons = np.linalg.lstsq(model.T * weights, app_deref[ix].T * weights, rcond=None)[0]
                     corrs = app[ix] - cons.T @ model
                     if renormalize:
                         corrs = corrs / cons[0, :, None]
 
-                    if iteration == 0 :
-                        resids = ((corrs - model[0, :])**2).sum(1)
-                    else :
-                        resids = ((corrs - np.dot(corrected[ix, :], app[ix, :].T)@ app[ix, :])**2).sum(1) #We compare to the previous correction, not the reference
+                    resids = ((corrs - projs[ix])**2).sum(1) #We compare to the previous correction, not the reference
 
                     if iteration == 0:
                         corrected = corrs
