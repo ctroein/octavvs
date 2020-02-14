@@ -651,9 +651,17 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     if iteration == 0 :
                         specs = app[ix, :] - model0[0, :]
                     else :
-                        specs = app[ix, :] - corrected[ix, :] #We use the previous corrected spectra as references for the least-squares
-                        #TODO : project it
+                        #specs = app[ix, :] - corrected[ix, :] #We use the previous corrected spectra as references for the least-squares
+                        specs = app[ix, :] - np.dot(corrected[ix, :], app[ix, :].T)@ app[ix, :] #We use the (projection of the) previous corrected 
+                                                                                                #spectra as references for the least-squares
 
+                        print(np.shape(corrected), np.shape(app))
+                        #plt.figure()
+                        #plt.plot(np.sqrt(corrected[0, :] @ app[0, :].T)*(corrected[0, :]/np.linalg.norm(corrected[0,:])), label="Proj")
+                        #plt.plot(app[0, :], label='App')
+                        #plt.plot(corrected[0, :], label='Prev')
+                        #plt.legend()
+                        #plt.show()
                     model = model0[1:, :] #Then we don't need the reference part of the model
 
                     if weights is None:
@@ -667,7 +675,7 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     if iteration == 0 :
                         resids = ((corrs - model[0, :])**2).sum(1)
                     else :
-                        resids = ((corrs - corrected[ix, :])**2).sum(1) #We compare to the previous correction, not the reference
+                        resids = ((corrs - np.dot(corrected[ix, :], app[ix, :].T)@ app[ix, :])**2).sum(1) #We compare to the previous correction, not the reference
 
                     if iteration == 0:
                         corrected = corrs
