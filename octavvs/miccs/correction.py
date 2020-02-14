@@ -656,7 +656,7 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                                           konevskikh=konevskikh, linearcomponent=linearcomponent,
                                           variancelimit=pcavariancelimit)
 
-                    print(np.shape(corrected), np.shape(app))
+                    #print(np.shape(corrected), np.shape(app))
                     plt.figure()
                     plt.plot(projs[0], label="Proj")
                     plt.plot(app[0, :] - projs[0], label='Difference')
