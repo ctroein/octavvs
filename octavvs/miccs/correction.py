@@ -657,14 +657,16 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                                           variancelimit=pcavariancelimit)
 
                     #print(np.shape(corrected), np.shape(app))
-                    plt.figure()
-                    plt.plot(projs[0], label="Proj")
-                    plt.plot(app[0, :] - projs[0], label='Difference')
-                    plt.plot(app[0, :], label='App')
-                    if iteration :
-                        plt.plot(corrected[0, :], label='Prev')
-                    plt.legend()
-                    plt.show()
+                    if plot:
+                        plt.figure()
+                        plt.plot(projs[0], label="Proj")
+                        plt.plot(app[0, :] - projs[0], label='Difference')
+                        plt.plot(app[0, :], label='App')
+                        plt.plot(model0[0, :], label='Reference')
+                        if iteration :
+                            plt.plot(corrected[0, :], label='Prev')
+                        plt.legend()
+                        plt.show()
 
                     model = model0[1:, :] #Then we don't need the reference part of the model
 
