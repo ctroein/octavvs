@@ -30,13 +30,17 @@ def readmat(filename):
      sizex = len(wavenumber)
      sizemx, sizemy = np.shape(ss)
      sp = ss[:,1:]
-     w = int(np.sqrt(sp.shape[1]))
-     h = sp.shape[1] // w
-     if w * h != sp.shape[1]:
-         w = sp.shape[1]
-         h = 1
-     p = sp.reshape(sizex,w,h,order='C')
-     return w, h, p, wavenumber, sp
+     if (len(info)) > 1:
+         (l,*_) = s['wh']
+         w , h = l
+     else:      
+         w = int(np.sqrt(sp.shape[1]))
+         h = sp.shape[1] // w
+         if w * h != sp.shape[1]:
+             w = sp.shape[1]
+             h = 1
+     p = sp.reshape(sizex,h,w,order='C')
+     return  w, h, p, wavenumber, sp
 
 
 #(1) Based on area under spectrum
