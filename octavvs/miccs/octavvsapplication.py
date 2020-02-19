@@ -18,6 +18,9 @@ from PyQt5.Qt import qApp
 from .exceptiondialog import ExceptionDialog
 from .copyfigure import add_clipboard_to_figures
 
+
+
+
 class OctavvsMainWindow(QMainWindow):
 
     fileOptions = QFileDialog.Options() | QFileDialog.DontUseNativeDialog
@@ -41,28 +44,6 @@ class OctavvsMainWindow(QMainWindow):
         ExceptionDialog.install(self)
 
 
-    def sliderToBox(self, slider, box, wngetter, ixfinder):
-        wn = wngetter()
-        if wn is not None:
-            if (not box.hasAcceptableInput() or
-                    slider.value() != ixfinder(wn, box.value())):
-                box.setValue(wn[-1-slider.value()])
-        elif (not box.hasAcceptableInput() or
-                slider.value() != int(round(slider.maximum() *
-                (box.value() - self.default_wmin) / (self.default_wmax - self.default_wmin)))):
-            box.setValue(self.default_wmin + (self.default_wmax - self.default_wmin) *
-                         slider.value() / slider.maximum())
-
-    def boxToSlider(self, slider, box, wngetter, ixfinder):
-        wn = wngetter()
-        if wn is not None:
-            if box.hasAcceptableInput():
-                slider.setValue(ixfinder(wn, box.value()))
-            else:
-                box.setValue(wn[-1-slider.value()])
-        else:
-            slider.setValue(int(round(slider.maximum() *
-                  (box.value() - self.default_wmin) / (self.default_wmax - self.default_wmin))))
 
 
 
@@ -152,6 +133,13 @@ class OctavvsMainWindow(QMainWindow):
             return dirs[0]
         return None
 
+    def updateWavenumberRange(self):
+        "For derived classes, when the wn range is updated"
+        pass
+
+    def updateDimensions(self, wh):
+        "For derived classes, when image width/height is updated"
+        pass
 
 
 

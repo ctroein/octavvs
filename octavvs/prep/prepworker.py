@@ -143,7 +143,6 @@ class PrepWorker(QObject):
         """ Helper function for running RMieSC and/or atmospheric correction
         """
         if params.acDo:
-            print('ac ref', params.acReference)
             self.emitProgress(-1, 100)
             y = correction.atmospheric(wn, y, cut_co2=params.acSpline,
                                        extra_iters=5 if params.acLocal else 0,

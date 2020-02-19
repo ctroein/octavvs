@@ -3,7 +3,6 @@ import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
 import argparse
-from io import BytesIO
 
 from PyQt5.QtWidgets import QFileDialog, QErrorMessage, QInputDialog, QDialog
 from PyQt5.QtWidgets import QMessageBox
@@ -18,8 +17,11 @@ matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
-from .miccs import SpectralData, FileLoader
+from . import miccs
+from .miccs import SpectralData, FileLoader, ImageVisualizer
 from .miccs import OctavvsMainWindow, NoRepeatStyle, run_octavvs_application
+
+
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
 Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(__name__, "prep/scadvanced.ui"))[0]
@@ -30,7 +32,7 @@ class DialogSCAdvanced(QDialog, Ui_DialogSCAdvanced):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
+class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow):
 
     closing = pyqtSignal()
     startRmiesc = pyqtSignal(SpectralData, dict)
@@ -59,19 +61,16 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
 
         self.fileLoader.setSuffix('_prep')
 
-        self.pushButtonWhitelight.clicked.connect(self.loadWhite)
+#        self.plot_visual.changedSelected.connect(self.updateSelectedSpectra)
 
-        self.comboBoxMethod.currentIndexChanged.connect(self.imageProjection)
-        self.horizontalSliderWavenumber.valueChanged.connect(self.wavenumberSlide)
-        self.lineEditWavenumber.editingFinished.connect(self.wavenumberEdit)
+        self.plot_visual.changedSelected.connect(self.spinBoxSpectra.setValue)
+        self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
+        self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
+        self.pushButtonWhitelight.clicked.connect(self.loadWhite)
 
         self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
         self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
         self.checkBoxAutopick.toggled.connect(self.selectSpectra)
-        self.plot_visual.changedSelected.connect(self.spinBoxSpectra.setValue)
-        self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
-        self.comboBoxCmaps.currentTextChanged.connect(self.plot_visual.setCmap)
-        self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
 
         self.plot_spectra.updated.connect(self.updateAC)
         self.plot_AC.clicked.connect(self.plot_AC.popOut)
@@ -159,8 +158,6 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         self.pushButtonRun.clicked.connect(self.runBatch)
 
         # Defaults when no data loaded
-        self.default_wmin = 800
-        self.default_wmax = 4000
         self.scSettings = {}
 
         self.worker = PrepWorker()
@@ -195,7 +192,6 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         self.abcWorker.bcFailed.connect(self.bcFailed)
         self.abcWorkerThread.start()
 
-        self.lineEditWavenumber.setFormat("%.2f")
         self.lineEditMinwn.setFormat("%.2f")
         self.lineEditMaxwn.setFormat("%.2f")
         self.lineEditLambda.setFormat("%.4g")
@@ -235,21 +231,16 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         if self.data.wavenumber is not None:
             wns = len(self.data.wavenumber)
             # Update sliders before boxes to avoid errors from triggered updates
-            self.horizontalSliderWavenumber.setMaximum(wns-1)
             self.horizontalSliderMin.setMaximum(wns-1)
             self.horizontalSliderMax.setMaximum(wns-1)
 
-        self.labelMinwn.setText("%.2f" % self.data.wmin)
-        self.labelMaxwn.setText("%.2f" % self.data.wmax)
-        wmin = min(self.data.wmin, self.default_wmin)
-        wmax = max(self.data.wmax, self.default_wmax)
-        self.lineEditWavenumber.setRange(wmin, wmax, default=.5*(wmin+wmax))
+        wmin = min(self.data.wmin, miccs.constants.WMIN)
+        wmax = max(self.data.wmax, miccs.constants.WMAX)
         self.lineEditMinwn.setRange(wmin, wmax, default=wmin)
         self.lineEditMaxwn.setRange(wmin, wmax, default=wmax)
         self.lineEditNormWavenum.setRange(wmin, wmax, default=.5*(wmin+wmax))
 
         # Make sure the sliders are in sync with the boxes
-        self.wavenumberEdit()
         self.srMinEdit()
         self.srMaxEdit()
 
@@ -264,7 +255,7 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
 
         self.plot_visual.setData(self.data.wavenumber, self.data.raw, self.data.wh)
         self.updateWavenumberRange()
-        self.imageProjection()
+#        self.imageProjection()
 
         if self.bcNext:
             self.abcWorker.haltBC = True
@@ -276,18 +267,7 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         self.clearSC()
         self.imageProjection()
         self.selectSpectra()
-        if self.data.image is not None:
-            self.plot_whitelight.load(BytesIO(self.data.image[0]), self.data.image[1])
-        else:
-            self.plot_whitelight.load(os.path.splitext(self.data.curFile)[0]+'.jpg')
-
-    def updateDimensions(self, dimnum):
-        super().updateDimensions(dimnum)
-        try:
-            self.plot_visual.setDimensions(self.data.wh)
-        except ValueError:
-            pass
-        self.imageProjection()
+        self.reloadWhiteLight()
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
@@ -298,32 +278,12 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         if q.exec():
             self.scStop()
 
-    # Image visualization
-    def loadWhite(self):
-        filename = self.getImageFileName(title="Load white light image",
-                                         settingname='whitelightDir')
-        if filename:
-            self.fileLoader.plot_whitelight.load(filename)
-
-    def imageProjection(self):
-        meth = self.comboBoxMethod.currentIndex()
-        iswn = meth == 2
-        self.lineEditWavenumber.setEnabled(iswn)
-        self.horizontalSliderWavenumber.setEnabled(iswn)
-        self.plot_visual.setProjection(meth, -1-self.horizontalSliderWavenumber.value())
-
-    def wavenumberSlide(self):
-        self.sliderToBox(self.horizontalSliderWavenumber, self.lineEditWavenumber,
-                         lambda: self.plot_visual.getWavenumbers(),
-                         lambda wn, val: len(wn)-1 - (np.abs(wn - val)).argmin())
-        self.plot_visual.setProjection(2, -1-self.horizontalSliderWavenumber.value())
-
-    def wavenumberEdit(self):
-        self.boxToSlider(self.horizontalSliderWavenumber, self.lineEditWavenumber,
-                         lambda: self.plot_visual.getWavenumbers(),
-                         lambda wn, val: len(wn)-1 - (np.abs(wn - val)).argmin())
 
     # Selection of spectra
+    def updateSelectedSpectra(self):
+        self.selectedSpectraUpdated()
+        self.selectSpectra()
+
     def selectedSpectraUpdated(self):
         self.plot_spectra.setData(self.plot_visual.getWavenumbers(), None,
                                   self.plot_visual.getSelectedData())
@@ -559,27 +519,32 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
                                  self.lineEditMinwn.value(), self.lineEditMaxwn.value())
 
     def srMinSlide(self):
-        self.sliderToBox(self.horizontalSliderMin, self.lineEditMinwn,
-                         lambda: self.plot_SGF.getWavenumbers(),
-                         lambda wn, val: wn[::-1].searchsorted(val, 'left'))
+        miccs.uitools.slider_to_box(
+                self.horizontalSliderMin, self.lineEditMinwn,
+                self.plot_SGF.getWavenumbers(),
+                miccs.uitools.ixfinder_noless)
         self.updateSR()
 
     def srMinEdit(self):
-        self.boxToSlider(self.horizontalSliderMin, self.lineEditMinwn,
-                         lambda: self.plot_SGF.getWavenumbers(),
-                         lambda wn, val: wn[::-1].searchsorted(val, 'left'))
+        miccs.uitools.box_to_slider(
+                self.horizontalSliderMin, self.lineEditMinwn,
+                self.plot_SGF.getWavenumbers(),
+                miccs.uitools.ixfinder_noless)
 
     def srMaxSlide(self):
-        self.sliderToBox(self.horizontalSliderMax, self.lineEditMaxwn,
-                         lambda: self.plot_SGF.getWavenumbers(),
-                         lambda wn, val: wn[::-1].searchsorted(val, 'right')-1)
+        miccs.uitools.slider_to_box(
+                self.horizontalSliderMax, self.lineEditMaxwn,
+                self.plot_SGF.getWavenumbers(),
+                miccs.uitools.ixfinder_nomore)
         self.updateSR()
 
     def srMaxEdit(self):
-        self.boxToSlider(self.horizontalSliderMax, self.lineEditMaxwn,
-                         lambda: self.plot_SGF.getWavenumbers(),
-                         lambda wn, val: wn[::-1].searchsorted(val, 'right')-1)
+        miccs.uitools.box_to_slider(
+                self.horizontalSliderMax, self.lineEditMaxwn,
+                self.plot_SGF.getWavenumbers(),
+                miccs.uitools.ixfinder_nomore)
 
+    # BC, Baseline Correction
     def bcName(self):
         return ['none', 'rubberband', 'concaverubberband', 'asls', 'arpls'
                 ][self.comboBoxBaseline.currentIndex()]
@@ -587,7 +552,6 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         return ['none', 'rubberband', 'concaverubberband', 'asls', 'arpls'
                 ].index(val)
 
-    # BC, Baseline Correction
     def updateBC(self):
         indata = self.plot_SR.getSpectra()
         wn = self.plot_SR.getWavenumbers()
@@ -713,10 +677,8 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
     def getParameters(self):
         p = PrepParameters()
         self.fileLoader.saveParameters(p)
+        self.imageVisualizer.saveParameters(p)
 
-        p.plotMethod = self.comboBoxMethod.currentIndex()
-        p.plotColors = self.comboBoxCmaps.currentText()
-        p.plotWavenum = self.lineEditWavenumber.value()
         p.spectraCount = self.spinBoxSpectra.value()
         p.spectraAuto = self.checkBoxAutopick.isChecked()
         p.acDo = self.checkBoxAC.isChecked()
@@ -776,9 +738,8 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
     def setParameters(self, p):
         self.spinBoxSpectra.setValue(0)
         self.fileLoader.loadParameters(p)
-        self.comboBoxMethod.setCurrentIndex(p.plotMethod)
-        self.comboBoxCmaps.setCurrentText(p.plotColors)
-        self.lineEditWavenumber.setValue(p.plotWavenum)
+        self.imageVisualizer.loadParameters(p)
+
         self.checkBoxAutopick.setChecked(p.spectraAuto)
         self.checkBoxAC.setChecked(p.acDo)
         self.checkBoxSpline.setChecked(p.acSpline)
@@ -819,9 +780,9 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         self.comboBoxNormMethod.setCurrentIndex(self.normIndex(p.normMethod))
         self.lineEditNormWavenum.setValue(p.normWavenum)
 
-        self.wavenumberEdit()
         self.srMinEdit()
         self.srMaxEdit()
+        self.wavenumberEdit()
 
         self.updateSGF()
         self.spinBoxSpectra.setValue(p.spectraCount)

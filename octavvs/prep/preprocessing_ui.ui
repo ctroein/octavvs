@@ -16,8 +16,7 @@
   <property name="styleSheet">
    <string notr="true">QSplitter::handle:horizontal {
 border: 1px solid #ccc;
-border-right-color: #bbb;
-border-bottom-color: #bbb;
+border-left-color: #bbb;
 margin: 5px;
 }
 </string>
@@ -36,7 +35,7 @@ margin: 5px;
        <bool>false</bool>
       </property>
       <widget class="QWidget" name="layoutWidget">
-       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,3,0,2">
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,2,0,2">
         <property name="sizeConstraint">
          <enum>QLayout::SetMinimumSize</enum>
         </property>
@@ -59,6 +58,45 @@ margin: 5px;
            </sizepolicy>
           </property>
          </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <widget class="WhiteLightWidget" name="plot_whitelight" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <property name="spacing">
+              <number>9</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButtonWhitelight">
+            <property name="toolTip">
+             <string>Automatically loaded if file.jpg is found in the same directory as file.mat.</string>
+            </property>
+            <property name="text">
+             <string>Load white light image</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButtonExpandProjection">
+            <property name="text">
+             <string>Enlarge</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="ProjectionWidget" name="plot_visual" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <property name="spacing">
+              <number>9</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="10,1,0,0">
@@ -824,6 +862,22 @@ margin: 5px;
    <slots>
     <slot>setValue(float)</slot>
     <slot>setRange(float,float)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>WhiteLightWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/miccs/whitelightwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ProjectionWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/projectionwidget.h</header>
+   <container>1</container>
+   <slots>
+    <slot>setCmap(QString)</slot>
+    <slot>popOut()</slot>
    </slots>
   </customwidget>
   <customwidget>

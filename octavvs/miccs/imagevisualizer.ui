@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>407</width>
-    <height>165</height>
+    <height>54</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
    <property name="sizeConstraint">
     <enum>QLayout::SetMinimumSize</enum>
    </property>
@@ -150,45 +150,6 @@
      </item>
     </layout>
    </item>
-   <item>
-    <layout class="QGridLayout" name="gridLayout_3">
-     <item row="0" column="0">
-      <widget class="WhiteLightWidget" name="plot_whitelight" native="true">
-       <layout class="QHBoxLayout" name="horizontalLayout_7">
-        <property name="spacing">
-         <number>9</number>
-        </property>
-       </layout>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QPushButton" name="pushButtonWhitelight">
-       <property name="toolTip">
-        <string>Automatically loaded if file.jpg is found in the same directory as file.mat.</string>
-       </property>
-       <property name="text">
-        <string>Load white light image</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QPushButton" name="pushButtonExpandProjection">
-       <property name="text">
-        <string>Enlarge</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="ProjectionWidget" name="plot_visual" native="true">
-       <layout class="QHBoxLayout" name="horizontalLayout_6">
-        <property name="spacing">
-         <number>9</number>
-        </property>
-       </layout>
-      </widget>
-     </item>
-    </layout>
-   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -199,22 +160,6 @@
    <slots>
     <slot>setValue(float)</slot>
     <slot>setRange(float,float)</slot>
-   </slots>
-  </customwidget>
-  <customwidget>
-   <class>WhiteLightWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/miccs/whitelightwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ProjectionWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/prep/projectionwidget.h</header>
-   <container>1</container>
-   <slots>
-    <slot>setCmap(QString)</slot>
-    <slot>popOut()</slot>
    </slots>
   </customwidget>
  </customwidgets>
