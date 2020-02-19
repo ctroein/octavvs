@@ -1,0 +1,5 @@
+*~
+build/
+dist/
+octavvs.egg-info/
+__pycache__

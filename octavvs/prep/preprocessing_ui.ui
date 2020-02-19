@@ -16,7 +16,8 @@
   <property name="styleSheet">
    <string notr="true">QSplitter::handle:horizontal {
 border: 1px solid #ccc;
-border-left-color: #bbb;
+border-right-color: #bbb;
+border-bottom-color: #bbb;
 margin: 5px;
 }
 </string>
