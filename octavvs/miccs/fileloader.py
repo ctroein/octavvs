@@ -72,6 +72,9 @@ class FileLoader():
         self.fileLoader.spinBoxFileNumber.valueChanged.connect(self.selectFile)
         self.fileLoader.pushButtonShowFiles.clicked.connect(self.showFileList)
 
+        self.fileLoader.lineEditWidth.editingFinished.connect(lambda: self.updateDimensions(0))
+        self.fileLoader.lineEditHeight.editingFinished.connect(lambda: self.updateDimensions(1))
+
 
     def addFolder(self):
         self.loadFolder(add=True)
@@ -215,10 +218,26 @@ class FileLoader():
             del self.data.filenames[num]
             self.updateFileListInfo(self.data.filenames)
 
-
     def updateFile(self, num):
         file = self.data.filenames[num]
         self.data.curFile = file
         self.fileLoader.spinBoxFileNumber.setValue(num+1)
         self.fileLoader.lineEditFilename.setText(file)
+        self.fileLoader.lineEditWidth.setText(str(self.data.wh[0]))
+        self.fileLoader.lineEditHeight.setText(str(self.data.wh[1]))
+
+    def updateDimensions(self, dimnum):
+        if dimnum == 0:
+            self.data.setWidth(self.fileLoader.lineEditWidth.text())
+        else:
+            self.data.setHeight(self.fileLoader.lineEditHeight.text())
+        self.fileLoader.lineEditWidth.setText(str(self.data.wh[0]))
+        self.fileLoader.lineEditHeight.setText(str(self.data.wh[1]))
+
+    def updateWavenumberRange(self):
+        if self.data.wavenumber is not None:
+            self.fileLoader.lineEditLength.setText(str(len(self.data.wavenumber)))
+
+
+
 

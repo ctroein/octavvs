@@ -203,9 +203,6 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         self.lineEditLambda.setRange(*(10. ** self.bcLambdaRange))
         self.lineEditP.setRange(*(10. ** self.bcPRange))
 
-        self.lineEditWidth.editingFinished.connect(lambda: self.updateDimensions(0))
-        self.lineEditHeight.editingFinished.connect(lambda: self.updateDimensions(1))
-
         self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
         self.dialogSCAdvanced.lineEditSCamax.setFormat("%.4g")
         self.dialogSCAdvanced.lineEditSCdmin.setFormat("%.4g")
@@ -234,9 +231,9 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         qApp.quit()
 
     def updateWavenumberRange(self):
+        super().updateWavenumberRange()
         if self.data.wavenumber is not None:
             wns = len(self.data.wavenumber)
-            self.lineEditLength.setText(str(wns))
             # Update sliders before boxes to avoid errors from triggered updates
             self.horizontalSliderWavenumber.setMaximum(wns-1)
             self.horizontalSliderMin.setMaximum(wns-1)
@@ -265,9 +262,6 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
     def updateFile(self, num):
         super().updateFile(num)
 
-        self.lineEditWidth.setText(str(self.data.wh[0]))
-        self.lineEditHeight.setText(str(self.data.wh[1]))
-
         self.plot_visual.setData(self.data.wavenumber, self.data.raw, self.data.wh)
         self.updateWavenumberRange()
         self.imageProjection()
@@ -287,6 +281,14 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         else:
             self.plot_whitelight.load(os.path.splitext(self.data.curFile)[0]+'.jpg')
 
+    def updateDimensions(self, dimnum):
+        super().updateDimensions(dimnum)
+        try:
+            self.plot_visual.setDimensions(self.data.wh)
+        except ValueError:
+            pass
+        self.imageProjection()
+
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
         "Error message from loading a file in the worker thread, with abort option"
@@ -296,25 +298,12 @@ class MyMainWindow(FileLoader, OctavvsMainWindow, Ui_MainWindow):
         if q.exec():
             self.scStop()
 
-    def updateDimensions(self, dimnum):
-        if dimnum == 0:
-            self.data.setWidth(self.lineEditWidth.text())
-        else:
-            self.data.setHeight(self.lineEditHeight.text())
-        self.lineEditWidth.setText(str(self.data.wh[0]))
-        self.lineEditHeight.setText(str(self.data.wh[1]))
-        try:
-            self.plot_visual.setDimensions(self.data.wh)
-        except ValueError:
-            pass
-        self.imageProjection()
-
     # Image visualization
     def loadWhite(self):
         filename = self.getImageFileName(title="Load white light image",
                                          settingname='whitelightDir')
         if filename:
-            self.plot_whitelight.load(filename)
+            self.fileLoader.plot_whitelight.load(filename)
 
     def imageProjection(self):
         meth = self.comboBoxMethod.currentIndex()
