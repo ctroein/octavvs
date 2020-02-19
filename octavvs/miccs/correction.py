@@ -640,22 +640,45 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                 progressPlotCallback(ref, (iteration, iterations))
             ref[ref < 0] = 0
 
+            if iteration == 0 :
+                projs = [np.dot(app[i], ref[0].T)*(ref[0]/(ref[0] @ ref[0])) for i in range(len(app))]
+            else :
+                projs = [np.dot(app[i], corrected[i].T)*(corrected[i]/(corrected[i] @ corrected[i])) for i in range(len(app))]
+            projs = np.array(projs)
+            app_deref = app - projs
+
             for cl in range(len(ref)):
                 ix = np.where(labels == cl)[0] # Indexes of spectra in this cluster
                 if autoiterations:
                     ix = ix[unimproved[ix] <= automax]
                 if ix.size:
-                    model = compute_model(wn, ref[cl], n_components, a, d, bvals,
+                    model0 = compute_model(wn, ref[cl], n_components, a, d, bvals,
                                           konevskikh=konevskikh, linearcomponent=linearcomponent,
                                           variancelimit=pcavariancelimit)
+
+                    #print(np.shape(corrected), np.shape(app))
+                    if plot:
+                        plt.figure()
+                        plt.plot(projs[0], label="Proj")
+                        plt.plot(app[0, :] - projs[0], label='Difference')
+                        plt.plot(app[0, :], label='App')
+                        plt.plot(model0[0, :], label='Reference')
+                        if iteration :
+                            plt.plot(corrected[0, :], label='Prev')
+                        plt.legend()
+                        plt.show()
+
+                    model = model0[1:, :] #Then we don't need the reference part of the model
+
                     if weights is None:
-                        cons = np.linalg.lstsq(model.T, app[ix, :].T, rcond=None)[0]
+                        cons = np.linalg.lstsq(model.T, app_deref[ix].T, rcond=None)[0]
                     else:
-                        cons = np.linalg.lstsq(model.T * weights, app[ix, :].T * weights, rcond=None)[0]
-                    corrs = app[ix] - cons[1:, :].T @ model[1:, :]
+                        cons = np.linalg.lstsq(model.T * weights, app_deref[ix].T * weights, rcond=None)[0]
+                    corrs = app[ix] - cons.T @ model
                     if renormalize:
                         corrs = corrs / cons[0, :, None]
-                    resids = ((corrs - model[0, :])**2).sum(1)
+
+                    resids = ((corrs - projs[ix])**2).sum(1) #We compare to the previous correction, not the reference
 
                     if iteration == 0:
                         corrected = corrs
@@ -678,9 +701,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                               (iteration, cl, len(ix), resids.mean(), nimprov, monotonic()-startt))
                 if progressCallback:
                     progressCallback(progressA + cl + 1, progressB)
-            progressA += progstep
-            if progressCallback and len(ref) < progstep:
-                progressCallback(progressA, progressB)
+            if progressCallback:
+                progressA += progstep
+                if len(ref) < progstep:
+                    progressCallback(progressA, progressB)
 #            print('progY',progressA,progressB)
 
     else:
