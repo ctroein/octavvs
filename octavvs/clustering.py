@@ -250,7 +250,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     def readfile(self,fileName):
         self.img = None
         try:
-            self.img = plt.imread(os.path.splitext(fileName)[0]+'.jpg')
+            self.img = plt.imread(fileName.replace(fileName.split('.0')[-1],'.jpg'))
         except:
             pass
 
