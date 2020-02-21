@@ -43,7 +43,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     bcLambdaRange = np.array([0, 8])
     bcPRange = np.array([-5, 0])
 
-    def __init__(self, parent=None, files=None, paramFile=None):
+    def __init__(self, parent=None, files=None, paramFile=None, savePath=None):
         super().__init__(parent)
 
         self.splitter.setSizes([1e5]*3)
@@ -215,14 +215,20 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         if files is not None and files != []:
             self.updateFileList(files, False) # Load files passed as arguments
 
-        if paramFile is not None and paramFile != []: # Loads the parameter file passed as argument
+        if paramFile is not None: # Loads the parameter file passed as argument
             p = PrepParameters()
             try:
-                p.load(paramFile[0])
+                p.load(paramFile)
                 self.setParameters(p)
             except Exception as e:
-                self.showDetailedErrorMessage("Error loading settings from "+paramFile[0]+": "+repr(e),
+                self.showDetailedErrorMessage("Error loading settings from "+paramFile+": "+repr(e),
                                               traceback.format_exc())
+        if savePath is not None:
+            if paramFile is None :
+                self.errorMsg.showMessage("Running from the command line without passing a parameter file does nothing.")
+            savePath = os.path.normpath(savePath)
+            self.runBatch(foldername=savePath)
+
 
     def closeEvent(self, event):
         self.worker.halt = True
@@ -810,16 +816,17 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                                               traceback.format_exc())
 
 
-    def runBatch(self):
+    def runBatch(self, foldername=None):
         assert not self.rmiescRunning
         if len(self.data.filenames) < 1:
             self.errorMsg.showMessage('Load some data first')
             return
         params = self.getParameters()
 
-        foldername = self.getDirectoryName("Select save directory",
-                                           settingname='spectraDir',
-                                           savesetting=False)
+        if foldername is None:
+            foldername = self.getDirectoryName("Select save directory",
+                                               settingname='spectraDir',
+                                               savesetting=False)
         if not foldername:
             return
         preservepath = False
@@ -870,9 +877,11 @@ def main():
             description='Graphical application for preprocessing of hyperspectral data.')
     parser.add_argument('files', metavar='file', type=str, nargs='*',
                         help='initial hyperspectral images to load')
-    parser.add_argument('-p', '--params', metavar='file.pjs', type=str, nargs=1, dest='paramFile',
+    parser.add_argument('-p', '--params', metavar='file.pjs', type=str, dest='paramFile',
                         help='parameter file to load')
+    parser.add_argument('-r', '--run', metavar='output_dir', type=str, nargs='?', dest='savePath',
+                        const='./', help='runs and saves to the output directory (params argument must also be passed)')
     run_octavvs_application('Preprocessing', windowclass=MyMainWindow,
-                            parser=parser, parameters=['files', 'paramFile'])
+                            parser=parser, parameters=['files', 'paramFile', 'savePath'])
 
 
