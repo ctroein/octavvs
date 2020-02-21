@@ -43,7 +43,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     bcLambdaRange = np.array([0, 8])
     bcPRange = np.array([-5, 0])
 
-    def __init__(self, parent=None, files=None):
+    def __init__(self, parent=None, files=None, paramFile=None):
         super().__init__(parent)
 
         self.splitter.setSizes([1e5]*3)
@@ -214,6 +214,15 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.post_setup()
         if files is not None and files != []:
             self.updateFileList(files, False) # Load files passed as arguments
+
+        if paramFile is not None and paramFile != []: # Loads the parameter file passed as argument
+            p = PrepParameters()
+            try:
+                p.load(paramFile[0])
+                self.setParameters(p)
+            except Exception as e:
+                self.showDetailedErrorMessage("Error loading settings from "+paramFile[0]+": "+repr(e),
+                                              traceback.format_exc())
 
     def closeEvent(self, event):
         self.worker.halt = True
@@ -861,7 +870,9 @@ def main():
             description='Graphical application for preprocessing of hyperspectral data.')
     parser.add_argument('files', metavar='file', type=str, nargs='*',
                         help='initial hyperspectral images to load')
+    parser.add_argument('-p', '--params', metavar='file.pjs', type=str, nargs=1, dest='paramFile',
+                        help='parameter file to load')
     run_octavvs_application('Preprocessing', windowclass=MyMainWindow,
-                            parser=parser, parameters=['files'])
+                            parser=parser, parameters=['files', 'paramFile'])
 
 
