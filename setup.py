@@ -28,7 +28,8 @@ setuptools.setup(
     install_requires=['numpy', 'scipy', 'matplotlib', 'sklearn', 'pyshortcuts', 'opencv-python', 'pandas', 'pillow'],
     package_data={ '': ['*.ui', '*.mat', '*.ico', '*.icns'] },
     entry_points={'console_scripts':
-        ['oct_preprocessing = octavvs.preprocessing:main',
+        ['octavvs = octavvs.launcher:main',
+        'oct_preprocessing = octavvs.preprocessing:main',
         'oct_mcr_als = octavvs.mcr_als:main',
         'oct_clustering = octavvs.clustering:main',
         'oct_make_icons = octavvs.make_icons:main'],

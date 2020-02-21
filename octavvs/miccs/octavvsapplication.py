@@ -143,14 +143,16 @@ class OctavvsMainWindow(QMainWindow):
 
 
 
-def run_octavvs_application(name, windowclass, parser, parameters):
+def run_octavvs_application(name, windowclass, parser=None, parameters=None, isChild=False):
     res = 1
     try:
         windowclass.program_name = name
         progver = 'OCTAVVS %s %s' % (windowclass.program_name, OctavvsMainWindow.octavvs_version)
-        parser.add_argument('--version', action='version', version=progver)
-        args = parser.parse_args()
-        windowparams = { k: args.__dict__[k] for k in parameters }
+        windowparams = {}
+        if parser is not None:
+            parser.add_argument('--version', action='version', version=progver)
+            args = parser.parse_args()
+            windowparams = { k: args.__dict__[k] for k in parameters }
         app = QApplication.instance()
         if not app:
             app = QApplication(sys.argv)
@@ -158,11 +160,13 @@ def run_octavvs_application(name, windowclass, parser, parameters):
         windowclass.programName = name
         window = windowclass(**windowparams)
         window.show()
-        res = app.exec_()
+        if not isChild:
+            res = app.exec_()
 
     except Exception:
         traceback.print_exc()
         print('Press some key to quit')
         input()
-    sys.exit(res)
+    if not isChild :
+        sys.exit(res)
 
