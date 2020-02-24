@@ -368,11 +368,11 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
             nre = nre / -nmin
             nim = nim / -nmin
         # My revised distribution of alpha_0 and gamma
-        alpha_0 = 1e-2 * np.linspace(d[0] * (a[0]-1), d[-1] * (a[-1]-1), len(a))
-        gamma = .25 * 2 * np.log(10) / np.pi * np.linspace(1 / alpha_0[0], 1 / alpha_0[-1], len(alpha_0))
+#        alpha_0 = 1e-2 * np.linspace(d[0] * (a[0]-1), d[-1] * (a[-1]-1), len(a))
+#        gamma = .25 * 2 * np.log(10) / np.pi * np.linspace(1 / alpha_0[0], 1 / alpha_0[-1], len(alpha_0))
         # Solheim's distributions of alpha_0 and gamma
-#        alpha_0 = 1e-2 * d * (a - 1)
-#        gamma = .25  * 2 * np.log(10) / np.pi / alpha_0
+        alpha_0 = 1e-2 * d * (a - 1)
+        gamma = .25  * 2 * np.log(10) / np.pi / alpha_0
         Q = np.empty((len(alpha_0) * len(gamma), len(wn)))  # Initialize the extinction matrix
 
 #        print('alpha_0', alpha_0)
@@ -415,6 +415,8 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
                     n_row += 1
 
     n_nonpca = 3 if linearcomponent else 2
+
+    savemat('everything_python.mat', {'Q':Q})
 
     # Orthogonalization of the model to improve numeric stability
     refn = ref / np.sqrt(ref@ref)

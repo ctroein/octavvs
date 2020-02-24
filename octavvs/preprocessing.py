@@ -139,13 +139,15 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.plot_SR.updated.connect(self.updateBC)
         self.plot_BC.clicked.connect(self.plot_BC.popOut)
         self.comboBoxBaseline.currentIndexChanged.connect(self.bcMethod)
-        self.horizontalSliderLambda.valueChanged.connect(self.bcLambdaSlide)
-        self.lineEditLambda.editingFinished.connect(self.bcLambdaEdit)
-        self.horizontalSliderP.valueChanged.connect(self.bcPSlide)
-        self.lineEditP.editingFinished.connect(self.bcPEdit)
+
+#        self.horizontalSliderLambda.valueChanged.connect(self.bcLambdaSlide)
+#        self.lineEditLambda.editingFinished.connect(self.bcLambdaEdit)
+#        self.horizontalSliderP.valueChanged.connect(self.bcPSlide)
+#        self.lineEditP.editingFinished.connect(self.bcPEdit)
+        self.connectLogSliders()
         self.spinBoxItersBC.valueChanged.connect(self.updateBC)
-        self.bcLambdaEdit()
-        self.bcPEdit()
+#        self.bcLambdaEdit()
+#        self.bcPEdit()
 
         self.plot_BC.updated.connect(self.updateNorm)
         self.plot_norm.clicked.connect(self.plot_norm.popOut)
@@ -196,8 +198,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.lineEditMaxwn.setFormat("%.2f")
         self.lineEditLambda.setFormat("%.4g")
         self.lineEditP.setFormat("%.4g")
-        self.lineEditLambda.setRange(*(10. ** self.bcLambdaRange))
-        self.lineEditP.setRange(*(10. ** self.bcPRange))
+        self.lineEditBCThresh.setRange(1e-6, 1e6)
 
         self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
         self.dialogSCAdvanced.lineEditSCamax.setFormat("%.4g")
@@ -216,15 +217,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             self.updateFileList(files, False) # Load files passed as arguments
 
         if paramFile is not None: # Loads the parameter file passed as argument
-            p = PrepParameters()
-            try:
-                p.load(paramFile)
-                self.setParameters(p)
-            except Exception as e:
-                self.showDetailedErrorMessage("Error loading settings from "+paramFile+": "+repr(e),
-                                              traceback.format_exc())
+            self.loadParameters(filename=paramFile)
+
         if savePath is not None:
-            if paramFile is None :
+            if paramFile is None:
                 self.errorMsg.showMessage("Running from the command line without passing a parameter file does nothing.")
             savePath = os.path.normpath(savePath)
             self.runBatch(foldername=savePath)
@@ -560,12 +556,19 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 miccs.uitools.ixfinder_nomore)
 
     # BC, Baseline Correction
+    bcNames = ['rubberband', 'concaverubberband', 'asls', 'arpls', 'assymtruncq' ]
     def bcName(self):
-        return ['none', 'rubberband', 'concaverubberband', 'asls', 'arpls'
-                ][self.comboBoxBaseline.currentIndex()]
-    def bcIndex(self, val):
-        return ['none', 'rubberband', 'concaverubberband', 'asls', 'arpls'
-                ].index(val)
+        if not self.checkBoxBC.isChecked():
+            return 'none'
+        return self.bcNames[self.comboBoxBaseline.currentIndex()]
+
+    def bcSetMethod(self, val):
+        if val in self.bcNames:
+            self.checkBoxBC.setChecked(True)
+            self.comboBoxBaseline.setCurrentIndex(self.bcNames.index(val))
+        else:
+            self.checkBoxBC.setChecked(False)
+            self.comboBoxBaseline.setCurrentIndex(0)
 
     def updateBC(self):
         indata = self.plot_SR.getSpectra()
@@ -577,11 +580,13 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         if bc == 'asls':
             param = {'lam': self.lineEditLambda.value(), 'p': self.lineEditP.value()}
         elif bc == 'arpls':
-            param = {'lam': self.lineEditLambda.value()}
+            param = {'lam': self.lineEditLambdaArpls.value()}
         elif bc == 'rubberband':
             param = {}
         elif bc == 'concaverubberband':
             param = {'iters': self.spinBoxItersBC.value()}
+        elif bc == 'assymtruncq':
+            param = {'poly': self.spinBoxBCPoly.value(), 'thresh': self.lineEditBCThresh.value()}
         if self.bcNext:
             self.abcWorker.haltBC = True
             self.bcNext = [ wn, indata, bc, param ]
@@ -607,17 +612,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.bcDone(None, None, None)
 
     def bcMethod(self):
-        params = dict(none=(0,0,0), asls=(1,1,0), arpls=(1,0,0),
-                      rubberband=(0,0,0), concaverubberband=(0,0,1))
-        params = params[self.bcName()]
-        self.horizontalSliderLambda.setEnabled(params[0])
-        self.lineEditLambda.setEnabled(params[0])
-        self.labelLambda.setEnabled(params[0])
-        self.horizontalSliderP.setEnabled(params[1])
-        self.lineEditP.setEnabled(params[1])
-        self.labelP.setEnabled(params[1])
-        self.spinBoxItersBC.setEnabled(params[2])
-        self.labelItersBC.setEnabled(params[2])
+        self.bcParams.setCurrentIndex(self.comboBoxBaseline.currentIndex())
         self.updateBC()
 
     def expSliderPos(self, box, slider, rng):
@@ -626,58 +621,85 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def expBoxVal(self, slider, rng):
         return 10.**(slider.value() / slider.maximum() * (rng[1] - rng[0]) + rng[0])
 
-    def bcLambdaSlide(self):
-        if (not self.lineEditLambda.hasAcceptableInput() or
-            self.expSliderPos(self.lineEditLambda, self.horizontalSliderLambda, self.bcLambdaRange) !=
-            self.horizontalSliderLambda.value()):
-            self.lineEditLambda.setValue(self.expBoxVal(self.horizontalSliderLambda,
-                                                        self.bcLambdaRange))
-            self.updateBC()
+    def connectLogSliders(self):
+        def makeSliderFuncs(box, slider, range_):
+            def edit():
+                if (not box.hasAcceptableInput() or
+                    self.expSliderPos(box, slider, range_) != slider.value()):
+                        box.setValue(self.expBoxVal(slider, range_))
+                self.updateBC()
+            def slide():
+                if box.hasAcceptableInput():
+                    slider.setValue(self.expSliderPos(box, slider, range_))
+                else:
+                    box.setValue(self.expBoxVal(slider, range_))
+                self.updateBC()
+            box.editingFinished.connect(edit)
+            slider.valueChanged.connect(slide)
+            box.setRange(*(10. ** range_))
+            edit()
 
-    def bcLambdaEdit(self):
-        if self.lineEditLambda.hasAcceptableInput():
-            self.horizontalSliderLambda.setValue(self.expSliderPos(
-                    self.lineEditLambda, self.horizontalSliderLambda, self.bcLambdaRange))
-        else:
-            self.lineEditLambda.setValue(self.expBoxVal(self.horizontalSliderLambda,
-                                                        self.bcLambdaRange))
-        self.updateBC()
+        makeSliderFuncs(self.lineEditLambda,
+                        self.horizontalSliderLambda, self.bcLambdaRange)
+        makeSliderFuncs(self.lineEditLambdaArpls,
+                        self.horizontalSliderLambdaArpls, self.bcLambdaRange)
+        makeSliderFuncs(self.lineEditP,
+                        self.horizontalSliderP, self.bcPRange)
+        
 
-    def bcPSlide(self):
-        if (not self.lineEditP.hasAcceptableInput() or
-            self.expSliderPos(self.lineEditP, self.horizontalSliderP, self.bcPRange) !=
-            self.horizontalSliderP.value()):
-            self.lineEditP.setValue(self.expBoxVal(self.horizontalSliderP, self.bcPRange))
-            self.updateBC()
-
-    def bcPEdit(self):
-        if self.lineEditP.hasAcceptableInput():
-            self.horizontalSliderP.setValue(self.expSliderPos(
-                    self.lineEditP, self.horizontalSliderP, self.bcPRange))
-        else:
-            self.lineEditP.setValue(self.expBoxVal(self.horizontalSliderP, self.bcPRange))
-        self.updateBC()
+#    def bcLambdaSlide(self):
+#        if (not self.lineEditLambda.hasAcceptableInput() or
+#            self.expSliderPos(self.lineEditLambda, self.horizontalSliderLambda, self.bcLambdaRange) !=
+#            self.horizontalSliderLambda.value()):
+#            self.lineEditLambda.setValue(self.expBoxVal(self.horizontalSliderLambda,
+#                                                        self.bcLambdaRange))
+#            self.updateBC()
+#
+#    def bcLambdaEdit(self):
+#        if self.lineEditLambda.hasAcceptableInput():
+#            self.horizontalSliderLambda.setValue(self.expSliderPos(
+#                    self.lineEditLambda, self.horizontalSliderLambda, self.bcLambdaRange))
+#        else:
+#            self.lineEditLambda.setValue(self.expBoxVal(self.horizontalSliderLambda,
+#                                                        self.bcLambdaRange))
+#        self.updateBC()
+#
+#    def bcPSlide(self):
+#        if (not self.lineEditP.hasAcceptableInput() or
+#            self.expSliderPos(self.lineEditP, self.horizontalSliderP, self.bcPRange) !=
+#            self.horizontalSliderP.value()):
+#            self.lineEditP.setValue(self.expBoxVal(self.horizontalSliderP, self.bcPRange))
+#            self.updateBC()
+#
+#    def bcPEdit(self):
+#        if self.lineEditP.hasAcceptableInput():
+#            self.horizontalSliderP.setValue(self.expSliderPos(
+#                    self.lineEditP, self.horizontalSliderP, self.bcPRange))
+#        else:
+#            self.lineEditP.setValue(self.expBoxVal(self.horizontalSliderP, self.bcPRange))
+#        self.updateBC()
 
 
     # Normalization
+    normNames = [ 'mean', 'area', 'wn', 'max', 'n2' ]
     def normName(self):
-        return ['none', 'area', 'wn', 'mean', 'max'][self.comboBoxNormMethod.currentIndex()]
+        return self.normNames[self.comboBoxNormMethod.currentIndex()]
     def normIndex(self, val):
-        return ['none', 'area', 'wn', 'mean', 'max'].index(val)
+        if val not in self.normNames:
+            return 0
+        return self.normNames.index(val)
 
     def updateNorm(self):
         meth = self.normName()
         self.lineEditNormWavenum.setEnabled(meth == 'wn')
         wn = self.plot_BC.getWavenumbers()
         indata = self.plot_BC.getSpectra()
-        if indata is None or len(indata) == 0:
+        if indata is None or len(indata) == 0 or not self.checkBoxNorm.isChecked():
             self.plot_norm.setData(wn, indata, indata)
             return
         if not self.lineEditNormWavenum.hasAcceptableInput():
             self.lineEditNormWavenum.setValue()
-        if meth == 'none':
-            self.plot_norm.setData(wn, indata, indata)
-        elif meth == 'mean':
+        if meth == 'mean':
             self.plot_norm.setData(wn, indata, (indata.T / indata.mean(axis=1)).T)
         elif meth == 'area':
             self.plot_norm.setData(wn, indata, (indata.T / -np.trapz(indata, wn, axis=1)).T)
@@ -686,6 +708,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             self.plot_norm.setData(wn, indata, (indata.T / indata[:, idx]).T)
         elif meth == 'max':
             self.plot_norm.setData(wn, indata, (indata.T / indata.max(axis=1)).T)
+        elif meth == 'n2':
+            self.plot_norm.setData(
+                    wn, indata,
+                    (indata.T / np.sqrt((indata * indata).mean(axis=1))).T)
 
 
     # Loading and saving parameters
@@ -728,10 +754,15 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         p.srDo = self.checkBoxSR.isChecked()
         p.srMin = self.lineEditMinwn.value()
         p.srMax = self.lineEditMaxwn.value()
+        p.bcDo = self.checkBoxBC.isChecked()
         p.bcMethod = self.bcName()
         p.bcIters = self.spinBoxItersBC.value()
         p.bcLambda = self.lineEditLambda.value()
+        p.bcLambdaArpls = self.lineEditLambdaArpls.value()
         p.bcP = self.lineEditP.value()
+        p.bcThreshold = self.lineEditBCThresh.value()
+        p.bcPoly = self.spinBoxBCPoly.value()
+        p.normDo = self.checkBoxNorm.isChecked()
         p.normMethod = self.normName()
         p.normWavenum = self.lineEditNormWavenum.value()
         return p
@@ -742,6 +773,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 filter="Setting files (*.pjs);;All files (*)",
                 settingname='settingsDir',
                 suffix='pjs')
+        print('fn',filename)
         if filename:
             try:
                 self.getParameters().save(filename)
@@ -788,10 +820,15 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxSR.setChecked(p.srDo)
         self.lineEditMinwn.setValue(p.srMin)
         self.lineEditMaxwn.setValue(p.srMax)
-        self.comboBoxBaseline.setCurrentIndex(self.bcIndex(p.bcMethod))
+        self.checkBoxBC.setChecked(p.bcDo)
+        self.bcSetMethod(p.bcMethod)
         self.spinBoxItersBC.setValue(p.bcIters)
         self.lineEditLambda.setValue(p.bcLambda)
+        self.lineEditLambdaArpls.setValue(p.bcLambdaArpls)
         self.lineEditP.setValue(p.bcP)
+        self.lineEditBCThresh.setValue(p.bcThreshold)
+        self.spinBoxBCPoly.setValue(p.bcPoly)
+        self.checkBoxNorm.setChecked(p.normDo)
         self.comboBoxNormMethod.setCurrentIndex(self.normIndex(p.normMethod))
         self.lineEditNormWavenum.setValue(p.normWavenum)
 
@@ -802,18 +839,25 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.updateSGF()
         self.spinBoxSpectra.setValue(p.spectraCount)
 
-    def loadParameters(self):
-        filename = self.getLoadFileName("Load preprocessing settings",
-                                        filter="Settings files (*.pjs);;All files (*)",
-                                        settingname='settingsDir')
+    def loadParameters(self, checked=False, filename=None):
+        """
+        Load parameters from a file, showing a dialog if no filename is given.
+        The 'checked' parameter is just a placeholder to match QPushButton.clicked().
+        """
+        if not filename:
+            filename = self.getLoadFileName(
+                    "Load preprocessing settings",
+                    filter="Settings files (*.pjs);;All files (*)",
+                    settingname='settingsDir')
         if filename:
             p = PrepParameters()
             try:
                 p.load(filename)
                 self.setParameters(p)
             except Exception as e:
-                self.showDetailedErrorMessage("Error loading settings from "+filename+": "+repr(e),
-                                              traceback.format_exc())
+                self.showDetailedErrorMessage(
+                        "Error loading settings from "+filename+": "+repr(e),
+                        traceback.format_exc())
 
 
     def runBatch(self, foldername=None):

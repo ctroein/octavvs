@@ -61,10 +61,15 @@ class PrepParameters:
         self.srDo = False
         self.srMin = 800
         self.srMax = 4000
+        self.bcDo = False
         self.bcMethod = 'none'
         self.bcIters = 10
         self.bcLambda = 10000
         self.bcP = 0.01
+        self.bcLambdaArpls = 10000
+        self.bcThreshold = 0.01
+        self.bcPoly = 3
+        self.normDo = False
         self.normMethod = 'none'
         self.normWavenum = 1655
 
@@ -235,22 +240,27 @@ class PrepWorker(QObject):
                     wn = wn[a:b]
                     y = y[:, a:b]
 
-                if params.bcMethod != 'none':
+                if params.bcDo:
                     self.emitProgress(-4, 100)
                     if params.bcMethod == 'rubberband':
-                        y -= baseline.rubberband(wn, y, progressCallback=self.emitProgress)
+                        y -= baseline.rubberband(
+                                wn, y, progressCallback=self.emitProgress)
                     elif params.bcMethod == 'concaverubberband':
                         y -= baseline.concaverubberband(
-                                wn, y, iters=params.bcIters, progressCallback=self.emitProgress)
+                                wn, y, iters=params.bcIters,
+                                progressCallback=self.emitProgress)
                     elif params.bcMethod == 'asls':
-                        y -= baseline.asls(y, lam=params.bcLambda,
-                                           p=params.bcP, progressCallback=self.emitProgress)
+                        y -= baseline.asls(
+                                y, lam=params.bcLambda, p=params.bcP,
+                                progressCallback=self.emitProgress)
                     elif params.bcMethod == 'arpls':
-                        y -= baseline.arpls(y, lam=params.bcLambda, progressCallback=self.emitProgress)
+                        y -= baseline.arpls(
+                                y, lam=params.bcLambdaArpls,
+                                progressCallback=self.emitProgress)
                     else:
                         raise ValueError('unknown baseline correction method '+str(params.bcMethod))
 
-                if params.normMethod == 'none':
+                if not params.normDo:
                     pass
                 elif params.normMethod == 'mean':
                     y = (y.T / y.mean(axis=1)).T
