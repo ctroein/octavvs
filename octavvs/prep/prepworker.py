@@ -14,7 +14,7 @@ import numpy as np
 import scipy.signal, scipy.io
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from ..miccs import baseline, correction, SpectralData
+from ..miccs import baseline, correction, normalization, SpectralData
 
 class PrepParameters:
     """
@@ -260,19 +260,9 @@ class PrepWorker(QObject):
                     else:
                         raise ValueError('unknown baseline correction method '+str(params.bcMethod))
 
-                if not params.normDo:
-                    pass
-                elif params.normMethod == 'mean':
-                    y = (y.T / y.mean(axis=1)).T
-                elif params.normMethod == 'area':
-                    y = (y.T / -np.trapz(y, wn, axis=1)).T
-                elif params.normMethod == 'wn':
-                    idx = (np.abs(wn-params.normWavenum)).argmin()
-                    y = (y.T / y[:, idx]).T
-                elif params.normMethod == 'max':
-                    y = (y.T / y.max(axis=1)).T
-                else:
-                    raise ValueError('unknown normalization method '+params.normMethod)
+                if params.normDo:
+                    y = normalization.normalize_spectra(params.normMethod, y, wn,
+                                                        wavenum=params.normWavenum)
 
                 # Figure out where to save the file
                 filename = data.curFile

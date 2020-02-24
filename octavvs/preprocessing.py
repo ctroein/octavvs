@@ -139,16 +139,9 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.plot_SR.updated.connect(self.updateBC)
         self.plot_BC.clicked.connect(self.plot_BC.popOut)
         self.comboBoxBaseline.currentIndexChanged.connect(self.bcMethod)
-
-#        self.horizontalSliderLambda.valueChanged.connect(self.bcLambdaSlide)
-#        self.lineEditLambda.editingFinished.connect(self.bcLambdaEdit)
-#        self.horizontalSliderP.valueChanged.connect(self.bcPSlide)
-#        self.lineEditP.editingFinished.connect(self.bcPEdit)
         self.checkBoxBC.toggled.connect(self.updateBC)
         self.connectLogSliders()
         self.spinBoxItersBC.valueChanged.connect(self.updateBC)
-#        self.bcLambdaEdit()
-#        self.bcPEdit()
 
         self.plot_BC.updated.connect(self.updateNorm)
         self.plot_norm.clicked.connect(self.plot_norm.popOut)
@@ -647,39 +640,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                         self.horizontalSliderP, self.bcPRange)
 
 
-#    def bcLambdaSlide(self):
-#        if (not self.lineEditLambda.hasAcceptableInput() or
-#            self.expSliderPos(self.lineEditLambda, self.horizontalSliderLambda, self.bcLambdaRange) !=
-#            self.horizontalSliderLambda.value()):
-#            self.lineEditLambda.setValue(self.expBoxVal(self.horizontalSliderLambda,
-#                                                        self.bcLambdaRange))
-#            self.updateBC()
-#
-#    def bcLambdaEdit(self):
-#        if self.lineEditLambda.hasAcceptableInput():
-#            self.horizontalSliderLambda.setValue(self.expSliderPos(
-#                    self.lineEditLambda, self.horizontalSliderLambda, self.bcLambdaRange))
-#        else:
-#            self.lineEditLambda.setValue(self.expBoxVal(self.horizontalSliderLambda,
-#                                                        self.bcLambdaRange))
-#        self.updateBC()
-#
-#    def bcPSlide(self):
-#        if (not self.lineEditP.hasAcceptableInput() or
-#            self.expSliderPos(self.lineEditP, self.horizontalSliderP, self.bcPRange) !=
-#            self.horizontalSliderP.value()):
-#            self.lineEditP.setValue(self.expBoxVal(self.horizontalSliderP, self.bcPRange))
-#            self.updateBC()
-#
-#    def bcPEdit(self):
-#        if self.lineEditP.hasAcceptableInput():
-#            self.horizontalSliderP.setValue(self.expSliderPos(
-#                    self.lineEditP, self.horizontalSliderP, self.bcPRange))
-#        else:
-#            self.lineEditP.setValue(self.expBoxVal(self.horizontalSliderP, self.bcPRange))
-#        self.updateBC()
-
-
     # Normalization
     normNames = [ 'mean', 'area', 'wn', 'max', 'n2' ]
     def normName(self):
@@ -699,19 +659,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             return
         if not self.lineEditNormWavenum.hasAcceptableInput():
             self.lineEditNormWavenum.setValue()
-        if meth == 'mean':
-            self.plot_norm.setData(wn, indata, (indata.T / indata.mean(axis=1)).T)
-        elif meth == 'area':
-            self.plot_norm.setData(wn, indata, (indata.T / -np.trapz(indata, wn, axis=1)).T)
-        elif meth == 'wn':
-            idx = (np.abs(wn-self.lineEditNormWavenum.value())).argmin()
-            self.plot_norm.setData(wn, indata, (indata.T / indata[:, idx]).T)
-        elif meth == 'max':
-            self.plot_norm.setData(wn, indata, (indata.T / indata.max(axis=1)).T)
-        elif meth == 'n2':
-            self.plot_norm.setData(
-                    wn, indata,
-                    (indata.T / np.sqrt((indata * indata).mean(axis=1))).T)
+
+        n = miccs.normalization.normalize_spectra(
+                meth, y=indata, wn=wn, wavenum=self.lineEditNormWavenum.value())
+        self.plot_norm.setData(wn, indata, n)
 
 
     # Loading and saving parameters
@@ -860,7 +811,11 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                         traceback.format_exc())
 
 
-    def runBatch(self, foldername=None):
+    def runBatch(self, checked=False, foldername=None):
+        """
+        Run the selected preprocessing steps, showing a dialog if no output path is given.
+        The 'checked' parameter is just a placeholder to match QPushButton.clicked().
+        """
         assert not self.rmiescRunning
         if len(self.data.filenames) < 1:
             self.errorMsg.showMessage('Load some data first')
