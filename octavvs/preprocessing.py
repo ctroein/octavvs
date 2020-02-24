@@ -144,6 +144,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 #        self.lineEditLambda.editingFinished.connect(self.bcLambdaEdit)
 #        self.horizontalSliderP.valueChanged.connect(self.bcPSlide)
 #        self.lineEditP.editingFinished.connect(self.bcPEdit)
+        self.checkBoxBC.toggled.connect(self.updateBC)
         self.connectLogSliders()
         self.spinBoxItersBC.valueChanged.connect(self.updateBC)
 #        self.bcLambdaEdit()
@@ -151,6 +152,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.plot_BC.updated.connect(self.updateNorm)
         self.plot_norm.clicked.connect(self.plot_norm.popOut)
+        self.checkBoxNorm.toggled.connect(self.updateNorm)
         self.comboBoxNormMethod.currentIndexChanged.connect(self.updateNorm)
         self.lineEditNormWavenum.editingFinished.connect(self.updateNorm)
 
@@ -196,8 +198,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.lineEditMinwn.setFormat("%.2f")
         self.lineEditMaxwn.setFormat("%.2f")
-        self.lineEditLambda.setFormat("%.4g")
-        self.lineEditP.setFormat("%.4g")
         self.lineEditBCThresh.setRange(1e-6, 1e6)
 
         self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
@@ -615,37 +615,37 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.bcParams.setCurrentIndex(self.comboBoxBaseline.currentIndex())
         self.updateBC()
 
-    def expSliderPos(self, box, slider, rng):
-        return round(slider.maximum() * (np.log10(box.value()) - rng[0]) / (rng[1] - rng[0]))
-
-    def expBoxVal(self, slider, rng):
-        return 10.**(slider.value() / slider.maximum() * (rng[1] - rng[0]) + rng[0])
-
     def connectLogSliders(self):
+        def expSliderPos(box, slider, rng):
+            return round(slider.maximum() * (np.log10(box.value()) - rng[0]) / (rng[1] - rng[0]))
+
+        def expBoxVal(slider, rng):
+            return 10.**(slider.value() / slider.maximum() * (rng[1] - rng[0]) + rng[0])
+
         def makeSliderFuncs(box, slider, range_):
-            def edit():
-                if (not box.hasAcceptableInput() or
-                    self.expSliderPos(box, slider, range_) != slider.value()):
-                        box.setValue(self.expBoxVal(slider, range_))
-                self.updateBC()
             def slide():
+                if (not box.hasAcceptableInput() or
+                    expSliderPos(box, slider, range_) != slider.value()):
+                        box.setValue(expBoxVal(slider, range_))
+                self.updateBC()
+            def edit():
                 if box.hasAcceptableInput():
-                    slider.setValue(self.expSliderPos(box, slider, range_))
+                    slider.setValue(expSliderPos(box, slider, range_))
                 else:
-                    box.setValue(self.expBoxVal(slider, range_))
+                    box.setValue(expBoxVal(slider, range_))
                 self.updateBC()
             box.editingFinished.connect(edit)
             slider.valueChanged.connect(slide)
             box.setRange(*(10. ** range_))
+            box.setFormat("%.4g")
             edit()
-
         makeSliderFuncs(self.lineEditLambda,
                         self.horizontalSliderLambda, self.bcLambdaRange)
         makeSliderFuncs(self.lineEditLambdaArpls,
                         self.horizontalSliderLambdaArpls, self.bcLambdaRange)
         makeSliderFuncs(self.lineEditP,
                         self.horizontalSliderP, self.bcPRange)
-        
+
 
 #    def bcLambdaSlide(self):
 #        if (not self.lineEditLambda.hasAcceptableInput() or
