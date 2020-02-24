@@ -86,6 +86,8 @@ class OctavvsMainWindow(QMainWindow):
         else:
             dialog.setFileMode(QFileDialog.ExistingFile)
         dialog.exec()
+        if not dialog.result():
+            return None
         files = dialog.selectedFiles()
         if len(files):
 #            self.settings.setValue(settingname, dialog.saveState())
