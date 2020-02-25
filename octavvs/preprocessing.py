@@ -601,7 +601,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     @pyqtSlot(str)
     def bcFailed(self, err):
         if err != '':
-            self.errorMsg.showMessage('BC failed: ' + err)
+            print(err)
+            self.errorMsg.showMessage('BC failed: <pre>' + err + '</pre>')
         self.bcDone(None, None, None)
 
     def bcMethod(self):
