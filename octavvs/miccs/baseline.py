@@ -13,6 +13,10 @@ from scipy import sparse
 from scipy.spatial import ConvexHull
 from scipy.interpolate import interp1d
 from scipy.sparse.linalg import spsolve
+from multiprocessing.pool import ThreadPool as Pool
+import os
+#import dill
+
 
 def straight(x, y):
     """
@@ -27,6 +31,16 @@ def straight(x, y):
     if x[0] < x[-1]:
         return interp1d(x[[0,-1]], y[...,[0,-1]], assume_sorted=True)(x)
     return interp1d(x[[-1,0]], y[...,[-1,0]], assume_sorted=True)(x)
+
+
+#def apply_packed_function_for_map(dumped):
+#    "Unpack dumped function as target function and call it with arguments."
+#    return dill.loads(dumped[0])(dumped[1])
+#
+#def pack_function_for_map(target_function, items):
+#    dumped_function = dill.dumps(target_function)
+#    dumped_items = [(dumped_function, item) for item in items]
+#    return apply_packed_function_for_map, dumped_items
 
 
 def asls(y, lam, p, niter=20, progressCallback=None):
@@ -46,10 +60,8 @@ def asls(y, lam, p, niter=20, progressCallback=None):
     L = y.shape[-1]
     D = sparse.csc_matrix(np.diff(np.eye(L), 2))
     D = lam * D.dot(D.T)
-    multi = y.ndim > 1
-    y = y.copy() if multi else [ y ]
-    for k in range(len(y)):
-        yy = y[k]
+
+    def asls_one(yy):
         w = np.ones(L)
         for i in range(niter):
             z = spsolve(sparse.spdiags(w, 0, L, L) + D, w * yy)
@@ -57,11 +69,25 @@ def asls(y, lam, p, niter=20, progressCallback=None):
             if np.array_equal(wnew, w):
                 break
             w = wnew
-        if not multi:
-            return z
-        y[k] = z
-        if progressCallback:
-            progressCallback(k+1, len(y))
+        return z
+    if y.ndim < 2:
+        return asls_one(y)
+
+    y = y.copy()
+    if len(y) < 1:
+        return y
+    cpus = min(len(os.sched_getaffinity(0)), len(y), 6)
+    if cpus > 1:
+        pool = Pool(cpus)
+        it = pool.imap(asls_one, y, chunksize=10)
+#        it = pool.imap(*pack_function_for_map(asls_one, y), chunksize=10)
+    else:
+        cpus = 1
+        it = map(asls_one, y)
+    for i in range(len(y)):
+        y[i] = next(it)
+        if progressCallback and not i % cpus:
+            progressCallback(i+1, len(y))
     return y
 
 def iasls(y, lam, lam1, p, niter=30, progressCallback=None):
