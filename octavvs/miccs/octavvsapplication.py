@@ -86,14 +86,11 @@ class OctavvsMainWindow(QMainWindow):
         else:
             dialog.setFileMode(QFileDialog.ExistingFile)
         dialog.exec()
-        if not dialog.result():
-            return None
         files = dialog.selectedFiles()
-        if len(files):
-#            self.settings.setValue(settingname, dialog.saveState())
-            self.settings.setValue(settingname, os.path.dirname(files[0]))
-            return files if multiple else files[0]
-        return None
+        if not dialog.result() or not files:
+            return None
+        self.settings.setValue(settingname, os.path.dirname(files[0]))
+        return files if multiple else files[0]
 
     def getSaveFileName(self, title, suffix='', filter=None, settingname=None):
         "Show a file dialog and select an output file"
@@ -129,11 +126,11 @@ class OctavvsMainWindow(QMainWindow):
         dialog.setOption(QFileDialog.ShowDirsOnly, True)
         dialog.exec()
         dirs = dialog.selectedFiles()
-        if len(dirs):
-            if savesetting:
-                self.settings.setValue(settingname, dirs[0])
-            return dirs[0]
-        return None
+        if not dialog.result() or not dirs:
+            return None
+        if savesetting:
+            self.settings.setValue(settingname, dirs[0])
+        return dirs[0]
 
     def updateWavenumberRange(self):
         "For derived classes, when the wn range is updated"
