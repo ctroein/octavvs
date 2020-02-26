@@ -8,7 +8,7 @@ import traceback
 from os.path import basename, dirname
 from pkg_resources import resource_filename
 import argparse
-
+import io
 #from PyQt5.QtCore import *
 #from PyQt5.QtGui import QFileDialog
 #from PyQt5 import QtWidgets
@@ -16,21 +16,102 @@ from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
 from PyQt5.Qt import QMainWindow, qApp #, QTimer
 #from PyQt5.QtCore import (QCoreApplication, QObject, QRunnable, QThread, QThreadPool,pyqtSignal, pyqtSlot)
 from PyQt5 import uic
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from matplotlib import colors
-#from matplotlib.cm import ScalarMappable
+from PyQt5.QtWidgets import QTableWidgetItem, QTableWidgetSelectionRange
 
 from .mcr import ftir_function as ff
 from .miccs import ExceptionDialog
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
+Ui_table = uic.loadUiType(resource_filename(__name__, "mcr/table_ui.ui"))[0]
+
+class Table(QMainWindow, Ui_table):
+    def __init__(self, parent=None):
+        super(Table, self).__init__(parent=None)
+        qApp.installEventFilter(self)
+        self.setupUi(self)
+        self.actionSelect_all.triggered.connect(self.select)
+        self.actionDeselect_all.triggered.connect(self.deselect)
+        self.actionCopy.triggered.connect(self.copySelection)
+        self.actionSave_as.triggered.connect(self.saveas)
+        self.actionClose.triggered.connect(self.close)
+                   
+        
+    @pyqtSlot(np.ndarray, int)
+    def main_data(self,data, decision):
+        self.data_tab = data
+        self.decision = decision
+        self.row  = len(self.data_tab) 
+        self.col = len(self.data_tab.T) 
+        
+        if self.decision == 0:
+            name = range(1,self.col)
+            name = (list(map(str,name))) 
+            
+            head = ['Wavenumber']
+            head = head + name
+            self.tableWidget.setHorizontalHeaderLabels(head)
+            
+          
+        # print(self.data_tab)
+        if self.data_tab is not None:
+            self.row  = len(self.data_tab)
+            self.col = len(self.data_tab.T) 
+            self.tableWidget.setRowCount(self.row)
+            self.tableWidget.setColumnCount(self.col)
+            
+            for i in range(0,self.row):
+                for j in range(0,self.col):
+                    self.tableWidget.setItem(i, j, QTableWidgetItem(str(self.data_tab[i,j])))
+         
+    def select(self):
+        self.tableWidget.setRangeSelected(QTableWidgetSelectionRange(0,0, self.row-1, self.col-1), True)
+
+    def deselect(self):
+        self.tableWidget.setRangeSelected(QTableWidgetSelectionRange(0,0, self.row-1, self.col-1), False)       
+        
+    def close(self):
+        self.hide()
+    
+    
+    def copySelection(self):
+        selection = self.tableWidget.selectedIndexes()
+        if selection:
+            rows = sorted(index.row() for index in selection)
+            columns = sorted(index.column() for index in selection)
+            rowcount = rows[-1] - rows[0] + 1
+            colcount = columns[-1] - columns[0] + 1
+            table = [[''] * colcount for _ in range(rowcount)]
+            for index in selection:
+                row = index.row() - rows[0]
+                column = index.column() - columns[0]
+                table[row][column] = index.data()
+            stream = io.StringIO()
+            csv.writer(stream).writerows(table)
+            qApp.clipboard().setText(stream.getvalue())
+
+
+    def saveas(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        filesave, _ = QFileDialog.getSaveFileName(self,"Save the data","","csv file (*.csv)", options=options)
+        if filesave:
+            __ , ext = os.path.splitext(filesave)
+            print(filesave)
+            # if  ext == '.xls':
+            #     filesave = filesave
+            # else:
+            #     filesave = filesave+'.xls'
 
 
 class MyMainWindow(QMainWindow, Ui_MainWindow):
+    DataUpdated = pyqtSignal(np.ndarray, int)
 
     def __init__(self,parent=None):
         super(MyMainWindow, self).__init__(parent)
@@ -59,10 +140,15 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.pushButtonSC.clicked.connect(self.SC)
         self.lineEditHeight.returnPressed.connect(self.ValidationX)
         self.lineEditWidth.returnPressed.connect(self.ValidationY)
+        self.pushButtonTable.clicked.connect(self.TableShow)
+        self.Tableview = Table(self)
+   
+        self.DataUpdated.connect(self.Tableview.main_data)
 
         ExceptionDialog.install(self)
 
     def closeEvent(self, event):
+        self.Tableview.close()
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setText("Warning")
@@ -75,6 +161,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             qApp.quit()
         else:
             event.ignore()
+
+    def TableShow(self):
+        self.Tableview.show()
 
 
     def Load_chose(self):
@@ -269,12 +358,16 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             pass
 
 
-        self.index = np.random.randint(0,int(self.sx*self.sy),(10))
+        self.index = np.random.randint(0,int(self.sx*self.sy),(20))
         self.clear_all()
         self.lock_un(True)
         self.lineEditFilename.setText((basename(fileName).replace('.mat','')))
         self.lineEditDirSpectra.setText(fileName)
-
+        
+           
+        # data = self.sp[:,self.index]
+        self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0)
+        
 
         self.plot_specta.canvas.ax.clear()
         self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
@@ -631,14 +724,13 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
             self.plot_specta.canvas.fig.tight_layout()
             self.plot_specta.canvas.draw()
-
+            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0)
 
         if 'component_' in self.comboBoxVisualize.currentText():
             import re
             val = int(re.search(r'\d+', self.comboBoxVisualize.currentText()).group()) - 1
             self.datap = self.df_conc.iloc[:,val].to_numpy()
 
-#            global component
             self.component = np.reshape(self.datap,(int(self.lineEditHeight.text()),
                                            int(self.lineEditWidth.text())))
             self.plotMultiVisual.canvas.ax.clear()
@@ -646,12 +738,16 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.plotMultiVisual.canvas.fig.tight_layout()
             self.plotMultiVisual.canvas.draw()
 
-#            global datas
             self.datas = self.df_spec.iloc[:,val].to_numpy()
             self.plot_specta.canvas.ax.clear()
             self.plot_specta.canvas.ax.plot(self.wavenumber, self.datas)
             self.plot_specta.canvas.fig.tight_layout()
             self.plot_specta.canvas.draw()
+           
+            
+            # print(len(self.datas))
+            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.datas)),0)
+
 
         self.ExpandSpectraU()
         self.ExpandVisU()
@@ -1051,6 +1147,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.pushButtonReduce.setEnabled(stat)
         self.comboBoxNormalization.setEnabled(stat)
         self.pushButtonSC.setEnabled(stat)
+        self.pushButtonTable.setEnabled(stat)
 
 
 

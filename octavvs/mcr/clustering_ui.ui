@@ -24,7 +24,7 @@
     <item row="0" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_29" stretch="3,5">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_15" stretch="0,1,0,1">
+       <layout class="QVBoxLayout" name="verticalLayout_15" stretch="0,1,0,0,1">
         <item>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
@@ -227,14 +227,25 @@
          </layout>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0">
+         <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1">
           <item>
            <widget class="MplWidget" name="plot_specta" native="true"/>
           </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
            <widget class="QPushButton" name="pushButtonExpandSpectra">
             <property name="text">
              <string>Expand</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonTable">
+            <property name="text">
+             <string>Table View</string>
             </property>
            </widget>
           </item>
@@ -1386,7 +1397,6 @@
   <tabstop>lineEditLength</tabstop>
   <tabstop>lineEditWidth</tabstop>
   <tabstop>lineEditHeight</tabstop>
-  <tabstop>pushButtonExpandSpectra</tabstop>
   <tabstop>comboBoxMethod</tabstop>
   <tabstop>comboBoxCmaps</tabstop>
   <tabstop>horizontalSliderWavenumber</tabstop>
