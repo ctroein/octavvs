@@ -588,6 +588,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QPushButton" name="pushButtonTableAve">
+                <property name="text">
+                 <string>Table View</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="pushButtonSaveSpectra">
                 <property name="text">
                  <string>Save average spectra</string>

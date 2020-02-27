@@ -43,12 +43,13 @@ class Table(QMainWindow, Ui_table):
         self.actionClose.triggered.connect(self.close)
                    
         
-    @pyqtSlot(np.ndarray, int)
-    def main_data(self,data, decision):
+    @pyqtSlot(np.ndarray, int, list)
+    def main_data(self,data, decision,label):
         self.data_tab = data
         self.decision = decision
         self.row  = len(self.data_tab) 
         self.col = len(self.data_tab.T) 
+        self.label = label
         
         if self.decision == 0:
             name = range(1,self.col)
@@ -57,9 +58,13 @@ class Table(QMainWindow, Ui_table):
             head = ['Wavenumber']
             head = head + name
             self.tableWidget.setHorizontalHeaderLabels(head)
-            
-          
-        # print(self.data_tab)
+        
+        if self.label != ['0']:
+            head = ['Wavenumber']
+            head = head + self.label
+            self.tableWidget.setHorizontalHeaderLabels(head)
+        
+    
         if self.data_tab is not None:
             self.row  = len(self.data_tab)
             self.col = len(self.data_tab.T) 
@@ -79,7 +84,6 @@ class Table(QMainWindow, Ui_table):
     def close(self):
         self.hide()
     
-    
     def copySelection(self):
         selection = self.tableWidget.selectedIndexes()
         if selection:
@@ -96,7 +100,6 @@ class Table(QMainWindow, Ui_table):
             csv.writer(stream).writerows(table)
             qApp.clipboard().setText(stream.getvalue())
 
-
     def saveas(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -111,7 +114,12 @@ class Table(QMainWindow, Ui_table):
 
 
 class MyMainWindow(QMainWindow, Ui_MainWindow):
-    DataUpdated = pyqtSignal(np.ndarray, int)
+    DataUpdated = pyqtSignal(np.ndarray, int, list)
+    SearchUp = pyqtSignal(str)
+    Onefile = pyqtSignal(str)
+    ProjUp = pyqtSignal()
+    VisUp = pyqtSignal()
+    ClusUp = pyqtSignal()
 
     def __init__(self,parent=None):
         super(MyMainWindow, self).__init__(parent)
@@ -141,9 +149,16 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEditHeight.returnPressed.connect(self.ValidationX)
         self.lineEditWidth.returnPressed.connect(self.ValidationY)
         self.pushButtonTable.clicked.connect(self.TableShow)
+        self.pushButtonTableAve.clicked.connect(self.TableAve)
         self.Tableview = Table(self)
    
         self.DataUpdated.connect(self.Tableview.main_data)
+        self.SearchUp.connect(self.search_whole_folder)
+        self.Onefile.connect(self.readfile)
+        self.ProjUp.connect(self.ImageProjection)
+        self.VisUp.connect(self.Cvisualize)
+        self.ClusUp.connect(self.ClusteringCal)
+        
 
         ExceptionDialog.install(self)
 
@@ -163,6 +178,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             event.ignore()
 
     def TableShow(self):
+        self.VisUp.emit()
+        self.Tableview.close()
+        # self.VisUp.emit()
         self.Tableview.show()
 
 
@@ -172,7 +190,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             options |= QFileDialog.DontUseNativeDialog
             self.foldername = QFileDialog.getExistingDirectory(self,"Open the input data")
             if self.foldername:
-                self.search_whole_folder(self.foldername)
+                self.SearchUp.emit(self.foldername)
                 self.pushButtonNext.setEnabled(True)
                 self.pushButtonPrevious.setEnabled(True)
             else:
@@ -189,6 +207,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.pushButtonNext.setEnabled(False)
             self.pushButtonPrevious.setEnabled(False)
 
+   
     def LoadSpec(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -197,7 +216,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.foldername = dirname(self.fileName)
             self.lineEditFileNum.setText('1')
             self.lineEditTotal.setText('1')
-            self.readfile(self.fileName)
+            self.Onefile.emit(self.fileName)
 
         else:
             msg = QMessageBox()
@@ -215,7 +234,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             count = int(self.lineEditFileNum.text())
             filename = df.iloc[count,1]
             self.lineEditFileNum.setText(str(count+1))
-            self.readfile(filename)
+            # self.readfile(filename)
+            self.Onefile.emit(filename)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
@@ -233,7 +253,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             count -=1
             filename = df.iloc[count-1,1]
             self.lineEditFileNum.setText(str(count))
-            self.readfile(filename)
+            self.Onefile.emit(filename)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
@@ -273,9 +293,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
         self.p = np.reshape(self.p,(z,x,y))
-        self.ImageProjection()
-        self.Cvisualize()
-        self.ClusteringCal()
+        self.ProjUp.emit()
+        self.VisUp.emit()
+        self.ClusUp.emit()
 
     def ValidationY(self):
         x = int(self.lineEditHeight.text())
@@ -306,16 +326,16 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
         self.p = np.reshape(self.p,(z,x,y))
-        self.ImageProjection()
-        self.Cvisualize()
-        self.ClusteringCal()
+        self.ProjUp.emit()
+        self.VisUp.emit()
+        self.ClusUp.emit()
 
     def SC(self):
         name = self.lineEditFilename.text()
         QApplication.primaryScreen().grabWindow(self.winId()).save(self.foldername+'/'+name+'_SC'+'.png')
 
 
-
+    @pyqtSlot(str)
     def search_whole_folder(self, foldername):
         count = 0
         name =  {}
@@ -328,14 +348,13 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         w = csv.writer(open(foldername+"//Fileall.csv", "w"))
         for key, val in sorted(name.items(), key=lambda item: item[1]):
-#        for key, val in sorted(name.items()):
             w.writerow([key, val])
 
         self.lineEditTotal.setText(str(count))
         self.lineEditFileNum.setText(str(1))
-        self.readfile(name[0])
+        self.Onefile.emit(name[0])
 
-
+    @pyqtSlot(str) 
     def readfile(self,fileName):
         self.img = None
         try:
@@ -364,10 +383,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEditFilename.setText((basename(fileName).replace('.mat','')))
         self.lineEditDirSpectra.setText(fileName)
         
-           
-        # data = self.sp[:,self.index]
-        self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0)
-        
+        self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
 
         self.plot_specta.canvas.ax.clear()
         self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
@@ -388,9 +404,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.lineEditWidth.setText(str(self.sx))
             self.lineEditHeight.setText(str(self.sy))
 
-
-        self.ImageProjection()
-
+        self.ProjUp.emit()
 
         if self.img is not None:
             self.plot_White.canvas.ax.clear()
@@ -430,7 +444,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             dfpurest = pd.read_csv(filepurest, header= None)
             self.df_spec = dfpurest.iloc[:int(self.lineEditLength.text()),:]
             self.df_conc = dfpurest.iloc[int(self.lineEditLength.text()):,:]
-            self.ClusteringCal()
+            self.ClusUp.emit()
             self.Nclus_on()
             for comp1 in range(0,len(self.df_conc.T)):
                 self.comboBoxVisualize.addItem("component_"+str(comp1+1))
@@ -443,7 +457,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.df_spec = dfpurest.iloc[:int(self.lineEditLength.text()),:]
         self.df_conc = dfpurest.iloc[int(self.lineEditLength.text()):,:]
 
-        self.ClusteringCal()
+        # self.ClusteringCal()
+        self.ClusUp.emit()
         self.Nclus_on()
         for comp1 in range(0,len(self.df_conc.T)):
             self.comboBoxVisualize.addItem("component_"+str(comp1+1))
@@ -459,7 +474,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
             self.plot_White.canvas.draw()
-            self.Cvisualize()
+            # self.Cvisualize()
+            self.VisUp.emit()
 
 
     def ExpandCluster(self):
@@ -476,7 +492,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         else:
             pass
 
-
+    
+    @pyqtSlot()
     def ClusteringCal(self):
         nclus = int(self.spinBoxNcluster.value())
         method = int(self.comboBoxMethodCluster.currentIndex())
@@ -585,11 +602,10 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         self.ExpandAveU()
         self.plotAverage.canvas.draw()
-        self.Similar()
-#
-#fig = plt.figure()
-#ax = fig.add_subplot(111)
-
+        anotclus=len(set(self.clis))
+        self.lineEditAnotClus.setText(str(anotclus))
+        
+    
 
     def ExpandAve(self):
         plt.close("Average Spectra")
@@ -637,7 +653,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         else:
             pass
 
-
     def ExpandProjection(self):
         plt.close("Image Projection")
         plt.figure("Image Projection", tight_layout={'pad':.5})
@@ -661,11 +676,12 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
         self.plot_visual.canvas.draw()
-        self.Cvisualize()
+        self.VisUp.emit()
         self.ExpandProjU()
 
+    
+    @pyqtSlot()
     def ImageProjection(self):
-
         if  self.comboBoxMethod.currentIndex() == 0:
             self.lineEditWavenumber.setEnabled(False)
             self.horizontalSliderWavenumber.setEnabled(False)
@@ -710,21 +726,22 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         self.ExpandProjU()
         self.ExpandSpectraU()
-
+        
+        
+    @pyqtSlot()
     def Cvisualize (self):
         if self.comboBoxVisualize.currentIndex() == 0:
             if self.img is not None:
                 self.plotMultiVisual.canvas.ax.clear()
                 self.plotMultiVisual.canvas.ax.imshow(self.img)
                 self.plotMultiVisual.canvas.fig.tight_layout()
-
                 self.plotMultiVisual.canvas.draw()
 
             self.plot_specta.canvas.ax.clear()
             self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
             self.plot_specta.canvas.fig.tight_layout()
             self.plot_specta.canvas.draw()
-            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0)
+            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
 
         if 'component_' in self.comboBoxVisualize.currentText():
             import re
@@ -746,7 +763,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
            
             
             # print(len(self.datas))
-            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.datas)),0)
+            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.datas)),0,[self.comboBoxVisualize.currentText()])
 
 
         self.ExpandSpectraU()
@@ -780,19 +797,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
 
-
-    def Similar(self):
-        anotclus=len(set(self.clis))
-        self.lineEditAnotClus.setText(str(anotclus))
-
-
     def Reduce(self):
-#        global spmean, label, color
         anotclus=len(set(self.clis))
-#        sp_new = spmean.copy()
         self.lineEditAnotClus.setText(str(anotclus))
-
-
 
         if self.spinBoxNcluster.value() != anotclus:
             sim = [item for item, count in collections.Counter(self.clis).items() if count > 1]
@@ -1034,7 +1041,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.lineEditAnotClus.setEnabled(True)
 
     def SaveAverage(self):
-#        wavenumber, spmean.T
         suggested = self.lineEditFilename.text()+'_clus.xls'
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -1050,15 +1056,17 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             df_save = pd.concat([df_save, df_spec], axis=1, sort=False)
             df_save.to_excel(filesave,index=False)
 
-
+    def TableAve(self):
+        self.Tableview.close()
+        self.DataUpdated.emit(np.column_stack((self.wavenumber, self.spmean.T)),0,self.color)
+        self.Tableview.show()
+        
+        
     def clear_all(self):
-#        plt.close('all')
         self.lineEditDirSpectra.setText('')
         self.lineEditDirPurest.setText('')
         self.lineEditFilename.setText('')
         self.lineEditLength.setText('')
-#        self.lineEditWidth.setText('')
-#        self.lineEditHeight.setText('')
         self.comboBoxMethod.setCurrentIndex(0)
         self.comboBoxCmaps.setCurrentIndex(0)
         self.horizontalSliderWavenumber.setSliderPosition(0)
