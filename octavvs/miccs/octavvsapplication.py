@@ -9,6 +9,7 @@ Created on Wed Jan 29 21:07:55 2020
 import os
 import sys
 import traceback
+#import multiprocessing
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog
 from PyQt5.QtWidgets import QErrorMessage, QInputDialog, QDialog, QMessageBox
@@ -143,6 +144,11 @@ class OctavvsMainWindow(QMainWindow):
 
 
 def run_octavvs_application(name, windowclass, parser=None, parameters=None, isChild=False):
+
+#    if multiprocessing.get_start_method(allow_none=True) is None:
+#        if 'forkserver' in multiprocessing.get_all_start_methods():
+#            multiprocessing.set_start_method('forkserver')
+
     res = 1
     try:
         windowclass.program_name = name
