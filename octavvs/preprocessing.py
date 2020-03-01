@@ -725,7 +725,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 filter="Setting files (*.pjs);;All files (*)",
                 settingname='settingsDir',
                 suffix='pjs')
-        print('fn',filename)
         if filename:
             try:
                 self.getParameters().save(filename)
@@ -834,7 +833,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             return
         preservepath = False
 
-        print('foldername', foldername)
         all_paths = { os.path.dirname(f) for f in self.data.filenames }
         folder_within_input = any(p.startswith(foldername) for p in all_paths)
 
