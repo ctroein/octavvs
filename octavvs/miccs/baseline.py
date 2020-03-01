@@ -65,7 +65,8 @@ def asls(y, lam, p, niter=20, progressCallback=None):
         w = np.ones(L)
         for i in range(niter):
             z = spsolve(sparse.spdiags(w, 0, L, L) + D, w * yy)
-            wnew = p * (yy > z) + (1-p) * (yy < z)
+            wnew = (p - .5) * np.sign(yy - z) + .5
+#            wnew = p * (yy > z) + (1-p) * (yy < z)
             if np.array_equal(wnew, w):
                 break
             w = wnew
@@ -73,6 +74,8 @@ def asls(y, lam, p, niter=20, progressCallback=None):
     if y.ndim < 2:
         return asls_one(y)
 
+    import time
+    a=time.time()
     y = y.copy()
     if len(y) < 1:
         return y
@@ -88,6 +91,7 @@ def asls(y, lam, p, niter=20, progressCallback=None):
         y[i] = next(it)
         if progressCallback and not i % cpus:
             progressCallback(i+1, len(y))
+    print('time', time.time()-a)
     return y
 
 def iasls(y, lam, lam1, p, niter=30, progressCallback=None):
