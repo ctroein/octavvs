@@ -43,6 +43,7 @@ requirements:
     - scikit-learn
     - scikit-image
     - xlwt
+    - dill
 
 test:
   imports:
