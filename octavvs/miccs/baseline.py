@@ -84,7 +84,7 @@ def asls(y, lam, p, niter=20, progressCallback=None):
     if cpus == 1 or len(y) <= 8:
         cpus = 1
         it = map(asls_one, y)
-    elif len(y) < 25:
+    elif len(y) <= 40:
         cpus = min(cpus, 3)
         pool = ThreadPool(cpus)
         it = pool.imap(asls_one, y, chunksize=5)
@@ -94,7 +94,7 @@ def asls(y, lam, p, niter=20, progressCallback=None):
 
     for i in range(len(y)):
         y[i] = next(it)
-        if progressCallback and not i % cpus:
+        if progressCallback:
             progressCallback(i+1, len(y))
     print('time', time.time()-a)
     return y
