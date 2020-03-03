@@ -13,7 +13,6 @@ from scipy import sparse
 from scipy.spatial import ConvexHull
 from scipy.interpolate import interp1d
 from scipy.sparse.linalg import spsolve
-#from multiprocessing.pool import ThreadPool as Pool
 from multiprocessing.pool import Pool, ThreadPool
 import os
 import dill
@@ -44,6 +43,30 @@ def pack_function_for_map(target_function, items):
     return apply_packed_function_for_map, dumped_items
 
 
+def mp_bgcorrection(func, y, lim_single=8, lim_tp=40, progressCallback=None):
+    if len(y) < 1:
+        return y.copy()
+    if y.ndim < 2:
+        return func(y)
+    cpus = min(len(os.sched_getaffinity(0)), len(y))
+    if cpus == 1 or len(y) <= lim_single:
+        cpus = 1
+        it = map(func, y)
+    elif len(y) <= lim_tp:
+        cpus = min(cpus, 3)
+        pool = ThreadPool(cpus)
+        it = pool.imap(func, y, chunksize=5)
+    else:
+        pool = Pool(cpus)
+        it = pool.imap(*pack_function_for_map(func, y), chunksize=10)
+
+    ret = np.empty_like(y)
+    for i in range(len(y)):
+        ret[i] = next(it)
+        if progressCallback:
+            progressCallback(i+1, len(y))
+    return ret
+
 def asls(y, lam, p, niter=20, progressCallback=None):
     """
     Return the baseline computed by Asymmetric least squares background correction, AsLS.
@@ -72,32 +95,8 @@ def asls(y, lam, p, niter=20, progressCallback=None):
                 break
             w = wnew
         return z
-    if y.ndim < 2:
-        return asls_one(y)
 
-    import time
-    a=time.time()
-    y = y.copy()
-    if len(y) < 1:
-        return y
-    cpus = min(len(os.sched_getaffinity(0)), len(y))
-    if cpus == 1 or len(y) <= 8:
-        cpus = 1
-        it = map(asls_one, y)
-    elif len(y) <= 40:
-        cpus = min(cpus, 3)
-        pool = ThreadPool(cpus)
-        it = pool.imap(asls_one, y, chunksize=5)
-    else:
-        pool = Pool(cpus)
-        it = pool.imap(*pack_function_for_map(asls_one, y), chunksize=10)
-
-    for i in range(len(y)):
-        y[i] = next(it)
-        if progressCallback:
-            progressCallback(i+1, len(y))
-    print('time', time.time()-a)
-    return y
+    return mp_bgcorrection(asls_one, y, progressCallback=progressCallback)
 
 def iasls(y, lam, lam1, p, niter=30, progressCallback=None):
     """
@@ -121,14 +120,12 @@ def iasls(y, lam, lam1, p, niter=30, progressCallback=None):
     D = lam * D.dot(D.T)
     D1 = sparse.csc_matrix(np.diff(np.eye(L), 1))
     D1 = lam1 * D1.dot(D1.T)
-    multi = y.ndim > 1
-    y = y.copy() if multi else [ y ]
-    for k in range(len(y)):
-        yy = y[k]
+
+    def iasls_one(yy):
         w = np.ones(L)
         W = sparse.spdiags(w, 0, L, L)
 #        W = W @ W.T
-        z = spsolve(W + D, w*yy)
+        z = spsolve(W + D, w * yy)
         w = p * (yy > z) + (1-p) * (yy < z)
         for i in range(niter):
             W = sparse.spdiags(w, 0, L, L)
@@ -138,12 +135,9 @@ def iasls(y, lam, lam1, p, niter=30, progressCallback=None):
             if np.array_equal(wnew, w):
                 break
             w = wnew
-        if not multi:
-            return z
-        y[k] = z
-        if progressCallback:
-            progressCallback(k+1, len(y))
-    return y
+        return z
+    return mp_bgcorrection(iasls_one, y, progressCallback=progressCallback)
+
 
 def arpls(y, lam, ratio=1e-6, niter=1000, progressCallback=None):
     """
@@ -164,10 +158,8 @@ def arpls(y, lam, ratio=1e-6, niter=1000, progressCallback=None):
     L = y.shape[-1]
     D = sparse.csc_matrix(np.diff(np.eye(L), 2))
     D = lam * D.dot(D.T)
-    multi = y.ndim > 1
-    y = y.copy() if multi else [ y ]
-    for k in range(len(y)):
-        yy = y[k]
+    
+    def arpls_one(yy):
         w = np.ones(L)
         for i in range(niter):
             W = sparse.spdiags(w, 0, L, L)
@@ -179,12 +171,9 @@ def arpls(y, lam, ratio=1e-6, niter=1000, progressCallback=None):
             if np.linalg.norm(w - wt) / np.linalg.norm(w) < ratio:
                 break
             w = wt
-        if not multi:
-            return z
-        y[k] = z
-        if progressCallback:
-            progressCallback(k+1, len(y))
-    return y
+        return z
+    return mp_bgcorrection(arpls_one, y, progressCallback=progressCallback)
+
 
 
 def rubberband(x, y, progressCallback=None):
@@ -198,12 +187,9 @@ def rubberband(x, y, progressCallback=None):
     Returns: baseline of the spectrum, measured at the same points
     """
     if x[0] > x[-1]:
-        return rubberband(x[::-1], y[...,::-1])[...,::-1]
-
-    multi = y.ndim > 1
-    y = y.copy() if multi else [ y ]
-    for k in range(len(y)):
-        yy = y[k]
+        return rubberband(x[::-1], y[...,::-1],
+                          progressCallback=progressCallback)[...,::-1]
+    def rubberband_one(yy):
         # Find the convex hull
         v = ConvexHull(np.column_stack((x, yy))).vertices
         # Rotate convex hull vertices until they start from the lowest one
@@ -212,18 +198,16 @@ def rubberband(x, y, progressCallback=None):
         v = v[:v.argmax()+1]
         # Create baseline using linear interpolation between vertices
         b = np.interp(x, x[v], yy[v])
-        if not multi:
-            return b
-        y[k] = b
-        if progressCallback:
-            progressCallback(k+1, len(y))
-    return y
+        return b
+    return mp_bgcorrection(rubberband_one, y, lim_single=100, lim_tp=10000,
+                           progressCallback=progressCallback)
 
 def concaverubberband(x, y, iters, progressCallback=None):
     """
-    Concave rubberband baseline correction. This algorithm removes more than a straight line, alternating with
-    normal rubberband to bring negative points up again. It does not converge nicely and will eat up all the data
-    if run with many iterations.
+    Concave rubberband baseline correction. This algorithm removes more than a
+    straight line, alternating with normal rubberband to bring negative points
+    up again. It does not converge nicely and will eat up all the data if run
+    with many iterations.
     Parameters:
     x: wavenumbers, sorted from low to high (todo: implement high-to-low)
     y: spectrum at those wavenumbers
@@ -232,22 +216,17 @@ def concaverubberband(x, y, iters, progressCallback=None):
         is complete to a fraction a/b.
     Returns: baseline of the spectrum, measured at the same points
     """
-    origy = y
-    multi = y.ndim > 1
-    y = y.copy() if multi else [ y.copy() ]
-    for k in range(len(y)):
-        yy = y[k]
-        yy -= rubberband(x, yy);
+    def concaverubberband_one(yy):
+        origyy = yy
+        yy = yy - rubberband(x, yy);
         for i in range(iters):
             F = .1 * (yy.max() - yy.min())
             xmid = .5 * (x[-1] + x[0])
             d2 = .25 * (x[-1] - x[0]) ** 2
             yy += F * (x - xmid)**2 / d2
             yy -= rubberband(x, yy);
-        if progressCallback:
-            progressCallback(k+1, len(y))
-    if not multi:
-        return origy - y[0]
-    return origy - y
+        return origyy - yy
+    return mp_bgcorrection(concaverubberband_one, y, lim_single=30, lim_tp=500,
+                           progressCallback=progressCallback)
 
 
