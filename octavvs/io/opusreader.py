@@ -15,9 +15,10 @@ class OpusReader:
         .mat export and will only load the data matrix and wavenumbers plus the white light image.
 
     Member variables:
-        wh - image dimensions (w, h)
-        wavenum - array of wavenumbers
-        AB - data matrix, array(w*h, len(wn))
+        wh: image dimensions (w, h)
+        wavenum: array of wavenumbers
+        AB: data matrix, array(w*h, len(wn))
+        image: tuple (img_data_bytes, img_type_str)
     """
 
     def __init__(self, filename=None):
@@ -31,11 +32,11 @@ class OpusReader:
         if filename is not None:
             self.load(filename)
 
-    def readChunk(self, file, chunksize, chunkoffset):
+    def read_chunk(self, file, chunksize, chunkoffset):
         file.seek(chunkoffset)
         return file.read(4 * chunksize)
 
-    def parseParams(self, chunk):
+    def parse_params(self, chunk):
         cix = 0
         inttypes = {0: 'B', 1: '<H', 2: '<I'}
         params = {}
@@ -55,10 +56,10 @@ class OpusReader:
 #            print('pname',pname, ptype, psize)
         return params, cix
 
-    def parseImage(self, chunk):
-        p = self.parseParams(chunk[12:])[0]
+    def parse_image(self, chunk):
+        p = self.parse_params(chunk[12:])[0]
         jump = p['F00']
-        p, q = self.parseParams(chunk[jump:])
+        p, q = self.parse_params(chunk[jump:])
         imgtype = 'jpg' if p['V08'] == 258 else 'bmp'
         q = q + jump + (14 if imgtype == 'jpg' else 0)
 #        print('pq',p,q)
@@ -81,11 +82,11 @@ class OpusReader:
             if not dcoffs:
                 break
             if dt == 31:
-                abparams = self.parseParams(self.readChunk(f, dcsize, dcoffs))[0]
+                abparams = self.parse_params(self.read_chunk(f, dcsize, dcoffs))[0]
             elif dt == 15:
-                abmatrix = self.readChunk(f, dcsize, dcoffs)
+                abmatrix = self.read_chunk(f, dcsize, dcoffs)
             elif dt == 0 and db == 0 and dtt == 160:
-                self.image = self.parseImage(self.readChunk(f, dcsize, dcoffs))
+                self.image = self.parse_image(self.read_chunk(f, dcsize, dcoffs))
         # Assume the data were read ok
         start, pad = 16006, 38
         wns, w, h, wn1, wn2 = [abparams[k] for k in ['NPT', 'NPX', 'NPY', 'FXV', 'LXV']]

@@ -1,18 +1,17 @@
 import os
 import os.path
-import fnmatch
-import traceback
+#import fnmatch
+#import traceback
 from pkg_resources import resource_filename
 from io import BytesIO
 
-import numpy as np
+#import numpy as np
 
-from PyQt5.QtWidgets import QWidget, QInputDialog
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
+from PyQt5.QtWidgets import QWidget
+#from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt5 import uic
 
-from .. import miccs
+from . import constants, uitools
 
 ImageVisualizerUi = uic.loadUiType(resource_filename(__name__, "imagevisualizer.ui"))[0]
 
@@ -69,8 +68,8 @@ class ImageVisualizer():
 
         iv.labelMinwn.setText("%.2f" % self.data.wmin)
         iv.labelMaxwn.setText("%.2f" % self.data.wmax)
-        wmin = min(self.data.wmin, miccs.constants.WMIN)
-        wmax = max(self.data.wmax, miccs.constants.WMAX)
+        wmin = min(self.data.wmin, constants.WMIN)
+        wmax = max(self.data.wmax, constants.WMAX)
         iv.lineEditWavenumber.setRange(wmin, wmax, default=.5*(wmin+wmax))
 
         # Make sure the sliders are in sync with the boxes
@@ -78,17 +77,17 @@ class ImageVisualizer():
 
     def wavenumberEdit(self):
         iv = self.imageVisualizer
-        miccs.uitools.box_to_slider(
+        uitools.box_to_slider(
                 iv.horizontalSliderWavenumber, iv.lineEditWavenumber,
                 self.plot_visual.getWavenumbers(),
-                miccs.uitools.ixfinder_nearest)
+                uitools.ixfinder_nearest)
 
     def wavenumberSlide(self):
         iv = self.imageVisualizer
-        miccs.uitools.slider_to_box(
+        uitools.slider_to_box(
                 iv.horizontalSliderWavenumber, iv.lineEditWavenumber,
                 self.plot_visual.getWavenumbers(),
-                miccs.uitools.ixfinder_nearest)
+                uitools.ixfinder_nearest)
         self.imageProjection()
 
     def updateDimensions(self, wh):

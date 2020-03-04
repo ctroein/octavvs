@@ -13,8 +13,8 @@ import traceback
 from pkg_resources import resource_filename
 
 from PyQt5.QtWidgets import QWidget, QInputDialog
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
+from PyQt5.QtWidgets import QMessageBox
+#from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt5 import uic
 
 from . import NoRepeatStyle
@@ -129,7 +129,7 @@ class FileLoader():
     def loadFile(self, file):
         "Load a file or return (error message, traceback) from trying"
         try:
-            self.data.readMatrix(file)
+            self.data.read_matrix(file)
             return
         except (RuntimeError, FileNotFoundError) as e:
             return (str(e), None)
@@ -232,9 +232,9 @@ class FileLoader():
     def _updateDimension(self, dimnum):
         "Update width/height in data.wh"
         if dimnum == 0:
-            self.data.setWidth(self.fileLoader.lineEditWidth.text())
+            self.data.set_width(self.fileLoader.lineEditWidth.text())
         else:
-            self.data.setHeight(self.fileLoader.lineEditHeight.text())
+            self.data.set_height(self.fileLoader.lineEditHeight.text())
         self.fileLoader.lineEditWidth.setText(str(self.data.wh[0]))
         self.fileLoader.lineEditHeight.setText(str(self.data.wh[1]))
         self.updateDimensions(self.data.wh)

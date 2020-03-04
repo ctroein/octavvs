@@ -28,7 +28,7 @@ class SpectralData:
         self.wh = (0, 0)  # Width and height in pixels
         self.image = None # Image loaded from raw data file; tuple (bytes, format_str)
 
-    def setWidth(self, w):
+    def set_width(self, w):
         try:
             w = int(w)
         except ValueError:
@@ -41,13 +41,13 @@ class SpectralData:
         self.wh = (w, h)
         return True
 
-    def setHeight(self, h):
-        if self.setWidth(h):
+    def set_height(self, h):
+        if self.set_width(h):
             self.wh = (self.wh[1], self.wh[0])
             return True
         return False
 
-    def readMatrix(self, filename):
+    def read_matrix(self, filename):
         """
         Read data from a file, with some error checking. The object is modified
         only if the file is successfully loaded.

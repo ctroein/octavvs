@@ -156,7 +156,7 @@
   <customwidget>
    <class>LineDouble</class>
    <extends>QLineEdit</extends>
-   <header location="global">octavvs/miccs/linedouble.h</header>
+   <header location="global">octavvs/ui/linedouble.h</header>
    <slots>
     <slot>setValue(float)</slot>
     <slot>setRange(float,float)</slot>

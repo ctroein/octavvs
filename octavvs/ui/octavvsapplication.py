@@ -142,38 +142,35 @@ class OctavvsMainWindow(QMainWindow):
         pass
 
 
+    @classmethod
+    def run_octavvs_application(windowclass, name, parser=None, parameters=None, isChild=False):
 
-def run_octavvs_application(name, windowclass, parser=None, parameters=None, isChild=False):
+        res = 1
+        try:
+            windowclass.program_name = name
+            progver = 'OCTAVVS %s %s' % (windowclass.program_name, OctavvsMainWindow.octavvs_version)
+            windowparams = {}
+            if parser is not None:
+                parser.add_argument('--version', action='version', version=progver)
+                parser.add_argument('--mpmethod')
+                args = parser.parse_args()
+                windowparams = { k: args.__dict__[k] for k in parameters }
+            app = QApplication.instance()
+            if not app:
+                app = QApplication(sys.argv)
+            add_clipboard_to_figures()
+            if args.mpmethod and multiprocessing.get_start_method(allow_none=True) is None:
+                multiprocessing.set_start_method(args.mpmethod)
+            windowclass.programName = name
+            window = windowclass(**windowparams)
+            window.show()
+            if not isChild:
+                res = app.exec_()
 
-    if multiprocessing.get_start_method(allow_none=True) is None:
-        if 'fork' in multiprocessing.get_all_start_methods():
-            multiprocessing.set_start_method('forl')
-        elif 'forkserver' in multiprocessing.get_all_start_methods():
-            multiprocessing.set_start_method('forkserver')
-
-    res = 1
-    try:
-        windowclass.program_name = name
-        progver = 'OCTAVVS %s %s' % (windowclass.program_name, OctavvsMainWindow.octavvs_version)
-        windowparams = {}
-        if parser is not None:
-            parser.add_argument('--version', action='version', version=progver)
-            args = parser.parse_args()
-            windowparams = { k: args.__dict__[k] for k in parameters }
-        app = QApplication.instance()
-        if not app:
-            app = QApplication(sys.argv)
-        add_clipboard_to_figures()
-        windowclass.programName = name
-        window = windowclass(**windowparams)
-        window.show()
-        if not isChild:
-            res = app.exec_()
-
-    except Exception:
-        traceback.print_exc()
-        print('Press some key to quit')
-        input()
-    if not isChild :
-        sys.exit(res)
+        except Exception:
+            traceback.print_exc()
+            print('Press some key to quit')
+            input()
+        if not isChild :
+            sys.exit(res)
 

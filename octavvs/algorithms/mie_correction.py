@@ -8,229 +8,16 @@ Atmospheric and scattering correction
 """
 
 import gc
-import os.path
 from time import monotonic
 import numpy as np
 import sklearn.linear_model
 import sklearn.cluster
 #import statsmodels.multivariate.pca
 from scipy.interpolate import PchipInterpolator
-from scipy.signal import hilbert, savgol_filter, tukey
-from scipy.io import loadmat, savemat
-import matplotlib.pyplot as plt
+from scipy.signal import hilbert
+#from scipy.io import loadmat, savemat
 
-from . import baseline
-
-def load_reference(wn, what=None, matfilename=None):
-    """
-    Loads and normalizes a spectrum from a Matlab file, interpolating at the given points.
-        The reference is assumed to cover the entire range of wavenumbers.
-    Parameters:
-        wn: array of wavenumbers at which to get the spectrum
-        what: A string defining what type of reference to get, corresponding to a file in the
-        'reference' directory
-        matfilename: the name of an arbitrary Matlab file to load data from; the data must be
-        in a matrix called AB, with wavenumbers in the first column.
-        Returns: spectrum at the points given by wn
-    """
-    if (what is None) == (matfilename is None):
-        raise ValueError("Either 'what' or 'matfilename' must be specified")
-    if what is not None:
-        matfilename = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),
-                                       'reference', what + '.mat'))
-    ref = loadmat(matfilename)['AB']
-    # Handle the case of high-to-low since the interpolator requires low-to-high
-    d = 1 if ref[0,0] < ref[-1,0] else -1
-    ref = PchipInterpolator(ref[::d,0], ref[::d,1])(wn)
-    return ref #/ ref.max()
-
-def nonnegative(y, fracspectra=.02, fracvalues=.02):
-    """
-    Make a matrix of spectral data nonnegative by shifting all the spectra up by the same computed
-    amount, followed by setting negative values to 0. The shift is chosen such that at most
-    fracspectra of the spectra get more than fracvalues of their intensities set to zero.
-    Parameters:
-    y: array of intensities for (pixel, wavenumber)
-    fracspectra: unheeded fraction of the spectra
-    fracvalues: maximal fraction of points to clip at 0
-    Returns: shifted spectra in the same format as y
-    """
-    s = int(fracspectra * y.shape[0])
-    v = int(fracvalues * y.shape[1])
-    if s == 0 or v == 0:
-        return y - np.min(y.min(), 0)
-    if s >= y.shape[0] or v >= y.shape[1]:
-        return np.maximum(y, 0)
-    yp = np.partition(y, v, axis=1)[:,v]
-    a = np.partition(yp, s)[s]
-    return np.maximum(y - a if a < 0 else y, 0)
-
-def find_wn_ranges(wn, ranges):
-    """
-    Find indexes corresponding to the beginning and end of a list of ranges of wavenumbers. The
-    wavenumbers have to be sorted in either direction.
-    Parameters:
-    wn: array of wavenumbers
-    ranges: numpy array of shape (n, 2) with desired wavenumber ranges in order [low,high]
-    Returns: numpy array of shape (n, 2) with indexes of the wavenumbers delimiting those ranges
-    """
-    if isinstance(ranges, list):
-        ranges = np.array(ranges)
-    if(wn[0] < wn[-1]):
-        return np.stack((np.searchsorted(wn, ranges[:,0]),
-                         np.searchsorted(wn, ranges[:,1], 'right')), 1)
-    return len(wn) - np.stack((np.searchsorted(wn[::-1], ranges[:,1], 'right'),
-                              np.searchsorted(wn[::-1], ranges[:,0])), 1)
-
-def cut_wn(wn, y, ranges):
-    """
-    Cut a set of spectra, leaving only the given wavenumber range(s).
-    Parameters:
-    wn: array of wavenumbers, sorted in either direction
-    y: array of spectra, shape (..., wavenumber)
-    ranges: list or numpy array of shape (..., 2) with desired wavenumber ranges in pairs (low, high)
-    Returns: (wavenumbers, spectra) with data in the given wavenumber ranges
-    """
-    if isinstance(ranges, list):
-        ranges = np.array(ranges)
-    inrange = lambda w: ((w >= ranges[...,0]) & (w <= ranges[...,1])).any()
-    ix = np.array([inrange(w) for w in wn])
-    return wn[ix], y[...,ix]
-
-def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5, extra_factor=0.25,
-                       smooth_win=9, progressCallback = None):
-    """
-    Apply atmospheric correction to multiple spectra, subtracting as much of the atompsheric
-    spectrum as needed to minimize the sum of squares of differences between consecutive points
-    in the corrected spectra. Each supplied range of wavenumbers is corrected separately.
-
-    Parameters:
-        wn: array of wavenumbers, sorted in either direction
-        y: array of spectra in the order (pixel, wavenumber), or just one spectrum
-        atm: atmospheric spectrum; if None, load the default
-        cut_co2: replace the CO2 region with a neatly fitted spline
-        extra_iters: number of iterations of subtraction of a locally reshaped atmospheric spectrum
-        (needed if the relative peak intensities are not always as in the atmospheric reference)
-        extra_factor: how much of the reshaped atmospheric spectrum to remove per iteration
-        smooth_win: window size (in cm-1) for smoothing of the spectrum in the atm regions
-        progressCallback(int a, int b): callback function called to indicated that the processing
-        is complete to a fraction a/b.
-    Returns:
-        tuple of (spectra after correction, array of correction factors; shape (spectra,ranges))
-    """
-    squeeze = False
-    yorig = y
-    if y.ndim == 1:
-        y = y[None,:]
-        squeeze = True
-    else:
-        y = y.copy()
-
-    if atm is None or (isinstance(atm, str) and atm == ''):
-        atm = load_reference(wn, what='water')
-    elif isinstance(atm, str):
-        atm = load_reference(wn, matfilename=atm)
-    else:
-        atm = atm.copy()
-
-    # ranges: numpy array (n, 2) of n non-overlapping wavenumber ranges (typically for H2O only), or None
-    # extra_winwidth: width of the window (in cm-1) used to locally reshape the atm spectrum
-    ranges = [[1300, 2100], [3410, 3850], [2190, 2480]]
-    extra_winwidth = [30, 150, 40]
-    corr_ranges = 2 if cut_co2 else 3
-#        ranges = ranges[:2]
-#        extra_winwidth = extra_winwidth[:2]
-
-    if ranges is None:
-        ranges = np.array([0, len(wn)])
-    else:
-        ranges = find_wn_ranges(wn, ranges)
-
-    for i in range(corr_ranges):
-        p, q = ranges[i]
-        if q - p < 2: continue
-        atm[p:q] -= baseline.straight(wn[p:q], atm[p:q]);
-
-    savgolwin = 1 + 2 * int(smooth_win * (len(wn) - 1) / np.abs(wn[0] - wn[-1]))
-
-    if progressCallback:
-        progressA = 0
-        progressB = 1 + corr_ranges * (extra_iters + (1 if savgolwin > 1 else 0))
-        progressCallback(progressA, progressB)
-
-    dh = atm[:-1] - atm[1:]
-    dy = y[:,:-1] - y[:,1:]
-    dh2 = np.cumsum(dh * dh)
-    dhdy = np.cumsum(dy * dh, 1)
-    az = np.zeros((len(y), corr_ranges))
-    for i in range(corr_ranges):
-        p, q = ranges[i]
-        if q - p < 2: continue
-        r = q-2 if q <= len(wn) else q-1
-        az[:, i] = ((dhdy[:,r] - dhdy[:,p-1]) / (dh2[r] - dh2[p-1])) if p > 0 else (dhdy[:,r] / dh2[r])
-        y[:, p:q] -= az[:, i, None] @ atm[None, p:q]
-
-    if progressCallback:
-        progressA += 1
-        progressCallback(progressA, progressB)
-
-    for pss in range(extra_iters):
-        for i in range(corr_ranges):
-            p, q = ranges[i]
-            if q - p < 2: continue
-            window = 2 * int(extra_winwidth[i] * (len(wn) - 1) / np.abs(wn[0] - wn[-1]))
-            winh = (window+1)//2
-            dy = y[:,:-1] - y[:,1:]
-            dhdy = np.cumsum(dy * dh, 1)
-            aa = np.zeros_like(y)
-            aa[:,1:winh+1] = dhdy[:,1:window:2] / np.maximum(dh2[1:window:2], 1e-8)
-            aa[:,1+winh:-winh-1] = (dhdy[:,window:-1] - dhdy[:,:-1-window]) / np.maximum(dh2[window:-1] - dh2[:-1-window], 1e-8)
-            aa[:,-winh-1:-1] = (dhdy[:,-1:] - dhdy[:,-1-window:-1:2]) / np.maximum(dh2[-1] - dh2[-1-window:-1:2], 1e-8)
-            aa[:, 0] = aa[:, 1]
-            aa[:, -1] = aa[:, -2]
-            aa = savgol_filter(aa, window + 1, 3, axis=1)
-            y[:, p:q] -= extra_factor * aa[:, p:q] * atm[p:q]
-            if progressCallback:
-                progressA += 1
-                progressCallback(progressA, progressB)
-
-    if savgolwin > 1:
-        for i in range(corr_ranges):
-            p, q = ranges[i]
-            if q - p < savgolwin: continue
-            y[:, p:q] = savgol_filter(y[:, p:q], savgolwin, 3, axis=1)
-            if progressCallback:
-                progressA += 1
-                progressCallback(progressA, progressB)
-
-    if cut_co2:
-        rng = np.array([[2190, 2260], [2410, 2480]])
-        rngm = rng.mean(1)
-        rngd = rngm[1] - rngm[0]
-        cr = find_wn_ranges(wn, rng).flatten()
-        if cr[1] - cr[0] > 2 and cr[3] - cr[2] > 2:
-            a = np.empty((4, len(y)))
-            a[0:2,:] = np.polyfit((wn[cr[0]:cr[1]]-rngm[0])/rngd, y[:,cr[0]:cr[1]].T, deg=1)
-            a[2:4,:] = np.polyfit((wn[cr[2]:cr[3]]-rngm[1])/rngd, y[:,cr[2]:cr[3]].T, deg=1)
-            P,Q = find_wn_ranges(wn, rngm[None,:])[0]
-            t = np.interp(wn[P:Q], wn[[Q,P] if wn[0] > wn[-1] else [P,Q]], [1, 0])
-            tt = np.array([-t**3+t**2, -2*t**3+3*t**2, -t**3+2*t**2-t, 2*t**3-3*t**2+1])
-            pt = a.T @ tt
-            y[:, P:Q] += (pt - y[:, P:Q]) * tukey(len(t), .3)
-
-    corrs = np.zeros(2)
-    ncorrs = np.zeros_like(corrs)
-    for i in range(len(ranges)):
-        p, q = ranges[i]
-        if q - p < 2: continue
-        corr = np.abs(yorig[:, p:q] - y[:, p:q]).sum(1) / np.maximum(np.abs(yorig[:, p:q]), np.abs(y[:, p:q])).sum(1)
-        gas = int(i > 1)
-        corrs[gas] += corr.mean()
-        ncorrs[gas] += 1
-    if ncorrs[0] > 1:
-        corrs[0] = corrs[0] / ncorrs[0]
-
-    return (y.squeeze() if squeeze else y), corrs
+from .util import pca_nipals
 
 def kkre(wn, ref):
     wn2 = wn ** 2.
@@ -290,48 +77,10 @@ def hilbert_n(wn, ref, zeropad=500):
         return nreal if hilbert_n.increasing else nreal[::-1]
     return PchipInterpolator(hilbert_n.lin, nreal)(wn)
 
-def pca_nipals(x, ncomp, tol=1e-5, max_iter=1000, copy=True, explainedvariance=None):
-    """
-    NIPALS algorithm for PCA, based on the code in statmodels.multivariate
-    but with optimizations as in Bassan's Matlab implementation to
-    sacrifice some accuracy for speed.
-    x: ndarray of data, will be altered
-    ncomp: number of PCA components to return
-    tol: tolerance
-    copy: If false, destroy the input matrix x
-    explainedvariance: If >0, stop after this fraction of the total variance is explained
-    returns: PCA loadings as rows
-    """
-    if copy:
-        x = x.copy()
-    if explainedvariance is not None and explainedvariance > 0:
-        varlim = (x * x).sum() * (1. - explainedvariance)
-    else:
-        varlim = 0
-    npts, nvar = x.shape
-    vecs = np.empty((ncomp, nvar))
-    for i in range(ncomp):
-        factor = np.ones(npts)
-        for j in range(max_iter):
-            vec = x.T @ factor #/ (factor @ factor)
-            vec = vec / np.sqrt(vec @ vec)
-            f_old = factor
-            factor = x @ vec #/ (vec @ vec)
-            f_old = factor - f_old
-            if tol > np.sqrt(f_old @ f_old) / np.sqrt(factor @ factor):
-                break
-        vecs[i, :] = vec
-        if i < ncomp - 1:
-            x -= factor[:,None] @ vec[None,:]
-            if varlim > 0 and (x * x).sum() < varlim:
-                return vecs[:i+1, :]
-    return vecs
-
 def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcomponent=False,
                   variancelimit = None):
     """
-    Support function for rmiesc_miccs. Compute the extinction matrix for Bassan's algorithm,
-    then PCA transform it.
+    Compute the extinction matrix for resonant Mie scattering, then PCA transform it.
     Parameters:
     wn: array of wavenumbers
     ref: reference spectrum
@@ -416,7 +165,7 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
 
     n_nonpca = 3 if linearcomponent else 2
 
-    savemat('everything_python.mat', {'Q':Q})
+#    savemat('everything_python.mat', {'Q':Q})
 
     # Orthogonalization of the model to improve numeric stability
     refn = ref / np.sqrt(ref@ref)
@@ -446,7 +195,6 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
 #        model[i,:] = w / np.sqrt(w @ w)
 
 #    savemat('everything_after-p.mat', locals())
-#    killmenow
 
     # Orthogonalization of the model to improve numeric stability (doing it after PCA is only
     # marginally slower)
@@ -459,7 +207,7 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
 
 def stable_rmiesc_clusters(iters, clusters):
     """
-    Make a cluster size scheme for reliable convergence in rmiesc_miccs.
+    Make a cluster size scheme for reliable convergence in rmiesc.
     Parameters:
     iters: The number of basic iterations to be used, preferably at least about 12-20
     Returns:
@@ -475,7 +223,7 @@ def stable_rmiesc_clusters(iters, clusters):
 def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
            pcavariancelimit=None,
            verbose=False, a=np.linspace(1.1, 1.5, 10), d=np.linspace(2.0, 8.0, 10),
-           bvals=10, plot=False, progressCallback = None, progressPlotCallback=None,
+           bvals=10, progressCallback = None, progressPlotCallback=None,
            konevskikh=False, linearcomponent=True, weighted=False, renormalize=False,
            autoiterations=False, targetrelresiduals=0.95):
     """
@@ -497,9 +245,9 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
     a: indexes of refraction to use in model
     d: sphere sizes to use in model, in micrometers
     bvals: number of values for the model parameter b
-    plot: produce plots of the cluster references, if in cluster mode
     progressCallback(int a, int b): callback function called to indicated that the processing
         is complete to a fraction a/b.
+    progressPlotCallback(array ref, (a, b)): like the above with a (cluster) reference spectrum
     konevskikh: if True, use the faster method by Konevskikh et al.
     linearcomponent: if True, include a linear term in the model (used in Bassan's paper only).
     weighted: if true, downweight the 1800-2800 region when fitting the model.
@@ -524,11 +272,6 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
         weights = weights[:, None]
     else:
         weights = None
-
-    if plot:
-        plt.figure()
-        color=plt.cm.jet(np.linspace(0, 1, iterations))
-        plt.plot(wn, app.mean(0), 'k', linewidth=.5)
 
     if np.isscalar(clusters):
         if clusters == 0:
@@ -636,8 +379,7 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     sel = labels == cl
                     if sel.sum() > 0:
                         ref[cl,:] = .5 * corrected[sel].mean(0) + .5 * ref[cl,:]
-            if plot:
-                plt.plot(wn, ref.T, c=color[iteration], linewidth=.5)
+
             if progressPlotCallback:
                 progressPlotCallback(ref, (iteration, iterations))
             ref[ref < 0] = 0
@@ -657,18 +399,6 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     model0 = compute_model(wn, ref[cl], n_components, a, d, bvals,
                                           konevskikh=konevskikh, linearcomponent=linearcomponent,
                                           variancelimit=pcavariancelimit)
-
-                    #print(np.shape(corrected), np.shape(app))
-                    if plot:
-                        plt.figure()
-                        plt.plot(projs[0], label="Proj")
-                        plt.plot(app[0, :] - projs[0], label='Difference')
-                        plt.plot(app[0, :], label='App')
-                        plt.plot(model0[0, :], label='Reference')
-                        if iteration :
-                            plt.plot(corrected[0, :], label='Prev')
-                        plt.legend()
-                        plt.show()
 
                     model = model0[1:, :] #Then we don't need the reference part of the model
 

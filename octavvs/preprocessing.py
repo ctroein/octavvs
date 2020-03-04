@@ -17,9 +17,11 @@ matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
-from . import miccs
-from .miccs import SpectralData, FileLoader, ImageVisualizer
-from .miccs import OctavvsMainWindow, NoRepeatStyle, run_octavvs_application
+import octavvs.io
+from octavvs.algorithms import normalization
+from octavvs.io import SpectralData
+from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle,
+                        uitools)
 
 
 
@@ -238,8 +240,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             self.horizontalSliderMin.setMaximum(wns-1)
             self.horizontalSliderMax.setMaximum(wns-1)
 
-        wmin = min(self.data.wmin, miccs.constants.WMIN)
-        wmax = max(self.data.wmax, miccs.constants.WMAX)
+        wmin = min(self.data.wmin, octavvs.ui.constants.WMIN)
+        wmax = max(self.data.wmax, octavvs.ui.constants.WMAX)
         self.lineEditMinwn.setRange(wmin, wmax, default=wmin)
         self.lineEditMaxwn.setRange(wmin, wmax, default=wmax)
         self.lineEditNormWavenum.setRange(wmin, wmax, default=.5*(wmin+wmax))
@@ -299,12 +301,15 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     # AC, Atmospheric correction
     def loadACReference(self):
-        startdir = os.path.realpath(os.path.join(
-                os.getcwd(), os.path.dirname(__file__), 'miccs', 'reference'))
+        startdir = resource_filename('octavvs', "reference_spectra")
+#        startdir = os.path.realpath(os.path.join(
+#                os.getcwd(), os.path.dirname(__file__), 'miccs', 'reference'))
         ref, _ = QFileDialog.getOpenFileName(self, "Load atmospheric reference spectrum",
                                              directory=self.settings.value('atmRefDir', startdir),
                                              filter="Matrix file (*.mat)",
                                              options=MyMainWindow.fileOptions)
+        if not ref:
+            return
         self.lineEditACReference.setText(ref)
         self.settings.setValue('atmRefDir', dirname(ref))
         self.updateAC()
@@ -523,30 +528,30 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                                  self.lineEditMinwn.value(), self.lineEditMaxwn.value())
 
     def srMinSlide(self):
-        miccs.uitools.slider_to_box(
+        uitools.slider_to_box(
                 self.horizontalSliderMin, self.lineEditMinwn,
                 self.plot_SGF.getWavenumbers(),
-                miccs.uitools.ixfinder_noless)
+                uitools.ixfinder_noless)
         self.updateSR()
 
     def srMinEdit(self):
-        miccs.uitools.box_to_slider(
+        uitools.box_to_slider(
                 self.horizontalSliderMin, self.lineEditMinwn,
                 self.plot_SGF.getWavenumbers(),
-                miccs.uitools.ixfinder_noless)
+                uitools.ixfinder_noless)
 
     def srMaxSlide(self):
-        miccs.uitools.slider_to_box(
+        uitools.slider_to_box(
                 self.horizontalSliderMax, self.lineEditMaxwn,
                 self.plot_SGF.getWavenumbers(),
-                miccs.uitools.ixfinder_nomore)
+                uitools.ixfinder_nomore)
         self.updateSR()
 
     def srMaxEdit(self):
-        miccs.uitools.box_to_slider(
+        uitools.box_to_slider(
                 self.horizontalSliderMax, self.lineEditMaxwn,
                 self.plot_SGF.getWavenumbers(),
-                miccs.uitools.ixfinder_nomore)
+                uitools.ixfinder_nomore)
 
     # BC, Baseline Correction
     bcNames = ['rubberband', 'concaverubberband', 'asls', 'arpls', 'assymtruncq' ]
@@ -661,7 +666,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         if not self.lineEditNormWavenum.hasAcceptableInput():
             self.lineEditNormWavenum.setValue()
 
-        n = miccs.normalization.normalize_spectra(
+        n = normalization.normalize_spectra(
                 meth, y=indata, wn=wn, wavenum=self.lineEditNormWavenum.value())
         self.plot_norm.setData(wn, indata, n)
 
@@ -876,13 +881,13 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 def main():
     parser = argparse.ArgumentParser(
             description='Graphical application for preprocessing of hyperspectral data.')
-    parser.add_argument('files', metavar='file', type=str, nargs='*',
+    parser.add_argument('files', metavar='file', nargs='*',
                         help='initial hyperspectral images to load')
-    parser.add_argument('-p', '--params', metavar='file.pjs', type=str, dest='paramFile',
+    parser.add_argument('-p', '--params', metavar='file.pjs', dest='paramFile',
                         help='parameter file to load')
-    parser.add_argument('-r', '--run', metavar='output_dir', type=str, nargs='?', dest='savePath',
-                        const='./', help='runs and saves to the output directory (params argument must also be passed)')
-    run_octavvs_application('Preprocessing', windowclass=MyMainWindow,
-                            parser=parser, parameters=['files', 'paramFile', 'savePath'])
+    parser.add_argument('-r', '--run', metavar='output_dir', nargs='?', dest='savePath', const='./',
+                        help='runs and saves to the output directory (params argument must also be passed)')
+    MyMainWindow.run_octavvs_application('Preprocessing', parser=parser,
+                                         parameters=['files', 'paramFile', 'savePath'])
 
 

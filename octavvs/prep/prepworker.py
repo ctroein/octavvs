@@ -14,7 +14,8 @@ import numpy as np
 import scipy.signal, scipy.io
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from ..miccs import baseline, correction, normalization, SpectralData
+from octavvs.io import SpectralData
+from octavvs.algorithms import baseline, correction, normalization
 
 class PrepParameters:
     """
@@ -113,7 +114,7 @@ class PrepWorker(QObject):
             file = data.filenames[num]
             if file == data.curFile:
                 return True
-            data.readMatrix(file)
+            data.read_matrix(file)
         except (RuntimeError, FileNotFoundError) as e:
             self.loadFailed.emit(file, str(e), '')
         except Exception as e:

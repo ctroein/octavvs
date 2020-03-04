@@ -1021,7 +1021,7 @@ margin: 5px;
   <customwidget>
    <class>LineDouble</class>
    <extends>QLineEdit</extends>
-   <header location="global">octavvs/miccs/linedouble.h</header>
+   <header location="global">octavvs/ui/linedouble.h</header>
    <slots>
     <slot>setValue(float)</slot>
     <slot>setRange(float,float)</slot>
@@ -1030,7 +1030,7 @@ margin: 5px;
   <customwidget>
    <class>WhiteLightWidget</class>
    <extends>QWidget</extends>
-   <header location="global">octavvs/miccs/whitelightwidget.h</header>
+   <header location="global">octavvs/ui/whitelightwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -1092,13 +1092,13 @@ margin: 5px;
   <customwidget>
    <class>FileLoaderWidget</class>
    <extends>QWidget</extends>
-   <header location="global">octavvs/miccs/fileloader.h</header>
+   <header location="global">octavvs/ui/fileloader.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>ImageVisualizerWidget</class>
    <extends>QWidget</extends>
-   <header location="global">octavvs/miccs/imagevisualizer.h</header>
+   <header location="global">octavvs/ui/imagevisualizer.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
