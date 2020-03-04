@@ -27,26 +27,25 @@ class OctavvsMainWindow(QMainWindow):
     fileOptions = QFileDialog.Options() | QFileDialog.DontUseNativeDialog
 
     octavvs_version = 'v0.0.30'
-    program_name = 'Undefined'
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.settings = QSettings('MICCS', 'OCTAVVS ' + self.program_name)
+        self.settings = QSettings('MICCS', 'OCTAVVS ' + self.program_name())
         qApp.installEventFilter(self)
         self.setupUi(self)
 
         self.errorMsg = QErrorMessage(self)
         self.errorMsg.setWindowModality(Qt.WindowModal)
 
-
     def post_setup(self):
         "Called by children after setting up UI but before loading data etc"
-        self.setWindowTitle('OCTAVVS %s %s' % (self.program_name, self.octavvs_version))
+        self.setWindowTitle('OCTAVVS %s %s' % (self.program_name(), self.octavvs_version))
         ExceptionDialog.install(self)
 
-
-
-
+    @classmethod
+    def program_name(cls):
+        "Return the name of the program that this main window represents"
+        return cls.__name__
 
     def showDetailedErrorMessage(self, err, details):
         "Show an error dialog with details"
@@ -143,28 +142,27 @@ class OctavvsMainWindow(QMainWindow):
 
 
     @classmethod
-    def run_octavvs_application(windowclass, name, parser=None, parameters=None, isChild=False):
-
+    def run_octavvs_application(windowclass, parser=None, parameters=[], isChild=False):
         res = 1
         try:
-            windowclass.program_name = name
-            progver = 'OCTAVVS %s %s' % (windowclass.program_name, OctavvsMainWindow.octavvs_version)
+            progver = 'OCTAVVS %s %s' % (windowclass.program_name(), OctavvsMainWindow.octavvs_version)
             windowparams = {}
             if parser is not None:
                 parser.add_argument('--version', action='version', version=progver)
                 parser.add_argument('--mpmethod')
                 args = parser.parse_args()
                 windowparams = { k: args.__dict__[k] for k in parameters }
+                if args.mpmethod and multiprocessing.get_start_method(allow_none=True) is None:
+                    multiprocessing.set_start_method(args.mpmethod)
+
             app = QApplication.instance()
             if not app:
                 app = QApplication(sys.argv)
             add_clipboard_to_figures()
-            if args.mpmethod and multiprocessing.get_start_method(allow_none=True) is None:
-                multiprocessing.set_start_method(args.mpmethod)
-            windowclass.programName = name
             window = windowclass(**windowparams)
             window.show()
             if not isChild:
+                qApp.lastWindowClosed.connect(qApp.quit);
                 res = app.exec_()
 
         except Exception:

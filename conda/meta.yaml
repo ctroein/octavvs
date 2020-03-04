@@ -48,9 +48,11 @@ requirements:
 test:
   imports:
     - octavvs
+    - octavvs.ui
+    - octavvs.io
+    - octavvs.algorithms
+    - octavvs.reference_spectra
     - octavvs.mcr
-    - octavvs.miccs
-    - octavvs.miccs.reference
     - octavvs.prep
     - octavvs.pymcr_new
   commands:

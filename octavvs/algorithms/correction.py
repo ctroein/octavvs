@@ -7,6 +7,6 @@ Created on Wed Mar  4 16:38:00 2020
 """
 
 from .atm_correction import atmospheric
-from .util import load_reference
+from .util import load_reference, nonnegative
 from .mie_correction import rmiesc
 

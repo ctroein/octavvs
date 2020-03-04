@@ -1,22 +1,10 @@
 #from PyQt5 import QtWidgets
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as Canvas
-import matplotlib
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 import numpy as np
-matplotlib.use('QT5Agg')
-from ..miccs import copyfigure
 
 
-#class MplWidget(QtWidgets.QWidget):
-#    def __init__(self, parent=None):
-#        QtWidgets.QWidget.__init__(self, parent)
-#        self.fig = Figure()
-#        self.ax = self.fig.add_subplot(111)
-#        self.vbl = QtWidgets.QVBoxLayout()         # Set box for plotting
-#        self.vbl.addWidget(Canvas(self.fig))
-#        self.setLayout(self.vbl)
-#        self.canvas = self
 
 class MplWidget(Canvas):
     def __init__(self, parent=None):

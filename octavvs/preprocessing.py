@@ -45,6 +45,11 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     bcLambdaRange = np.array([0, 8])
     bcPRange = np.array([-5, 0])
 
+    @classmethod
+    def program_name(cls):
+        "Return the name of the program that this main window represents"
+        return 'Preprocessing'
+
     def __init__(self, parent=None, files=None, paramFile=None, savePath=None):
         super().__init__(parent)
 
@@ -220,7 +225,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             savePath = os.path.normpath(savePath)
             self.runBatch(foldername=savePath)
 
-
     def closeEvent(self, event):
         self.worker.halt = True
         self.abcWorker.haltBC = True
@@ -230,7 +234,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.abcWorkerThread.wait()
         self.deleteLater()
         self.dialogSCAdvanced.close()
-        qApp.quit()
+#        qApp.quit()
 
     def updateWavenumberRange(self):
         super().updateWavenumberRange()
@@ -887,7 +891,7 @@ def main():
                         help='parameter file to load')
     parser.add_argument('-r', '--run', metavar='output_dir', nargs='?', dest='savePath', const='./',
                         help='runs and saves to the output directory (params argument must also be passed)')
-    MyMainWindow.run_octavvs_application('Preprocessing', parser=parser,
+    MyMainWindow.run_octavvs_application(parser=parser,
                                          parameters=['files', 'paramFile', 'savePath'])
 
 

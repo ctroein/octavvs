@@ -3,35 +3,36 @@
 @author: syahr
 """
 import gc
-import sys
+#import sys
 import csv
 import glob
 import os
 import pandas as pd
-import traceback
+#import traceback
 from os.path import basename, dirname
 from datetime import datetime
 from pkg_resources import resource_filename
 import argparse
 
-
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.Qt import QMainWindow,qApp
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot #QCoreApplication, QObject, QRunnable, QThreadPool
 from PyQt5 import uic
 
-import numpy as np
+import matplotlib
+matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.metrics import mean_squared_error as msea
 import scipy as sc
-import skimage
 from skimage.draw import polygon
 
 from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
 from .mcr import ftir_function as ff
-from .miccs import correction as mc
-from .miccs import ExceptionDialog
+from octavvs.algorithms import correction
+from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
+
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
 Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
@@ -71,15 +72,18 @@ class Second(QMainWindow, Ui_MainWindow2):
         self.hide()
 
 
-class MyMainWindow(QMainWindow, Ui_MainWindow):
+class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     projectionUpdated = pyqtSignal()
     loadedFile = pyqtSignal()
 
-    def __init__(self,parent=None):
-        super(MyMainWindow, self).__init__(parent)
-        qApp.installEventFilter(self)
-        self.setupUi(self)
+    @classmethod
+    def program_name(cls):
+        "Return the name of the program that this main window represents"
+        return 'MCR-ALS'
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self.lineEditSuffix.setText('_purest')
         self.pushButtonLocal.setEnabled(False)
@@ -118,7 +122,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.comboBoxCmaps.currentTextChanged.connect(self.roiDialog.setCmap)
         self.loadedFile.connect(self.roiDialog.resetAll)
 
-        ExceptionDialog.install(self)
+        self.post_setup()
+
 
     def closeEvent(self, event):
         self.roiDialog.close()
@@ -134,7 +139,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             if hasattr(self, 'calpures'):
                 self.calpures.stop()
 #            self.killer_renew()
-            qApp.quit()
+#            qApp.quit()
         else:
             event.ignore()
 
@@ -182,7 +187,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         try:
             self.lock_all(True)
             self.sx, self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(fileName)
-            self.sp = mc.nonnegative(self.sp)
+            self.sp = correction.nonnegative(self.sp)
 
             self.lineEditLength.setText(str(len(self.wavenumber)))
             self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
@@ -341,12 +346,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.projection = ff.prowavenum(self.p,self.wavenumber,self.wavenumv)
 
         self.plot_visual.setImage(self.projection, self.comboBoxCmaps.currentText())
-
-#        self.plot_visual.canvas.ax.clear()
-#        self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
-#        self.plot_visual.canvas.fig.tight_layout()
-#        self.plot_visual.canvas.draw()
-
         self.projectionUpdated.emit()
 
 
@@ -506,7 +505,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
         if not self.coord:
-            self.sp = mc.nonnegative(self.sp)
+            self.sp = correction.nonnegative(self.sp)
             self.u, self.s, self.v = np.linalg.svd(self.sp)
 
             self.xplot = np.arange(nplot)
@@ -524,7 +523,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             img_d = np.reshape(self.rem,(nx*ny,1))
             self.ind =  np.where(img_d > 0)[0]
 
-            sp_new = mc.nonnegative(self.sp[:,self.ind])
+            sp_new = correction.nonnegative(self.sp[:,self.ind])
             self.u, self.s, self.v = np.linalg.svd(sp_new)
 
             nplot = min(nplot, len(self.s))
@@ -812,7 +811,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         nr = self.spinBoxSVDComp.value()
 
-        sp_new = mc.nonnegative(self.sp[:,self.ind])
+        sp_new = correction.nonnegative(self.sp[:,self.ind])
         self.u, self.s, self.v = np.linalg.svd(sp_new)
         if nr < 20:
             nplot = nr+5
@@ -1214,7 +1213,7 @@ class Multiple_Calculation(QThread):
             else:
 
                 self.err = []
-                sp = mc.nonnegative(sp)
+                sp = correction.nonnegative(sp)
                 if self.init== 0:
                     self.ST , points = ff.initi_simplisma(sp,self.nr,self.f)
                     self.C = None
@@ -1653,20 +1652,4 @@ class single_report(QThread):
 def main():
     parser = argparse.ArgumentParser(
             description='Graphical application for MCR-ALS analysis of hyperspectral data.')
-    args = parser.parse_args()
-    try:
-        app = QApplication.instance()
-        if not app:
-            app = QApplication(sys.argv)
-        window = MyMainWindow()
-        window.show()
-        res = app.exec_()
-    except Exception:
-        traceback.print_exc()
-        print('Press some key to quit')
-        input()
-    sys.exit(res)
-
-if __name__ == '__main__':
-    main()
-
+    MyMainWindow.run_octavvs_application(parser=parser)

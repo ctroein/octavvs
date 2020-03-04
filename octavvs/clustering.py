@@ -21,12 +21,14 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.preprocessing import StandardScaler
+
+import matplotlib
+matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
-from matplotlib import colors
 from PyQt5.QtWidgets import QTableWidgetItem, QTableWidgetSelectionRange
 
-from .mcr import ftir_function as ff
-from .miccs import ExceptionDialog
+from octavvs.mcr import ftir_function as ff
+from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
 Ui_table = uic.loadUiType(resource_filename(__name__, "mcr/table_ui.ui"))[0]
@@ -41,49 +43,49 @@ class Table(QMainWindow, Ui_table):
         self.actionCopy.triggered.connect(self.copySelection)
         self.actionSave_as.triggered.connect(self.saveas)
         self.actionClose.triggered.connect(self.close)
-                   
-        
+
+
     @pyqtSlot(np.ndarray, int, list)
     def main_data(self,data, decision,label):
         self.data_tab = data
         self.decision = decision
-        self.row  = len(self.data_tab) 
-        self.col = len(self.data_tab.T) 
+        self.row  = len(self.data_tab)
+        self.col = len(self.data_tab.T)
         self.label = label
-        
+
         if self.decision == 0:
             name = range(1,self.col)
-            name = (list(map(str,name))) 
-            
+            name = (list(map(str,name)))
+
             head = ['Wavenumber']
             head = head + name
             self.tableWidget.setHorizontalHeaderLabels(head)
-        
+
         if self.label != ['0']:
             head = ['Wavenumber']
             head = head + self.label
             self.tableWidget.setHorizontalHeaderLabels(head)
-        
-    
+
+
         if self.data_tab is not None:
             self.row  = len(self.data_tab)
-            self.col = len(self.data_tab.T) 
+            self.col = len(self.data_tab.T)
             self.tableWidget.setRowCount(self.row)
             self.tableWidget.setColumnCount(self.col)
-            
+
             for i in range(0,self.row):
                 for j in range(0,self.col):
                     self.tableWidget.setItem(i, j, QTableWidgetItem(str(self.data_tab[i,j])))
-         
+
     def select(self):
         self.tableWidget.setRangeSelected(QTableWidgetSelectionRange(0,0, self.row-1, self.col-1), True)
 
     def deselect(self):
-        self.tableWidget.setRangeSelected(QTableWidgetSelectionRange(0,0, self.row-1, self.col-1), False)       
-        
+        self.tableWidget.setRangeSelected(QTableWidgetSelectionRange(0,0, self.row-1, self.col-1), False)
+
     def close(self):
         self.hide()
-    
+
     def copySelection(self):
         selection = self.tableWidget.selectedIndexes()
         if selection:
@@ -113,7 +115,7 @@ class Table(QMainWindow, Ui_table):
             #     filesave = filesave+'.xls'
 
 
-class MyMainWindow(QMainWindow, Ui_MainWindow):
+class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     DataUpdated = pyqtSignal(np.ndarray, int, list)
     SearchUp = pyqtSignal(str)
     Onefile = pyqtSignal(str)
@@ -121,10 +123,14 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
     VisUp = pyqtSignal()
     ClusUp = pyqtSignal()
 
+    @classmethod
+    def program_name(cls):
+        "Return the name of the program that this main window represents"
+        return 'Clustering'
+
     def __init__(self,parent=None):
-        super(MyMainWindow, self).__init__(parent)
-        qApp.installEventFilter(self)
-        self.setupUi(self)
+        super().__init__(parent)
+
         self.pushButtonLoadSpec.clicked.connect(self.Load_chose)
         self.lock_un(False)
         self.pushButtonExpandSpectra.clicked.connect(self.ExpandSpectra)
@@ -151,16 +157,16 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.pushButtonTable.clicked.connect(self.TableShow)
         self.pushButtonTableAve.clicked.connect(self.TableAve)
         self.Tableview = Table(self)
-   
+
         self.DataUpdated.connect(self.Tableview.main_data)
         self.SearchUp.connect(self.search_whole_folder)
         self.Onefile.connect(self.readfile)
         self.ProjUp.connect(self.ImageProjection)
         self.VisUp.connect(self.Cvisualize)
         self.ClusUp.connect(self.ClusteringCal)
-        
 
-        ExceptionDialog.install(self)
+        self.post_setup()
+
 
     def closeEvent(self, event):
         self.Tableview.close()
@@ -173,7 +179,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         reply = msgBox.exec_()
         if reply == QMessageBox.Yes:
             plt.close('all')
-            qApp.quit()
+#            qApp.quit()
         else:
             event.ignore()
 
@@ -207,7 +213,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.pushButtonNext.setEnabled(False)
             self.pushButtonPrevious.setEnabled(False)
 
-   
+
     def LoadSpec(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -354,7 +360,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEditFileNum.setText(str(1))
         self.Onefile.emit(name[0])
 
-    @pyqtSlot(str) 
+    @pyqtSlot(str)
     def readfile(self,fileName):
         self.img = None
         try:
@@ -382,7 +388,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.lock_un(True)
         self.lineEditFilename.setText((basename(fileName).replace('.mat','')))
         self.lineEditDirSpectra.setText(fileName)
-        
+
         self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
 
         self.plot_specta.canvas.ax.clear()
@@ -492,7 +498,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         else:
             pass
 
-    
+
     @pyqtSlot()
     def ClusteringCal(self):
         nclus = int(self.spinBoxNcluster.value())
@@ -568,7 +574,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         if nclus > 8:
             self.cmap = str(self.comboBoxColorBig.currentText())
         else:
-            self.cmap = colors.ListedColormap(self.clis)
+            self.cmap = matplotlib.colors.ListedColormap(self.clis)
 
         self.plotCluster.canvas.ax.clear()
         self.plotCluster.canvas.ax.imshow(self.mapping,cmap=self.cmap)
@@ -604,8 +610,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.plotAverage.canvas.draw()
         anotclus=len(set(self.clis))
         self.lineEditAnotClus.setText(str(anotclus))
-        
-    
+
+
 
     def ExpandAve(self):
         plt.close("Average Spectra")
@@ -679,7 +685,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.VisUp.emit()
         self.ExpandProjU()
 
-    
+
     @pyqtSlot()
     def ImageProjection(self):
         if  self.comboBoxMethod.currentIndex() == 0:
@@ -726,8 +732,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
         self.ExpandProjU()
         self.ExpandSpectraU()
-        
-        
+
+
     @pyqtSlot()
     def Cvisualize (self):
         if self.comboBoxVisualize.currentIndex() == 0:
@@ -760,8 +766,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
             self.plot_specta.canvas.ax.plot(self.wavenumber, self.datas)
             self.plot_specta.canvas.fig.tight_layout()
             self.plot_specta.canvas.draw()
-           
-            
+
+
             # print(len(self.datas))
             self.DataUpdated.emit(np.column_stack((self.wavenumber,self.datas)),0,[self.comboBoxVisualize.currentText()])
 
@@ -1060,8 +1066,8 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
         self.Tableview.close()
         self.DataUpdated.emit(np.column_stack((self.wavenumber, self.spmean.T)),0,self.color)
         self.Tableview.show()
-        
-        
+
+
     def clear_all(self):
         self.lineEditDirSpectra.setText('')
         self.lineEditDirPurest.setText('')
@@ -1159,24 +1165,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):
 
 
 
-
 def main():
     parser = argparse.ArgumentParser(
             description='Graphical application for clustering of MCR-ALS output.')
-    args = parser.parse_args()
-    try:
-        app = QApplication.instance()
-        if not app:
-            app = QApplication(sys.argv)
-        window = MyMainWindow()
-        window.show()
-        res = app.exec_()
-    except Exception:
-        traceback.print_exc()
-        print('Press some key to quit')
-        input()
-    sys.exit(res)
-
-if __name__ == '__main__':
-    main()
-
+    MyMainWindow.run_octavvs_application(parser=parser)

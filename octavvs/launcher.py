@@ -5,16 +5,16 @@ Author: Stéphan Pissot
 A minimalistic launcher to start the tools
 """
 import sys
+from PyQt5.Qt import qApp
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel
-from octavvs.miccs import octavvsapplication
 from octavvs import preprocessing, clustering, mcr_als
 
 def start_preprocessing():
-    octavvsapplication.run_octavvs_application('Preprocessing', windowclass=preprocessing.MyMainWindow, isChild=True)
+    preprocessing.MyMainWindow.run_octavvs_application(isChild=True)
 def start_clustering():
-    octavvsapplication.run_octavvs_application('Clustering', windowclass=clustering.MyMainWindow, isChild=True)
+    clustering.MyMainWindow.run_octavvs_application(isChild=True)
 def start_mcrals():
-    octavvsapplication.run_octavvs_application('MCR_ALS', windowclass=mcr_als.MyMainWindow, isChild=True)
+    mcr_als.MyMainWindow.run_octavvs_application(isChild=True)
 
 def main():
    app = QApplication(sys.argv)
@@ -23,7 +23,7 @@ def main():
    label=QLabel(widget)
    label.setText('OCTAVVS')
    label.move(10,10)
-   
+
    button1 = QPushButton(widget)
    button1.setText("Preprocessing")
    button1.move(10,42)
@@ -35,13 +35,14 @@ def main():
    button2.clicked.connect(start_clustering)
 
    button3 = QPushButton(widget)
-   button3.setText("MCR ALS")
+   button3.setText("MCR-ALS")
    button3.move(10,102)
    button3.clicked.connect(start_mcrals)
 
    widget.setWindowTitle("OCTAVVS Launcher")
    widget.show()
+   qApp.lastWindowClosed.connect(qApp.quit);
    sys.exit(app.exec_())
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
