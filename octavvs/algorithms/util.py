@@ -10,7 +10,8 @@ Created on Wed Mar  4 16:24:50 2020
 from pkg_resources import resource_filename
 import numpy as np
 from scipy.interpolate import PchipInterpolator
-from scipy.io import loadmat
+#from scipy.io import loadmat
+from pymatreader import read_mat
 
 
 def load_reference(wn, what=None, matfilename=None):
@@ -31,7 +32,7 @@ def load_reference(wn, what=None, matfilename=None):
         matfilename = resource_filename('octavvs.reference_spectra', what + ".mat")
 #        matfilename = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),
 #                                       'reference', what + '.mat'))
-    ref = loadmat(matfilename)['AB']
+    ref = read_mat(matfilename)['AB']
     # Handle the case of high-to-low since the interpolator requires low-to-high
     d = 1 if ref[0,0] < ref[-1,0] else -1
     ref = PchipInterpolator(ref[::d,0], ref[::d,1])(wn)
