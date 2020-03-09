@@ -13,6 +13,7 @@ from os.path import basename, dirname
 from datetime import datetime
 from pkg_resources import resource_filename
 import argparse
+from scipy.optimize import nnls as nnls
 
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.Qt import QMainWindow,qApp
@@ -30,7 +31,7 @@ from skimage.draw import polygon
 from .pymcr_new.regressors import OLS, NNLS
 from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
 from .mcr import ftir_function as ff
-from octavvs.algorithms import correction
+from octavvs.algorithms import correction as mc
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
 
@@ -187,7 +188,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         try:
             self.lock_all(True)
             self.sx, self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(fileName)
-            self.sp = correction.nonnegative(self.sp)
+            self.sp = mc.nonnegative(self.sp)
 
             self.lineEditLength.setText(str(len(self.wavenumber)))
             self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
@@ -346,6 +347,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.projection = ff.prowavenum(self.p,self.wavenumber,self.wavenumv)
 
         self.plot_visual.setImage(self.projection, self.comboBoxCmaps.currentText())
+
+#        self.plot_visual.canvas.ax.clear()
+#        self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+#        self.plot_visual.canvas.fig.tight_layout()
+#        self.plot_visual.canvas.draw()
+
         self.projectionUpdated.emit()
 
 
@@ -505,7 +512,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
         if not self.coord:
-            self.sp = correction.nonnegative(self.sp)
+            self.sp = mc.nonnegative(self.sp)
             self.u, self.s, self.v = np.linalg.svd(self.sp)
 
             self.xplot = np.arange(nplot)
@@ -523,7 +530,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             img_d = np.reshape(self.rem,(nx*ny,1))
             self.ind =  np.where(img_d > 0)[0]
 
-            sp_new = correction.nonnegative(self.sp[:,self.ind])
+            sp_new = mc.nonnegative(self.sp[:,self.ind])
             self.u, self.s, self.v = np.linalg.svd(sp_new)
 
             nplot = min(nplot, len(self.s))
@@ -602,6 +609,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.labelInitial.setText("Initial Concentration*")
             self.incon, __ = ff.initi_simplisma(self.sp.T,nr,self.f)
             self.plotInitSpec.canvas.ax.clear()
+            self.plot_visual.clearMarkings()
             self.plotInitSpec.canvas.ax.plot(np.arange(self.sx*self.sy),self.incon.T)
             self.plotInitSpec.canvas.fig.tight_layout()
             self.plotInitSpec.canvas.draw()
@@ -657,63 +665,26 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         f = float(self.lineEditNoisePercent.text())
         f = f*0.01
         max_iter = int(self.lineEditPurIter.text())
-        tol_percent = float(self.lineEditTol.text())
-        tol_error = float(self.lineEditTol.text())
-
-
+        stopping_error = float(self.lineEditTol.text())
         init = self.comboBoxInitial.currentIndex()
-        met = 'NNLS'
+    
 
         self.progressBar.setEnabled(True)
         self.lineEditStatus.setText('Multiple files')
-        self.calpures = Multiple_Calculation(init,f,nr,self.foldername, verbose=True, c_regr=met, st_regr=met, c_fit_kwargs={},
-                 st_fit_kwargs={}, c_constraints=[ConstraintNonneg(), ConstraintNorm()],
-                 st_constraints=[ConstraintNonneg()],
-                 max_iter=max_iter, tol_percent = tol_percent,
-                 tol_increase=0.0, tol_n_increase=1, tol_err_change=tol_error)
+        self.calpures = Multiple_Calculation(self.foldername, nr, f,max_iter, stopping_error, init)
 
-        self.calpures.purest.connect(self.finished_mcr_all)
+
+        self.calpures.purest.connect(self.finished_single)
+        self.calpures.DataInit.connect(self.finished_mcr_all)
         self.calpures.start()
         self.pushButtonStop.show()
         self.pushButtonPurestCal.setEnabled(False)
 
-    def finished_mcr_all(self,itera,name,itern,error,status,copt,sop):
-        self.copt = copt
-        self.sopt = sop
-
-        self.ExpandPurSpU(sop)
-        self.ExpandPurConcU(copt)
-
-        if itern == 2:
-            self.initialization(name)
-            self.lineEditFileNumber.setText(str(itera+1))
-#            if self.comboBoxInitial.currentIndex() == 0:
-            self.SVDprocess()
-
-        self.plotPurestSpectra.canvas.ax.clear()
-        self.plotPurestSpectra.canvas.ax.plot(self.wavenumber,sop)
-        self.plotPurestSpectra.canvas.fig.tight_layout()
-        self.plotPurestSpectra.canvas.draw()
-
-        self.plotPurestConc.canvas.ax.clear()
-        self.plotPurestConc.canvas.ax.plot(np.arange(len(copt)),copt)
-        self.plotPurestConc.canvas.fig.tight_layout()
-        self.plotPurestConc.canvas.draw()
-
-        self.lineEdit_Niter.setText(str(itern))
-        self.lineEdit_Error.setText(str(round(error,5)))
-        self.lineEditStatus.setText(status)
-
-        self.progressBar.setMaximum(self.nfiles+1)
-        self.progressBar.setValue(itera+1)
-
-        if (status == 'Max iterations reached') or (status == 'converged'):
-#            self.pushButtonPurestCal.setEnabled(True)
-
-            self.save_data(copt,sop)
-            if (itera+1 == self.nfiles):
-                self.progressBar.setValue(self.nfiles+1)
-                self.pushButtonPurestCal.setEnabled(True)
+    def finished_mcr_all(self,count, filename):
+        self.lineEditFileNumber.setText(str(count))
+        self.lineEditFilename.setText(basename(filename))
+        self.initialization(filename)
+        self.SVDprocess()
 
 
     @pyqtSlot(list)
@@ -729,47 +700,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def runsingle_noroi(self):
         max_iter = int(self.lineEditPurIter.text())
         tol_percent = float(self.lineEditTol.text())
-#        self.lineEditStatus.setText('-----Iterating-----')
+        f = 0.01*float(self.lineEditNoisePercent.text())
         self.SVDprocess()
-        tol_error = float(self.lineEditTol.text())
-
         nr = self.spinBoxSVDComp.value()
-        nrow, ncol = np.shape(self.sp)
-        s = sc.linalg.diagsvd(self.s,nrow, ncol)
-        u = self.u[:,0:nr]
-        s = s[0:nr,0:nr]
-        v = self.v[0:nr,:]
-        self.dn = u @ s @ v
-
         init = self.comboBoxInitial.currentIndex()
-        self.regres = self.comboBoxRegressor.currentIndex()
-
-        if self.regres == 0:
-            met= 'NNLS'
-        else:
-            met= 'OLS'
-
-        nrow, ncol = np.shape(self.dn)
-        dauxt = np.zeros((ncol,nrow))
-        aux=self.dn.T
-        tol_percent = float(self.lineEditTol.text())
-
-        for i in range(0,ncol):
-            dauxt[i,:]=aux[i,:]/np.sqrt(np.sum(aux[i,:]*aux[i,:]))
-
-
-        if init == 0:
-            C = None
-            ST = self.insp
-        else:
-            C = self.incon.T
-            ST = None
-
-        self.calpures = single_report(dauxt, C=C, ST=ST, verbose=True, c_regr=met, st_regr=met, c_fit_kwargs={},
-                 st_fit_kwargs={}, c_constraints=[ConstraintNonneg(), ConstraintNorm()],
-                 st_constraints=[ConstraintNonneg()],
-                 max_iter=max_iter, tol_percent = tol_percent,
-                 tol_increase=0.0, tol_n_increase=1, tol_err_change=tol_error)
+        self.calpures = single_report(self.sp,nr,f, max_iter,tol_percent,init)
         self.calpures.purest.connect(self.finished_single)
         self.calpures.start()
         self.pushButtonStop.show()
@@ -795,9 +730,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def runsingle_roi(self):
         self.comboBoxInitial.setCurrentIndex(0)
         nx, ny = int(self.lineEditWidth.text()),int(self.lineEditHeight.text())
-#        mask = np.ones((nx,ny))
         max_iter = int(self.lineEditPurIter.text())
-        tol_error = float(self.lineEditTol.text())
+        tol_percent = float(self.lineEditTol.text())
 
         self.roi = np.zeros((ny, nx))
         vertex_col_coords, vertex_row_coords = np.array(self.coord).T
@@ -811,7 +745,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         nr = self.spinBoxSVDComp.value()
 
-        sp_new = correction.nonnegative(self.sp[:,self.ind])
+        sp_new = mc.nonnegative(self.sp[:,self.ind])
         self.u, self.s, self.v = np.linalg.svd(sp_new)
         if nr < 20:
             nplot = nr+5
@@ -847,17 +781,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 #            self.pos = np.array([points % self.projection.shape[0], points // self.projection.shape[1]]).T
             self.pos = np.zeros((nr,2))
 
-            for i in range(0,self.nr):
+            for i in range(0,nr):
                 self.pos[i,0] = self.ind[points[i]] % nx
                 self.pos[i,1] = self.ind[points[i]] // nx
                 self.plot_visual.addPoints(self.pos)
-#            self.plot_visual.canvas.ax.plot(self.pos[i,0],self.pos[i,1],marker='p', color = 'black')
-#            self.plot_visual.canvas.draw_idle()
-
-#            self.plot_visual.canvas.ax.clear()
-#            self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
-#            self.plot_visual.canvas.fig.tight_layout()
-#            self.plot_visual.canvas.ax.plot(xs,ys,'red')
 
 
         nrow, ncol = np.shape(sp_new)
@@ -868,26 +795,21 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         v = self.v[0:nr,:]
         self.dn = u @ s @ v
 
-        self.regres = self.comboBoxRegressor.currentIndex()
-        if self.regres == 0:
-            met= 'NNLS'
-        else:
-            met= 'OLS'
 
         nrow, ncol = np.shape(self.dn)
         dauxt = np.zeros((ncol,nrow))
         aux=self.dn.T
-        tol_percent = float(self.lineEditTol.text())
-
+        
         for i in range(0,ncol):
             dauxt[i,:]=aux[i,:]/np.sqrt(np.sum(aux[i,:]*aux[i,:]))
 
-
-        self.calpures = single_report(dauxt, C=None, ST=self.insp, verbose=True, c_regr=met, st_regr=met, c_fit_kwargs={},
-                 st_fit_kwargs={}, c_constraints=[ConstraintNonneg(), ConstraintNorm()],
-                 st_constraints=[ConstraintNonneg()],
-                 max_iter=max_iter, tol_percent = tol_percent,
-                 tol_increase=0.0, tol_n_increase=1, tol_err_change=tol_error)
+       
+        f = 0.01*float(self.lineEditNoisePercent.text())
+        init = self.comboBoxInitial.currentIndex()
+       
+     
+        
+        self.calpures = single_report(sp_new, nr, f, max_iter,tol_percent, init)
         self.calpures.purest.connect(self.finished_single_roi)
         self.calpures.start()
         self.pushButtonStop.show()
@@ -1055,598 +977,413 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
 #----------------------------------------------------------------------
-"""
-The code of these classes were taken modified from
-National Institute of Standards and Technology (NIST), reference
-(1) C. H. Camp Jr., “pyMCR: A Python Library for MultivariateCurve
-    Resolution Analysis with Alternating Regression (MCR-AR)”, 124, 1-10 (2019)
-
-"""
-
-
-
 class Multiple_Calculation(QThread):
-#self.purest.emit(itera,name,self.ST,self.C,self.n_iter,err_differ,status, self.C_,self.ST_.T)
+        
+    DataInit = pyqtSignal(int, str)
+    purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
 
-    purest = pyqtSignal(np.int,str,np.int,np.float64,str,np.ndarray, np.ndarray)
     QThread.setTerminationEnabled()
-    def __init__(self,init, sim_error,nr,foldername, verbose=False, c_regr=OLS(), st_regr=OLS(), c_fit_kwargs={},
-                 st_fit_kwargs={}, c_constraints=[ConstraintNonneg()],
-                 st_constraints=[ConstraintNonneg()],
-                 max_iter=50, tol_percent=0.1,
-                 tol_increase=0.0, tol_n_increase=10, tol_err_change=None, parent=None
-                ):
+    def __init__(self, foldername, nr, f, max_iter, stopping_error, init, parent=None):
         QThread.__init__(self, parent)
-        """
-        Multivariate Curve Resolution - Alternating Regression
-        """
-        self.init = init
+        self.foldername = foldername 
         self.nr = nr
-        self.f = sim_error
-        self.fold = foldername
-        self.tol_percent = tol_percent
-        self.C = None
-        self.ST = None
-        self.dn = None
         self.max_iter = max_iter
-        self.tol_increase = tol_increase
-        self.tol_n_increase = tol_n_increase
-        self.tol_err_change = tol_err_change
-
-#        self.err_fcn = err_fcn
-        self.err = []
-
-        self.c_constraints = c_constraints
-        self.st_constraints = st_constraints
-
-        self.c_regressor = self._check_regr(c_regr)
-        self.st_regressor = self._check_regr(st_regr)
-        self.c_fit_kwargs = c_fit_kwargs
-        self.st_fit_kwargs = st_fit_kwargs
-
-        self.C_ = None
-        self.ST_ = None
-
-        self.C_opt_ = None
-        self.ST_opt_ = None
-        self.n_iter_opt = None
-
-        self.n_iter = None
-        self.n_increase = None
-        self.max_iter_reached = False
-
-        # Saving every C or S^T matrix at each iteration
-        # Could create huge memory usage
-        self._saveall_st = False
-        self._saveall_c = False
-        self._saved_st = []
-        self._saved_c = []
-        self.verbose = verbose
+        self.stopping_error = stopping_error
+        self.init = init
+        self.f = f
+        self.max_iter = max_iter
         self.rem = False
-
         if self.init == 0:
-            inguess = "Spectra"
+            inguess = 'Spectra'
         else:
-            inguess ="Concentrations"
+            inguess = 'Concentration'
+        
+        
 #----------------------------------------------------------------------------------------
-        self.logfile = open(self.fold+"//logfile.txt", "w")
+        self.logfile = open(self.foldername+"//logfile.txt", "w")
         now = datetime.now()
         date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
+        self.logfile.write("%s\n" % ("Octavvs Project"))
         self.logfile.write("%s\n" % ("Multivariate Curve Resolution-Alternating Least Square"))
         self.logfile.write("%s\n" % ("Logging started at "+date_time))
-        self.logfile.write("%s\n" % ("   Folder: "+self.fold))
+        self.logfile.write("%s\n" % ("   Folder: "+self.foldername))
         self.logfile.write("%s\n" % ("   Number of components: "+str(self.nr)))
         self.logfile.write("%s\n" % ("   Noise in SIMPLISMA: "+str(self.f)))
-        self.logfile.write("%s\n" % ("   Tolerance: "+str(self.tol_percent)))
+        self.logfile.write("%s\n" % ("   Tolerance: "+str(self.stopping_error)))
         self.logfile.write("%s\n" % ("   Initial Guess: "+ inguess))
         self.logfile.write("%s\n" % ("-------------------------------------------------------"))
 #----------------------------------------------------------------------------------------
+    def stop(self):
+        self.rem = True
+
+
 
     def logreport(self,filenumber,filename,niter,status,maxfile):
         now = datetime.now()
         date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
         self.logfile.write("%s %s %s %s\n" % (int(filenumber+1),date_time, filename, status+" at "+str(niter)))
-
+        
+        
+        print(filenumber+1,maxfile)
         if (filenumber+1) == maxfile:
             self.logfile.close()
 
 
-    def _check_regr(self, mth):
-        """
-            Check regressor method. If accetible strings, instantiate and return
-            object. If instantiated class, make sure it has a fit attribute.
-        """
-        if isinstance(mth, str):
-            if mth.upper() == 'OLS':
-                return OLS()
-            elif mth.upper() == 'NNLS':
-                return NNLS()
-            else:
-                raise ValueError('{} is unknown. Use NNLS or OLS.'.format(mth))
-        elif hasattr(mth, 'fit'):
-            return mth
+    def search_whole_folder(self, foldername):
+        count = 0
+        name =  {}
+        a = [x[0] for x in os.walk(foldername)]
+        for i in a:
+            os.chdir(i)
+            for file in glob.glob('*.mat'):
+                name[count] = str(i+'/'+file)
+                count += 1
+
+        w = csv.writer(open(foldername+"//Fileall.csv", "w"))
+        for key, val in sorted(name.items(), key=lambda item: item[1]):
+            w.writerow([key, val])
+        
+        return name
+
+    def finished_one(self, filenumber,filename, niter, status, maxfile):
+        if status == 'converged' or status =='Max iterations reached':
+            self.logreport(filenumber,filename,niter,status,maxfile)
+
+
+    def solve_lineq(self,A,B):
+        if B.ndim ==2:
+            N = B.shape[-1]
         else:
-            raise ValueError('Input class {} does not have a \'fit\' method'.format(mth))
+            N = 0
 
+        X_ = np.zeros((A.shape[-1], N))
+        residual_ = np.zeros((N))
 
-    @property
-    def D_(self):
-        """ D matrix with current C and S^T matrices """
-        return np.dot(self.C_, self.ST_)
-
-    @property
-    def D_opt_(self):
-        """ D matrix with optimal C and S^T matrices """
-        return np.dot(self.C_opt_, self.ST_opt_)
-
-    def _ismin_err(self, val):
-        """ Is the current error the minimum """
-        if len(self.err) == 0:
-            return True
+        # nnls is Ax = b; thus, need to iterate along
+        if N == 0:
+            X_, residual_ = nnls(A, B)
         else:
-            return ([val > x for x in self.err].count(True) == 0)
+            for num in range(N):
+                X_[:, num],residual_[num] = nnls(A, B[:, num])
+        return X_
 
-    def stop(self):
-        try:
-            self.logfile.write("%s\n" % ("The calculation is terminated"))
-            self.logfile.close()
-        except:
-            pass
-        self.rem = True
+    def normalize(self,dn):
+        nrow, ncol = dn.shape
+        dauxt = np.zeros((ncol,nrow))
+        aux=dn.T
+        for i in range(0,ncol):
+            dauxt[i,:]=aux[i,:]/np.sqrt(np.sum(aux[i,:]*aux[i,:]))
+        return dauxt
 
 
+    def constraint_norm(self,A):
+        A = A.copy()    
+        A /= A.sum(axis=0)[None, :]
+        return A*(A > 0)
 
+    
+    
+    
+        
+        
+
+        
     def run(self):
-        df = pd.read_csv(os.path.join(self.fold, "Fileall.csv"),header=None)
-        value = len(df)
-        err_differ = 0.
-#        sc.io.savemat(os.path.join(self.fold, '00.start'), {'nada': [[0]] } )
-        for itera in range(0,value):
-            filename = df.iloc[itera,1]
-            name = filename#basename(filename)
-            sx, sy, p ,wavenumber, sp = ff.readmat(filename)
-
+        filenames = self.search_whole_folder(self.foldername)
+        self.maxfile = len(filenames)
+        
+        self.count = 0
+        for i in range(0,self.maxfile):
             if self.rem:
                 status = 'STOP'
-                self.purest.emit(itera,name,self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
+                # self.purest.emit(iter,per,status, Cf.T,Sf.T)
                 break
             else:
+                
+                self.filename = filenames[i]
+                self.count = self.count + 1
+                self.sx, self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(self.filename)
+            # self,xplot,splot,sx,sy, p, wavenumber, sp, count     
+            
+                if self.init == 0:
+                    insp, points = ff.initi_simplisma(self.sp,self.nr,self.f)
+                    C_ = None
+                    ST_ = insp
+                elif self.init == 1:
+                    insp, points = ff.initi_simplisma(self.sp.T,self.nr,self.f)
+                    C_ = insp
+                    ST_ = None
 
-                self.err = []
-                sp = correction.nonnegative(sp)
-                if self.init== 0:
-                    self.ST , points = ff.initi_simplisma(sp,self.nr,self.f)
-                    self.C = None
+                if self.nr < 20:
+                    nplot = self.nr+5
                 else:
-                    con, points = ff.initi_simplisma(sp.T,self.nr,self.f)
-                    self.C = con.T
-                    self.ST = None
+                    nplot = self.nr
+    
+                u,s,v = np.linalg.svd(self.sp)
 
+                splot =s[0:nplot].copy()
+                xplot = np.arange(nplot)
 
-                u, s, v = np.linalg.svd(sp)
+                self.DataInit.emit(self.count,self.filename)    
 
-                nrow, ncol = np.shape(sp)
-
+                nrow, ncol = np.shape(self.sp)
+                
+                
+        
                 s = sc.linalg.diagsvd(s,nrow, ncol)
+                
                 u = u[:,0:self.nr]
                 s = s[0:self.nr,0:self.nr]
                 v = v[0:self.nr,:]
                 dn = u @ s @ v
 
-                nrow, ncol = np.shape(dn)
-                dauxt = np.zeros((ncol,nrow))
-                aux=dn.T
 
-                for i in range(0,ncol):
-                    dauxt[i,:]=aux[i,:]/np.sqrt(np.sum(aux[i,:]*aux[i,:]))
-
-                D = dauxt
-
-                if (self.C is None) & (self.ST is None):
-                    raise TypeError('C or ST estimate must be provided')
-                elif (self.C is not None) & (self.ST is not None):
-                    raise TypeError('Only C or ST estimate must be provided, only one')
-                else:
-                    self.C_ = self.C
-                    self.ST_ = self.ST
-
-                self.n_increase = 0
-
-
+                dauxt = self.normalize(dn)
+        
                 for num in range(self.max_iter):
-                    self.n_iter = num + 1
-                    if self.rem:
-                        status = 'STOP'
-                        self.purest.emit(itera,name,self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                        break
-                    else:
+                    iter = num + 1
+                
+                    if ST_ is not None:
+                        Ctemp = self.solve_lineq(ST_.T,dauxt.T)
+                        #Constraint
+                        # Ctemp = constraint_norm(Ctemp)
+                
+                        Dcal = np.dot(Ctemp.T,ST_)
+                        error = msea(dauxt,Dcal)
+        
+                        if iter ==1:
+                            error0 = error.copy()
+                            C_ = Ctemp
+        
+                        per = 100*abs(error-error0)/error
+                        # print(iter,'and',per)
+                        if per == 0:
+                            Cf = C_.copy()
+                            Sf = ST_.copy()
+                            ST_temp = ST_.copy()
+                            status = 'Iterating'
+                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
 
-                        if self.ST_ is not None:
-                            # Debugging feature -- saves every S^T matrix in a list
-                            # Can create huge memory usage
-                            if self._saveall_st:
-                                self._saved_st.append(self.ST_)
-
-                            self.c_regressor.fit(self.ST_.T, D.T, **self.c_fit_kwargs)
-                            C_temp = self.c_regressor.coef_
-
-                            # Apply c-constraints
-                            for constr in self.c_constraints:
-                                C_temp = constr.transform(C_temp)
-
-                            D_calc = np.dot(C_temp, self.ST_)
-                            err_temp = msea(D, D_calc)
-            #                err_temp = self.err_fcn(C_temp, self.ST_, D, D_calc)
-
-
-                            if self._ismin_err(err_temp):
-                                self.C_opt_ = 1*C_temp
-                                self.ST_opt_ = 1*self.ST_
-                                self.n_iter_opt = num + 1
-
-                            # Calculate error fcn and check for tolerance increase
-                            if self.err != 0:
-                                self.err.append(1*err_temp)
-                                self.C_ = 1*C_temp
-                            elif (err_temp <= self.err[-1]*(1+self.tol_increase)):
-                                self.err.append(1*err_temp)
-                                self.C_ = 1*C_temp
-                            else:
-                                print('Mean squared residual increased above tol_increase {:.4e}. Exiting'.format(err_temp))
-                                break
-
-                            # Check if err went up
-                            if len(self.err) > 1:
-                                if self.err[-1] > self.err[-2]:  # Error increased
-                                    self.n_increase += 1
-                                else:
-                                    self.n_increase *= 0
-
-                            # Break if too many error-increases in a row
-                            if self.n_increase > self.tol_n_increase:
-                                print('Maximum error increases reached ({}). Exiting.'.format(self.tol_n_increase))
-                                break
-
-
-
-                        if self.C_ is not None:
-
-                            # Debugging feature -- saves every C matrix in a list
-                            # Can create huge memory usage
-                            if self._saveall_c:
-                                self._saved_c.append(self.C_)
-
-                            self.st_regressor.fit(self.C_, D, **self.st_fit_kwargs)
-                            ST_temp = self.st_regressor.coef_.T
-
-
-                            # Apply ST-constraints
-                            for constr in self.st_constraints:
-                                ST_temp = constr.transform(ST_temp)
-
-                            D_calc = np.dot(self.C_, ST_temp)
-                            err_temp = msea(D, D_calc)
-
-                            # Calculate error fcn and check for tolerance increase
-                            if self._ismin_err(err_temp):
-                                self.ST_opt_ = 1*ST_temp
-                                self.C_opt_ = 1*self.C_
-                                self.n_iter_opt = num + 1
-
-                            if len(self.err) == 0:
-                                self.err.append(1*err_temp)
-                                self.ST_ = 1*ST_temp
-                            elif (err_temp <= self.err[-1]*(1+self.tol_increase)):
-                                self.err.append(1*err_temp)
-                                self.ST_ = 1*ST_temp
-                            else:
-                                print('Mean squared residual increased above tol_increase {:.4e}. Exiting'.format(err_temp))
-        #                        break
-
-                            # Check if err went up
-                            if len(self.err) > 1:
-                                if self.err[-1] > self.err[-2]:  # Error increased
-                                    self.n_increase += 1
-                                else:
-                                    self.n_increase *= 0
-
-                            # Break if too many error-increases in a row
-                            if self.n_increase > self.tol_n_increase:
-                                print('Maximum error increases reached ({}). Exiting.'.format(self.tol_n_increase))
-                                break
-
-                        if self.n_iter >= self.max_iter:
-                            print('Max iterations reached ({}).'.format(num+1))
-                            status = 'Max iterations reached'
-        #                    err_differ=0.0
-        #                    self.purest.emit(itera,name,self.ST,camp,self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                            self.purest.emit(itera,name,self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                            self.max_iter_reached = True
-                            self.logreport(itera,basename(filename),self.n_iter,status,value)
+                        elif  per < self.stopping_error:
+                            Cf = C_.copy()
+                            Sf = ST_.copy()
+                            # Save_data(Cf,Sf)
+                            status = 'converged'
+                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                            print(self.count)
+                            self.finished_one(i,self.filename,iter,status,self.maxfile)
                             break
+                        else:
+                            error0 = error.copy()
+                            C_ = Ctemp.copy()
+                            Sf = ST_.copy()
+                            status = 'Iterating'
+                            self.purest.emit(iter,per,status, C_.T,Sf.T)
+            
+                    if C_ is not None:
+                        ST_temp = self.solve_lineq(C_.T,dauxt)
+                        #Constraint
+                        # ST_temp = constraint_norm(ST_temp)
+        
+                        Dcal = np.dot(C_.T,ST_temp)
+                        error = msea(dauxt,Dcal)
+        
+                        if iter ==1:
+                            error0 = error.copy()
+                            # C_ = Ctemp
+                            ST_ = ST_temp
+        
+                        per = 100*abs(error-error0)/error
+                        # print(iter,'and',per)
+                        if per == 0:
+                            Cf = C_.copy()
+                            Sf = ST_.copy()
+                            status = 'Iterating'
+                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                    
+                        elif per < self.stopping_error:
+                            Cf = C_.copy()
+                            Sf = ST_.copy()
+                            # Save_data(Cf,Sf)
+                            status = 'converged'
+                            print(self.count)
+                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                            self.finished_one(i,self.filename,iter,status,self.maxfile)
+                            break
+            
+                        else:
+                            error0 = error.copy()
+                            ST_ = ST_temp.copy()
+                            status = 'Iterating'
+                            self.purest.emit(iter,per,status, C_.T,ST_.T)
 
-                        self.n_iter = num + 1
-
-
-                        if ((self.tol_err_change is not None) & (len(self.err) > 2)):
-            #
-
-                            err_differ = np.abs(self.err[-1] - self.err[-3])/self.err[-1]*100
-                            status = 'iterating'
-                            self.purest.emit(itera,name,self.n_iter,err_differ,status, self.C_,self.ST_opt_.T)
-                            if err_differ < np.abs(self.tol_percent):
-                                print('Change in err below tol_err_change ({:.4e}). Exiting.'.format(err_differ))
-                                status = 'converged'
-                                self.purest.emit(itera,name,self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                                self.logreport(itera,basename(filename),self.n_iter,status,value)
-                                break
-
-            gc.collect()
+                    if iter == self.max_iter:
+                        status = 'Max iterations reached'
+                        self.purest.emit(iter,per,status, C_.T,ST_.T)
+                        self.finished_one(i,self.filename,iter,status,self.maxfile)
+                        break
+ 
+             
 
  #----------------------------------------------------------------------
 
 
 class single_report(QThread):
-
     purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
-    def __init__(self,D, C=None, ST=None, verbose=False, c_regr=OLS(), st_regr=OLS(), c_fit_kwargs={},
-                 st_fit_kwargs={}, c_constraints=[ConstraintNonneg()],
-                 st_constraints=[ConstraintNonneg()],
-                 max_iter=50, tol_percent=0.1,
-                 tol_increase=0.0, tol_n_increase=10, tol_err_change=None, parent=None
+    def __init__(self, sp, nr, f, niter, stopping_error, init, parent=None
                 ):
         QThread.__init__(self, parent)
         """
-        Multivariate Curve Resolution - Alternating Regression
+        Multivariate Curve Resolution - Alternating Least Square
         """
-
-        self.tol_percent = tol_percent
-        self.C = C
-        self.ST = ST
-        self.dn = D
-        self.max_iter = max_iter
-        self.tol_increase = tol_increase
-        self.tol_n_increase = tol_n_increase
-        self.tol_err_change = tol_err_change
-
-#        self.err_fcn = err_fcn
-        self.err = []
-
-        self.c_constraints = c_constraints
-        self.st_constraints = st_constraints
-
-        self.c_regressor = self._check_regr(c_regr)
-        self.st_regressor = self._check_regr(st_regr)
-        self.c_fit_kwargs = c_fit_kwargs
-        self.st_fit_kwargs = st_fit_kwargs
-
-        self.C_ = None
-        self.ST_ = None
-
-        self.C_opt_ = None
-        self.ST_opt_ = None
-        self.n_iter_opt = None
-
-        self.n_iter = None
-        self.n_increase = None
-        self.max_iter_reached = False
-
-        # Saving every C or S^T matrix at each iteration
-        # Could create huge memory usage
-        self._saveall_st = False
-        self._saveall_c = False
-        self._saved_st = []
-        self._saved_c = []
-        self.verbose = verbose
+        self.sp = sp
+        self.nr = nr
+        self.f = f
+        self.niter = niter
+        self.stopping_error = stopping_error
+        self.init = init
         self.rem = False
-
-    def _check_regr(self, mth):
-        """
-            Check regressor method. If accetible strings, instantiate and return
-            object. If instantiated class, make sure it has a fit attribute.
-        """
-        if isinstance(mth, str):
-            if mth.upper() == 'OLS':
-                return OLS()
-            elif mth.upper() == 'NNLS':
-                return NNLS()
-            else:
-                raise ValueError('{} is unknown. Use NNLS or OLS.'.format(mth))
-        elif hasattr(mth, 'fit'):
-            return mth
-        else:
-            raise ValueError('Input class {} does not have a \'fit\' method'.format(mth))
-
-
-    @property
-    def D_(self):
-        """ D matrix with current C and S^T matrices """
-        return np.dot(self.C_, self.ST_)
-
-    @property
-    def D_opt_(self):
-        """ D matrix with optimal C and S^T matrices """
-        return np.dot(self.C_opt_, self.ST_opt_)
-
-    def _ismin_err(self, val):
-        """ Is the current error the minimum """
-        if len(self.err) == 0:
-            return True
-        else:
-            return ([val > x for x in self.err].count(True) == 0)
-
-
+    
     def stop(self):
         self.rem = True
 
 
-    def run(self):
-        """
-        Perform MCR-ALS. D = CS^T. Solve for C and S^T iteratively.
-
-        Parameters
-        ----------
-        Dn: ndarray
-            Dn --> Dexperiment
-
-        D : ndarray
-            D matrix --> DPCA
-
-        C : ndarray
-            Initial C matrix estimate. Only provide initial C OR S^T.
-
-        ST : ndarray
-            Initial S^T matrix estimate. Only provide initial C OR S^T.
-
-        verbose : bool
-            Display iteration and per-least squares err results.
-        """
-
-        # Ensure only C or ST provided
-        D = self.dn
-
-        if (self.C is None) & (self.ST is None):
-            raise TypeError('C or ST estimate must be provided')
-        elif (self.C is not None) & (self.ST is not None):
-            raise TypeError('Only C or ST estimate must be provided, only one')
+    def solve_lineq(self,A,B):
+        if B.ndim ==2:
+            N = B.shape[-1]
         else:
-            self.C_ = self.C
-            self.ST_ = self.ST
-        self.n_increase = 0
-        err_differ = 0.
+            N = 0
 
-        for num in range(self.max_iter):
+        X_ = np.zeros((A.shape[-1], N))
+        residual_ = np.zeros((N))
 
+        # nnls is Ax = b; thus, need to iterate along
+        if N == 0:
+            X_, residual_ = nnls(A, B)
+        else:
+            for num in range(N):
+                X_[:, num],residual_[num] = nnls(A, B[:, num])
+        return X_
+
+    def normalize(self,dn):
+        nrow, ncol = dn.shape
+        dauxt = np.zeros((ncol,nrow))
+        aux=dn.T
+        for i in range(0,ncol):
+            dauxt[i,:]=aux[i,:]/np.sqrt(np.sum(aux[i,:]*aux[i,:]))
+        return dauxt
+
+
+    def constraint_norm(self,A):
+        A = A.copy()    
+        A /= A.sum(axis=0)[None, :]
+        return A*(A > 0)
+
+
+    def run(self):
+        print('yes')
+        if self.init == 0:
+            insp, points = ff.initi_simplisma(self.sp,self.nr,self.f)
+            C_ = None
+            ST_ = insp
+        elif self.init == 1:
+            insp, points = ff.initi_simplisma(self.sp.T,self.nr,self.f)
+            C_ = insp
+            ST_ = None
+
+        u,s,v = np.linalg.svd(self.sp)
+        nrow, ncol = np.shape(self.sp)
+        # nr = 
+        s = sc.linalg.diagsvd(s,nrow, ncol)
+        u = u[:,0:self.nr]
+        s = s[0:self.nr,0:self.nr]
+        v = v[0:self.nr,:]
+        dn = u @ s @ v
+
+        dauxt = self.normalize(dn)
+    
+        for num in range(self.niter):
+            iter = num + 1
             if self.rem:
                 status = 'STOP'
-                self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
+                self.purest.emit(iter,per,status, Cf.T,Sf.T)
                 break
             else:
-                self.n_iter = num + 1
-                if self.ST_ is not None:
-                    # Debugging feature -- saves every S^T matrix in a list
-                    # Can create huge memory usage
-                    if self._saveall_st:
-                        self._saved_st.append(self.ST_)
-
-                    self.c_regressor.fit(self.ST_.T, D.T, **self.c_fit_kwargs)
-                    C_temp = self.c_regressor.coef_
-
-                    # Apply c-constraints
-                    for constr in self.c_constraints:
-                        C_temp = constr.transform(C_temp)
-
-                    D_calc = np.dot(C_temp, self.ST_)
-                    err_temp = msea(D, D_calc)
-    #                err_temp = self.err_fcn(C_temp, self.ST_, D, D_calc)
-
-
-                    if self._ismin_err(err_temp):
-                        self.C_opt_ = 1*C_temp
-                        self.ST_opt_ = 1*self.ST_
-                        self.n_iter_opt = num + 1
-
-                    # Calculate error fcn and check for tolerance increase
-                    if self.err != 0:
-                        self.err.append(1*err_temp)
-                        self.C_ = 1*C_temp
-                    elif (err_temp <= self.err[-1]*(1+self.tol_increase)):
-                        self.err.append(1*err_temp)
-                        self.C_ = 1*C_temp
-                    else:
-                        print('Mean squared residual increased above tol_increase {:.4e}. Exiting'.format(err_temp))
-                        status = 'Mean squared residual increased above tol_increase'
-                        self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                        break
-
-                    # Check if err went up
-                    if len(self.err) > 1:
-                        if self.err[-1] > self.err[-2]:  # Error increased
-                            self.n_increase += 1
-                        else:
-                            self.n_increase *= 0
-
-                    # Break if too many error-increases in a row
-                    if self.n_increase > self.tol_n_increase:
-                        print('Maximum error increases reached ({}). Exiting.'.format(self.tol_n_increase))
-                        status = 'Maximum error increases reached'
-                        self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                        break
-
-                if self.C_ is not None:
-
-                    # Debugging feature -- saves every C matrix in a list
-                    # Can create huge memory usage
-                    if self._saveall_c:
-                        self._saved_c.append(self.C_)
-
-                    self.st_regressor.fit(self.C_, D, **self.st_fit_kwargs)
-                    ST_temp = self.st_regressor.coef_.T
-
-
-
-                    # Apply ST-constraints
-                    for constr in self.st_constraints:
-                        ST_temp = constr.transform(ST_temp)
-    #
-                    D_calc = np.dot(self.C_, ST_temp)
-
-
-    #                err_temp = self.err_fcn(self.C_, ST_temp, D, D_calc)
-                    err_temp = msea(D, D_calc)
-
-                    # Calculate error fcn and check for tolerance increase
-                    if self._ismin_err(err_temp):
-                        self.ST_opt_ = 1*ST_temp
-                        self.C_opt_ = 1*self.C_
-                        self.n_iter_opt = num + 1
-
-                    if len(self.err) == 0:
-                        self.err.append(1*err_temp)
-                        self.ST_ = 1*ST_temp
-                    elif (err_temp <= self.err[-1]*(1+self.tol_increase)):
-                        self.err.append(1*err_temp)
-                        self.ST_ = 1*ST_temp
-                    else:
-                        print('Mean squared residual increased above tol_increase {:.4e}. Exiting'.format(err_temp))
-                        status = 'Mean squared residual increased above tol_increase'
-                        self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                        break
-
-                    # Check if err went up
-                    if len(self.err) > 1:
-                        if self.err[-1] > self.err[-2]:  # Error increased
-                            self.n_increase += 1
-                        else:
-                            self.n_increase *= 0
-
-                    # Break if too many error-increases in a row
-                    if self.n_increase > self.tol_n_increase:
-                        print('Maximum error increases reached ({}). Exiting.'.format(self.tol_n_increase))
-                        status = 'Maximum error increases'
-                        self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                        break
-
-
-                if self.n_iter >= self.max_iter:
-                    print('Max iterations reached ({}).'.format(num+1))
-                    status = 'Max iterations reached'
-                    self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                    self.max_iter_reached = True
-                    break
-
-                self.n_iter = num + 1
-
-
-                if ((self.tol_err_change is not None) & (len(self.err) > 2)):
-                    err_differ = np.abs(self.err[-1] - self.err[-3])/self.err[-1]*100
-                    status = 'iterating'
-                    self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
-                    if err_differ < np.abs(self.tol_percent):
-                        print('Change in err below tol_err_change ({:.4e}). Exiting.'.format(err_differ))
+                
+                if ST_ is not None:
+                    Ctemp = self.solve_lineq(ST_.T,dauxt.T)
+                    #Constraint
+                    # Ctemp = constraint_norm(Ctemp)
+                    
+                    Dcal = np.dot(Ctemp.T,ST_)
+                    error = msea(dauxt,Dcal)
+            
+                    if iter ==1:
+                        error0 = error.copy()
+                        C_ = Ctemp
+            
+                    per = 100*abs(error-error0)/error
+                    print(iter,'and',per)
+                    if per == 0:
+                        Cf = C_.copy()
+                        Sf = ST_.copy()
+                        ST_temp = ST_.copy()
+                        status = 'Iterating'
+                        self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                    elif  per < self.stopping_error:
+                        Cf = C_.copy()
+                        Sf = ST_.copy()
+                    # Save_data(Cf,Sf)
                         status = 'converged'
-                        self.purest.emit(self.n_iter,err_differ,status, self.C_opt_,self.ST_opt_.T)
+                        self.purest.emit(iter,per,status, Cf.T,Sf.T)
                         break
+                    else:
+                        error0 = error.copy()
+                        C_ = Ctemp.copy()
+                        Sf = ST_.copy()
+                        # status = 'Iterating'
+                        # self.purest.emit(iter,per,status, C_.T,Sf.T)
+                
+                if C_ is not None:
+                    ST_temp = self.solve_lineq(C_.T,dauxt)
+                    #Constraint
+                    # ST_temp = constraint_norm(ST_temp)
+            
+                    Dcal = np.dot(C_.T,ST_temp)
+                    error = msea(dauxt,Dcal)
+            
+                    if iter ==1:
+                        error0 = error.copy()
+                        # C_ = Ctemp
+                        ST_ = ST_temp
+            
+                    per = 100*abs(error-error0)/error
+                    print(iter,'and',per)
+                    if per == 0:
+                        Cf = C_.copy()
+                        Sf = ST_.copy()
+                        status = 'Iterating'
+                        self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                        
+                    elif per < self.stopping_error:
+                        Cf = C_.copy()
+                        Sf = ST_.copy()
+                    # Save_data(Cf,Sf)
+                        status = 'converged'
+                        self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                        break
+                
+                    else:
+                        error0 = error.copy()
+                        ST_ = ST_temp.copy()
+                        status = 'Iterating'
+                        self.purest.emit(iter,per,status, C_.T,ST_.T)
+    
+                if iter == self.niter:
+                    status = 'Max iterations reached'
+                    self.purest.emit(iter,per,status, C_.T,ST_.T)
+                    break
+            # Save_data(Cf,Sf)
 
 
 def main():
