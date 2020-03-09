@@ -28,8 +28,8 @@ from sklearn.metrics import mean_squared_error as msea
 import scipy as sc
 from skimage.draw import polygon
 
-from .pymcr_new.regressors import OLS, NNLS
-from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
+# from .pymcr_new.regressors import OLS, NNLS
+# from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
 from .mcr import ftir_function as ff
 from octavvs.algorithms import correction as mc
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
@@ -1059,7 +1059,6 @@ class Multiple_Calculation(QThread):
         X_ = np.zeros((A.shape[-1], N))
         residual_ = np.zeros((N))
 
-        # nnls is Ax = b; thus, need to iterate along
         if N == 0:
             X_, residual_ = nnls(A, B)
         else:
@@ -1080,13 +1079,6 @@ class Multiple_Calculation(QThread):
         A = A.copy()    
         A /= A.sum(axis=0)[None, :]
         return A*(A > 0)
-
-    
-    
-    
-        
-        
-
         
     def run(self):
         filenames = self.search_whole_folder(self.foldername)
@@ -1114,15 +1106,7 @@ class Multiple_Calculation(QThread):
                     C_ = insp
                     ST_ = None
 
-                if self.nr < 20:
-                    nplot = self.nr+5
-                else:
-                    nplot = self.nr
-    
                 u,s,v = np.linalg.svd(self.sp)
-
-                splot =s[0:nplot].copy()
-                xplot = np.arange(nplot)
 
                 self.DataInit.emit(self.count,self.filename)    
 
@@ -1306,7 +1290,7 @@ class single_report(QThread):
             iter = num + 1
             if self.rem:
                 status = 'STOP'
-                self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                # self.purest.emit(iter,per,status, Cf.T,Sf.T)
                 break
             else:
                 

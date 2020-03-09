@@ -167,7 +167,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.post_setup()
 
-
+        self.checkBoxinvert.toggled.connect(self.Inverting)
+        
     def closeEvent(self, event):
         self.Tableview.close()
         msgBox = QMessageBox()
@@ -391,11 +392,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
 
-        self.plot_specta.canvas.ax.clear()
-        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
-        self.plot_specta.canvas.fig.tight_layout()
-        self.plot_specta.canvas.draw()
-
+        
+        self.PlotSpectraSample()
+        
         self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
         self.labelMaxwn.setText(str("%.2f" % np.max(self.wavenumber)))
         self.lineEditLength.setText(str(len(self.wavenumber)))
@@ -435,6 +434,29 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.LoadPurest()
         else:
             self.LoadPurest()
+
+    def Inverting(self):
+        if self.comboBoxVisualize.currentIndex() == 0:
+            self.PlotSpectraSample()
+        else:
+            self.VisUp.emit()
+            self.ClusUp.emit()
+            
+        if hasattr(self,'df_spec'):
+            self.ClusUp.emit()
+            if self.pushButtonReduce.isEnabled():
+                pass
+            else:
+                self.Reduce()
+        
+    def PlotSpectraSample(self):
+        self.plot_specta.canvas.ax.clear()
+        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
+        if self.checkBoxinvert.isChecked():
+            self.plot_specta.Invert()
+        self.plot_specta.canvas.fig.tight_layout()
+        self.plot_specta.canvas.draw()
+        self.ExpandSpectraU()
 
 
     def LoadPurest(self):
@@ -600,6 +622,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
         self.plotAverage.canvas.ax.plot(self.wavenumber, self.spmean.T )
+        if self.checkBoxinvert.isChecked():
+            self.plotAverage.Invert()
+        
+        
         if nclus <= 8:
             self.plotAverage.canvas.ax.legend(self.label,loc='best')
             self.plotAverage.canvas.fig.tight_layout()
@@ -607,6 +633,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotAverage.canvas.fig.tight_layout()
 
         self.ExpandAveU()
+  
+        
         self.plotAverage.canvas.draw()
         anotclus=len(set(self.clis))
         self.lineEditAnotClus.setText(str(anotclus))
@@ -619,6 +647,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         ax = fig.add_subplot(111)
         ax.set_prop_cycle(color=self.color)
         ax.plot(self.wavenumber, self.spmean.T)
+        if self.checkBoxinvert.isChecked():
+            ax.invert_xaxis()
         plt.legend(self.label,loc='best')
         plt.show("Average Spectra")
 
@@ -631,13 +661,17 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandSpectra(self):
         plt.close('Spectra')
-        plt.figure('Spectra', tight_layout={'pad':.5})
+        fig = plt.figure('Spectra', tight_layout={'pad':.5})
+        ax = fig.subplots()
         if self.comboBoxVisualize.currentIndex() == 0:
-            plt.plot(self.wavenumber,self.sp[:,self.index])
+            ax.plot(self.wavenumber,self.sp[:,self.index])
             if self.comboBoxMethod.currentIndex() == 2:
-                plt.axvline(x=self.wavenumv)
+                ax.axvline(x=self.wavenumv)
         else:
-            plt.plot(self.wavenumber, self.datas)
+            ax.plot(self.wavenumber, self.datas)
+        
+        if self.checkBoxinvert.isChecked():
+            ax.invert_xaxis()
         plt.xlabel("Wavenumber(1/cm)")#,fontsize=24)
         plt.ylabel("Absorption(arb. units)")#,fontsize=24)
         plt.tick_params(axis='both',direction='in', length=8, width=1)
@@ -655,6 +689,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                     ax.axvline(x=self.wavenumv)
             else:
                 ax.plot(self.wavenumber, self.datas)
+            
+            if self.checkBoxinvert.isChecked():
+                ax.invert_xaxis()
             fig.canvas.draw_idle()
         else:
             pass
@@ -718,12 +755,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.wavenumv = float(self.lineEditWavenumber.text())
         self.projection = ff.prowavenum(self.p,self.wavenumber,self.wavenumv)
 
-        self.plot_specta.canvas.ax.clear()
-        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
-        self.plot_specta.canvas.ax.axvline(x=self.wavenumv)
-        self.plot_specta.canvas.fig.tight_layout()
-
-        self.plot_specta.canvas.draw()
+        self.PlotSpectraSample()
 
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
@@ -743,10 +775,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.plotMultiVisual.canvas.fig.tight_layout()
                 self.plotMultiVisual.canvas.draw()
 
-            self.plot_specta.canvas.ax.clear()
-            self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
-            self.plot_specta.canvas.fig.tight_layout()
-            self.plot_specta.canvas.draw()
+            self.PlotSpectraSample()
+            # self.plot_specta.canvas.ax.clear()
+            # self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
+            # self.plot_specta.canvas.fig.tight_layout()
+            # self.plot_specta.canvas.draw()
             self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
 
         if 'component_' in self.comboBoxVisualize.currentText():
@@ -764,6 +797,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.datas = self.df_spec.iloc[:,val].to_numpy()
             self.plot_specta.canvas.ax.clear()
             self.plot_specta.canvas.ax.plot(self.wavenumber, self.datas)
+            if self.checkBoxinvert.isChecked():
+                self.plot_specta.Invert()           
             self.plot_specta.canvas.fig.tight_layout()
             self.plot_specta.canvas.draw()
 
@@ -856,6 +891,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotAverage.canvas.ax.set_prop_cycle(color=self.color)
             self.plotAverage.canvas.ax.plot(self.wavenumber, self.spmean.T )
             self.plotAverage.canvas.ax.legend(self.label,loc= 'best')
+            if self.checkBoxinvert.isChecked():
+                self.plotAverage.Invert()
             self.plotAverage.canvas.fig.tight_layout()
             self.plotAverage.canvas.draw()
 

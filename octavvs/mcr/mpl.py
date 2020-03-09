@@ -13,6 +13,11 @@ class MplWidget(Canvas):
         self.canvas = self
         Canvas.__init__(self, self.fig)
 
+    def Invert(self):
+        # print('called')
+        self.ax.invert_xaxis()
+
+
 
 class Mpl_Proj(MplWidget):
     def __init__(self, parent=None):
