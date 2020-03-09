@@ -142,7 +142,7 @@
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,1,0,1,0,1,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,1,0,0,1,0,1,0">
             <item>
              <widget class="QLabel" name="label_6">
               <property name="text">
@@ -160,6 +160,13 @@
               </property>
               <property name="readOnly">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxInvert">
+              <property name="text">
+               <string>Invert Wavenumber Axis                             </string>
               </property>
              </widget>
             </item>
