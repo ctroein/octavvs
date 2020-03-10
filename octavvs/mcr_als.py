@@ -7,7 +7,7 @@ import gc
 import csv
 import glob
 import os
-import pandas as pd
+# import pandas as pd
 #import traceback
 from os.path import basename, dirname
 from datetime import datetime
@@ -123,8 +123,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.comboBoxCmaps.currentTextChanged.connect(self.roiDialog.setCmap)
         self.loadedFile.connect(self.roiDialog.resetAll)
 
+        self.checkBoxInvert.toggled.connect(self.Invert)
+        
         self.post_setup()
-
+        
+        
+        
 
     def closeEvent(self, event):
         self.roiDialog.close()
@@ -197,12 +201,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
             self.index = np.random.randint(0,int(self.sx*self.sy),(20))
 
-            self.plot_specta.canvas.ax.clear()
-            self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
-            self.plot_specta.canvas.fig.tight_layout()
-            self.plot_specta.canvas.draw()
+            self. VisSpectra()
 
-            self.ExpandSpecU(self.wavenumber,self.sp)
+
 
             try:
                 x = int(self.lineEditHeight.text())
@@ -228,6 +229,27 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 #        self.plot_whitelight.load(os.path.splitext(fileName)[0]+'.jpg')
         self.loadedFile.emit()
         self.ImageProjection()
+
+
+    def VisSpectra(self):
+        self.plot_specta.canvas.ax.clear()
+        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
+        if self.checkBoxInvert.isChecked():
+            self.plot_specta.Invert()
+        self.plot_specta.canvas.fig.tight_layout()
+        self.plot_specta.canvas.draw()
+        
+        self.ExpandSpecU()
+
+    def Invert(self):
+        self.VisSpectra()
+        if self.comboBoxMethod.currentIndex() == 2:
+            self.Wavenumbercal()
+            
+        if hasattr(self,'nr') :
+            if self.comboBoxInitial.currentIndex() == 0:
+                self.InitialVis()
+       
 
 
     def ValidationX(self):
@@ -403,11 +425,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandInitSpect(self):
         plt.close("Initial")
-        plt.figure("Initial")
-
+        fig = plt.figure("Initial")
+        ax = fig.subplots()
         if len(self.insp) != 1:
             if self.comboBoxInitial.currentIndex() == 0:
-                plt.plot(self.wavenumber,self.insp.T)
+                ax.plot(self.wavenumber,self.insp.T)
+                if self.checkBoxInvert.isChecked():
+                    ax.invert_xaxis()
             else:
                 plt.plot(np.arange(self.sx*self.sy),self.incon.T)
             plt.show("Initial")
@@ -419,6 +443,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             ax = fig.gca()
             ax.clear()
             ax.plot(x,y)
+            if self.checkBoxInvert.isChecked():
+                ax.invert_xaxis()
             fig.canvas.draw_idle()
         else:
             pass
@@ -436,30 +462,43 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_specta.canvas.ax.clear()
         self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
         self.plot_specta.canvas.ax.axvline(x=self.wavenumv)
+        if self.checkBoxInvert.isChecked():
+            self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
         self.plot_specta.canvas.draw()
 
         self.plot_visual.setImage(self.projection, self.comboBoxCmaps.currentText())
         self.projectionUpdated.emit()
-
+        self.ExpandSpecU()
 
 
     def ExpandSpec(self):
         plt.close("Spectra")
-        plt.figure("Spectra")
-        plt.plot(self.wavenumber,self.sp[:,self.index])
-        plt.xlabel("Wavenumber(1/cm)",fontsize=24)
-        plt.ylabel("Absorption(arb. units)",fontsize=24)
+        fig = plt.figure("Spectra")
+        ax = fig.subplots()
+        ax.plot(self.wavenumber,self.sp[:,self.index])
+        if self.comboBoxMethod.currentIndex() == 2:
+                ax.axvline(x=self.wavenumv)
+        if self.checkBoxInvert.isChecked():
+            ax.invert_xaxis()
+              
+        plt.xlabel("Wavenumber(1/cm)",fontsize=14)
+        plt.ylabel("Absorption(arb. units)",fontsize=14)
         plt.tick_params(axis='both',direction='in', length=8, width=1)
-        plt.tick_params(axis='both',which='major',labelsize=24)
+        plt.tick_params(axis='both',which='major',labelsize=14)
         plt.show()
 
-    def ExpandSpecU(self,wn, sp):
+
+    def ExpandSpecU(self):
         if plt.fignum_exists("Spectra"):
             fig = plt.figure("Spectra")
             ax = fig.gca()
             ax.clear()
-            ax.plot(wn,sp[:,self.index])
+            ax.plot(self.wavenumber,self.sp[:,self.index])
+            if self.comboBoxMethod.currentIndex() == 2:
+                ax.axvline(x=self.wavenumv)
+            if self.checkBoxInvert.isChecked():
+                ax.invert_xaxis()
             fig.canvas.draw_idle()
         else:
             pass
@@ -487,8 +526,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def ExpandPurSp(self):
         if len(self.sopt) != 1:
             plt.close("Purest Spectra")
-            plt.figure("Purest Spectra")
-            plt.plot(self.wavenumber,self.sopt)
+            fig = plt.figure("Purest Spectra")
+            ax = fig.subplots()
+            if self.checkBoxInvert.isChecked():
+                ax.invert_xaxis()
+            ax.plot(self.wavenumber,self.sopt)
             plt.show("Purest Spectra")
 
     def ExpandPurSpU(self, sopt):
@@ -497,11 +539,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             ax = fig.gca()
             ax.clear()
             ax.plot(self.wavenumber, sopt)
+            if self.checkBoxInvert.isChecked():
+                ax.invert_xaxis()
             fig.canvas.draw_idle()
         else:
             pass
-
-
 
     def SVDprocess(self):
         self.nr = self.spinBoxSVDComp.value()
@@ -550,21 +592,26 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.incon = [0,0]
                 self.labelInitial.setText("Initial Spectra*")
                 self.insp, points = ff.initi_simplisma(sp_new,self.nr,self.f)
-                self.plotInitSpec.canvas.ax.clear()
-                self.plotInitSpec.canvas.ax.plot(self.wavenumber,self.insp.T)
-                self.plotInitSpec.canvas.fig.tight_layout()
-                self.plotInitSpec.canvas.draw()
-
-
                 self.pos = np.zeros((self.nr,2))
 
                 for i in range(0,self.nr):
                     self.pos[i,0] = self.ind[points[i]] % nx
                     self.pos[i,1] = self.ind[points[i]] // nx
                 self.plot_visual.addPoints(self.pos)
+                self.InitialVis()
+             
+    
+    def InitialVis(self):
+        self.plotInitSpec.canvas.ax.clear()
+        self.plotInitSpec.canvas.ax.plot(self.wavenumber,self.insp.T)
+        if self.checkBoxInvert.isChecked():
+            self.plotInitSpec.Invert()
+        self.plotInitSpec.canvas.fig.tight_layout()
+        self.plotInitSpec.canvas.draw()
+        self.ExpandInitSpectU(self.wavenumber,self.insp.T)
 
+                
     def SVDPlot(self):
-
         self.plotPurestConc.canvas.ax.clear()
         self.plotPurestConc.canvas.draw()
         self.plotPurestSpectra.canvas.ax.clear()
@@ -587,23 +634,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.incon = [0,0]
             self.labelInitial.setText("Initial Spectra*")
             self.insp, points = ff.initi_simplisma(self.sp,nr,self.f)
-            self.plotInitSpec.canvas.ax.clear()
-            self.plotInitSpec.canvas.ax.plot(self.wavenumber,self.insp.T)
-            self.plotInitSpec.canvas.fig.tight_layout()
-            self.plotInitSpec.canvas.draw()
-            self.ExpandInitSpectU(self.wavenumber,self.insp.T)
-
             self.pos = np.array([points % self.projection.shape[0], points // self.projection.shape[1]]).T
-
             self.plot_visual.setImage(self.projection, self.comboBoxCmaps.currentText())
-#            self.plot_visual.canvas.ax.clear()
-#            self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
-#            self.plot_visual.canvas.fig.tight_layout()
             self.plot_visual.addPoints(self.pos)
-#            for j in range(0,nr):
-#                self.plot_visual.canvas.ax.plot(self.pos[j,0],self.pos[j,1],marker='p', color = 'black')
-#            self.plot_visual.canvas.draw()
-            self.ExpandProjU(nr)
+            self.InitialVis()
+            self.ExpandProjU(nr)                        
+            
+            
         else:
             self.insp = [0,0]
             self.labelInitial.setText("Initial Concentration*")
@@ -624,8 +661,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditNoisePercent.setEnabled(True)
         self.checkBoxSaveInit.setEnabled(True)
         self.lineEditPurIter.setText('700')
-        self.lineEditTol.setText('2e-12')
-        self.SVDprocess()
+        # self.SVDprocess()
 
 
     def run(self):
@@ -773,10 +809,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.incon = [0,0]
             self.labelInitial.setText("Initial Spectra*")
             self.insp, points = ff.initi_simplisma(sp_new,nr,self.f)
-            self.plotInitSpec.canvas.ax.clear()
-            self.plotInitSpec.canvas.ax.plot(self.wavenumber,self.insp.T)
-            self.plotInitSpec.canvas.fig.tight_layout()
-            self.plotInitSpec.canvas.draw()
+            self.InitialVis()
+            # self.plotInitSpec.canvas.ax.clear()
+            # self.plotInitSpec.canvas.ax.plot(self.wavenumber,self.insp.T)
+            # if self.checkBoxInvert.isChecked():
+            #     self.plotInitSpec.Invert()
+            # self.plotInitSpec.canvas.fig.tight_layout()
+            # self.plotInitSpec.canvas.draw()
 
 #            self.pos = np.array([points % self.projection.shape[0], points // self.projection.shape[1]]).T
             self.pos = np.zeros((nr,2))
@@ -833,6 +872,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.plotPurestSpectra.canvas.ax.clear()
         self.plotPurestSpectra.canvas.ax.plot(self.wavenumber,sopt)
+        if self.checkBoxInvert.isChecked():
+            self.plotPurestSpectra.Invert()
         self.plotPurestSpectra.canvas.fig.tight_layout()
         self.plotPurestSpectra.canvas.draw()
 
@@ -890,6 +931,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.plotPurestSpectra.canvas.ax.clear()
         self.plotPurestSpectra.canvas.ax.plot(self.wavenumber,sopt)
+        if self.checkBoxInvert.isChecked():
+            self.plotPurestSpectra.Invert()
         self.plotPurestSpectra.canvas.fig.tight_layout()
         self.plotPurestSpectra.canvas.draw()
 
@@ -903,9 +946,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditStatus.setText(status)
 
         if (status == 'Max iterations reached') or (status == 'converged'):
-            self.pushButtonPurestCal.setEnabled(True)
             self.save_data(copt,sopt)
-            self.pushButtonStop.hide()
+            if self.comboBoxSingMult.currentIndex() ==0 or (int(self.lineEditFileNumber.text())==
+                                                             int(self.lineEditTotal.text())) :
+                self.pushButtonPurestCal.setEnabled(True)            
+                self.pushButtonStop.hide()
 
     def lock_all(self,Stat):
         self.pushButtonExpandSpectra.setEnabled(Stat)
@@ -921,7 +966,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditStatus.setEnabled(Stat)
         self.checkBoxSaveInit.setEnabled(Stat)
         self.checkBoxSavePurest.setEnabled(Stat)
-        self.pushButtonPurestCal.setEnabled(Stat)
+        # self.pushButtonPurestCal.setEnabled(Stat)
         self.pushButtonExpandPurSp.setEnabled(Stat)
         self.pushButtonExpandPurConc.setEnabled(Stat)
         self.comboBoxCmaps.setEnabled(Stat)
@@ -1015,8 +1060,12 @@ class Multiple_Calculation(QThread):
 #----------------------------------------------------------------------------------------
     def stop(self):
         self.rem = True
-
-
+        try:
+            self.logfile.write("%s\n" % ("calculation was terminated"))
+            self.logfile.write("%s\n" % ("-------------------------------------------------------"))
+            self.logfile.close()
+        except:
+            pass
 
     def logreport(self,filenumber,filename,niter,status,maxfile):
         now = datetime.now()
@@ -1024,7 +1073,6 @@ class Multiple_Calculation(QThread):
         self.logfile.write("%s %s %s %s\n" % (int(filenumber+1),date_time, filename, status+" at "+str(niter)))
         
         
-        print(filenumber+1,maxfile)
         if (filenumber+1) == maxfile:
             self.logfile.close()
 
@@ -1126,86 +1174,89 @@ class Multiple_Calculation(QThread):
         
                 for num in range(self.max_iter):
                     iter = num + 1
-                
-                    if ST_ is not None:
-                        Ctemp = self.solve_lineq(ST_.T,dauxt.T)
-                        #Constraint
-                        # Ctemp = constraint_norm(Ctemp)
-                
-                        Dcal = np.dot(Ctemp.T,ST_)
-                        error = msea(dauxt,Dcal)
-        
-                        if iter ==1:
-                            error0 = error.copy()
-                            C_ = Ctemp
-        
-                        per = 100*abs(error-error0)/error
-                        # print(iter,'and',per)
-                        if per == 0:
-                            Cf = C_.copy()
-                            Sf = ST_.copy()
-                            ST_temp = ST_.copy()
-                            status = 'Iterating'
-                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
-
-                        elif  per < self.stopping_error:
-                            Cf = C_.copy()
-                            Sf = ST_.copy()
-                            # Save_data(Cf,Sf)
-                            status = 'converged'
-                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
-                            print(self.count)
-                            self.finished_one(i,self.filename,iter,status,self.maxfile)
-                            break
-                        else:
-                            error0 = error.copy()
-                            C_ = Ctemp.copy()
-                            Sf = ST_.copy()
-                            status = 'Iterating'
-                            self.purest.emit(iter,per,status, C_.T,Sf.T)
-            
-                    if C_ is not None:
-                        ST_temp = self.solve_lineq(C_.T,dauxt)
-                        #Constraint
-                        # ST_temp = constraint_norm(ST_temp)
-        
-                        Dcal = np.dot(C_.T,ST_temp)
-                        error = msea(dauxt,Dcal)
-        
-                        if iter ==1:
-                            error0 = error.copy()
-                            # C_ = Ctemp
-                            ST_ = ST_temp
-        
-                        per = 100*abs(error-error0)/error
-                        # print(iter,'and',per)
-                        if per == 0:
-                            Cf = C_.copy()
-                            Sf = ST_.copy()
-                            status = 'Iterating'
-                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
-                    
-                        elif per < self.stopping_error:
-                            Cf = C_.copy()
-                            Sf = ST_.copy()
-                            # Save_data(Cf,Sf)
-                            status = 'converged'
-                            print(self.count)
-                            self.purest.emit(iter,per,status, Cf.T,Sf.T)
-                            self.finished_one(i,self.filename,iter,status,self.maxfile)
-                            break
-            
-                        else:
-                            error0 = error.copy()
-                            ST_ = ST_temp.copy()
-                            status = 'Iterating'
-                            self.purest.emit(iter,per,status, C_.T,ST_.T)
-
-                    if iter == self.max_iter:
-                        status = 'Max iterations reached'
-                        self.purest.emit(iter,per,status, C_.T,ST_.T)
-                        self.finished_one(i,self.filename,iter,status,self.maxfile)
+                    if self.rem:
+                        status = 'STOP'
+                # self.purest.emit(iter,per,status, Cf.T,Sf.T)
                         break
+                    else:
+                
+                        if ST_ is not None:
+                            Ctemp = self.solve_lineq(ST_.T,dauxt.T)
+                            #Constraint
+                            # Ctemp = constraint_norm(Ctemp)
+                    
+                            Dcal = np.dot(Ctemp.T,ST_)
+                            error = msea(dauxt,Dcal)
+            
+                            if iter ==1:
+                                error0 = error.copy()
+                                C_ = Ctemp
+            
+                            per = 100*abs(error-error0)/error
+                            # print(iter,'and',per)
+                            if per == 0:
+                                Cf = C_.copy()
+                                Sf = ST_.copy()
+                                ST_temp = ST_.copy()
+                                status = 'Iterating'
+                                self.purest.emit(iter,per,status, Cf.T,Sf.T)
+    
+                            elif  per < self.stopping_error:
+                                Cf = C_.copy()
+                                Sf = ST_.copy()
+                                # Save_data(Cf,Sf)
+                                status = 'converged'
+                                self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                                self.finished_one(i,self.filename,iter,status,self.maxfile)
+                                break
+                            else:
+                                error0 = error.copy()
+                                C_ = Ctemp.copy()
+                                Sf = ST_.copy()
+                                status = 'Iterating'
+                                self.purest.emit(iter,per,status, C_.T,Sf.T)
+                
+                        if C_ is not None:
+                            ST_temp = self.solve_lineq(C_.T,dauxt)
+                            #Constraint
+                            # ST_temp = constraint_norm(ST_temp)
+            
+                            Dcal = np.dot(C_.T,ST_temp)
+                            error = msea(dauxt,Dcal)
+            
+                            if iter ==1:
+                                error0 = error.copy()
+                                # C_ = Ctemp
+                                ST_ = ST_temp
+            
+                            per = 100*abs(error-error0)/error
+                            # print(iter,'and',per)
+                            if per == 0:
+                                Cf = C_.copy()
+                                Sf = ST_.copy()
+                                status = 'Iterating'
+                                self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                        
+                            elif per < self.stopping_error:
+                                Cf = C_.copy()
+                                Sf = ST_.copy()
+                                # Save_data(Cf,Sf)
+                                status = 'converged'
+                                self.purest.emit(iter,per,status, Cf.T,Sf.T)
+                                self.finished_one(i,self.filename,iter,status,self.maxfile)
+                                break
+                
+                            else:
+                                error0 = error.copy()
+                                ST_ = ST_temp.copy()
+                                status = 'Iterating'
+                                self.purest.emit(iter,per,status, C_.T,ST_.T)
+    
+                        if iter == self.max_iter:
+                            status = 'Max iterations reached'
+                            self.purest.emit(iter,per,status, C_.T,ST_.T)
+                            self.finished_one(i,self.filename,iter,status,self.maxfile)
+                            break
  
              
 
@@ -1265,7 +1316,6 @@ class single_report(QThread):
 
 
     def run(self):
-        print('yes')
         if self.init == 0:
             insp, points = ff.initi_simplisma(self.sp,self.nr,self.f)
             C_ = None
