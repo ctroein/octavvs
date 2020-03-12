@@ -8,13 +8,19 @@ package:
   version: "{{ version }}"
 
 source:
-  - folder: .
-    url: https://pypi.io/packages/source/p/pyshortcuts/pyshortcuts-1.7.tar.gz
-  - folder: .
-#    path: .
-#    path: ../dist/{{ name }}-{{ version }}.tar.gz
-    url: file://../dist/{{ name }}-{{ version }}.tar.gz
-#    url: file:///home/carl/src/octavvs/dist/{{ name }}-{{ version }}.tar.gz
+  - url: https://pypi.io/packages/source/p/pyshortcuts/pyshortcuts-1.7.tar.gz
+    sha1: 0002ea9659827dfaa66496e73100ab02a22a3137
+    folder: .
+#  - git_url: https://github.com/newville/pyshortcuts
+#    git_rev: 1.7.1
+#    git_depth: 1
+  - url: https://files.pythonhosted.org/packages/eb/81/28b05a08dcce2c0fd21ec54084532708ae0aa73e4d89bdef1393e6356303/pymatreader-0.0.21.tar.gz
+    sha1: 371f387e103aec79b39c3fba0014a3cb5a9083b1
+    folder: .
+#  - git_url: https://gitlab.com/obob/pymatreader
+#    git_rev: 0.0.21
+#    git_depth: 1
+  - path: ..
 #    url: http://cbbp.thep.lu.se/~carl/octavvs-dist/{{ name }}-{{ version }}.tar.gz
 #    url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
 
@@ -44,17 +50,11 @@ requirements:
     - scikit-image
     - xlwt
     - dill
+    - h5py
 
 test:
   imports:
     - octavvs
-    - octavvs.ui
-    - octavvs.io
-    - octavvs.algorithms
-    - octavvs.reference_spectra
-    - octavvs.mcr
-    - octavvs.prep
-    - octavvs.pymcr_new
   commands:
     - oct_preprocessing --help
     - oct_mcr_als --help

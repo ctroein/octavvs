@@ -9,6 +9,7 @@ Created on Wed Jan 29 14:01:08 2020
 import os.path
 import numpy as np
 import scipy.signal, scipy.io
+from pymatreader import read_mat
 
 from .opusreader import OpusReader
 
@@ -58,9 +59,10 @@ class SpectralData:
 #        opusformat = False
         if fext in ['.txt', '.csv', '.mat']:
             if fext == '.mat':
-                s = scipy.io.loadmat(filename)
-                info = scipy.io.whosmat(filename)
-                ss = s[info[0][0]]
+#                s = scipy.io.loadmat(filename)
+                s = read_mat(filename)
+                # Assume data are in the biggest matrix in the file
+                ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
                 if 'wh' in s:
                     wh = s['wh'].flatten()
             else:

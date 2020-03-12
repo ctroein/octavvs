@@ -10,25 +10,8 @@ import numpy as np
 from scipy.signal import savgol_filter, tukey
 
 from . import baseline
-from .util import load_reference
+from .util import load_reference, find_wn_ranges
 
-
-def find_wn_ranges(wn, ranges):
-    """
-    Find indexes corresponding to the beginning and end of a list of ranges of wavenumbers. The
-    wavenumbers have to be sorted in either direction.
-    Parameters:
-    wn: array of wavenumbers
-    ranges: numpy array of shape (n, 2) with desired wavenumber ranges in order [low,high]
-    Returns: numpy array of shape (n, 2) with indexes of the wavenumbers delimiting those ranges
-    """
-    if isinstance(ranges, list):
-        ranges = np.array(ranges)
-    if(wn[0] < wn[-1]):
-        return np.stack((np.searchsorted(wn, ranges[:,0]),
-                         np.searchsorted(wn, ranges[:,1], 'right')), 1)
-    return len(wn) - np.stack((np.searchsorted(wn[::-1], ranges[:,1], 'right'),
-                              np.searchsorted(wn[::-1], ranges[:,0])), 1)
 
 def cut_wn(wn, y, ranges):
     """

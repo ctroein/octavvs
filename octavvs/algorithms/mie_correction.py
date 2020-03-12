@@ -17,7 +17,7 @@ from scipy.interpolate import PchipInterpolator
 from scipy.signal import hilbert
 #from scipy.io import loadmat, savemat
 
-from .util import pca_nipals
+from .util import pca_nipals, find_wn_ranges
 
 def kkre(wn, ref):
     wn2 = wn ** 2.
@@ -188,11 +188,11 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
     model[1,:] = 1
     if linearcomponent:
         model[2,:] = np.linspace(0., 1., len(wn))
-    if linearcomponent:
-        model[2,:] = np.linspace(0., 1., len(wn))
-#    for i in range(2, n_nonpca):
-#        w = model[i, :] - np.sum(np.dot(model[i, :], b) * b for b in model[0:i, :])
-#        model[i,:] = w / np.sqrt(w @ w)
+#        for i in range(1, n_nonpca):
+#            model[i,:] = model[i,:] - refn * (model[i,:] @ refn)
+#        for i in range(1, n_nonpca):
+#            w = model[i, :] - np.sum(np.dot(model[i, :], b) * b for b in model[0:i, :])
+#            model[i,:] = w / np.sqrt(w @ w)
 
 #    savemat('everything_after-p.mat', locals())
 
@@ -203,6 +203,7 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
 #        w = v - np.sum(np.dot(v, b) * b for b in model[0:i, :])
 #        model[i,:] = w / np.linalg.norm(w)
 
+#    print('model',ref.sum(), model.sum())
     return model
 
 def stable_rmiesc_clusters(iters, clusters):
@@ -218,6 +219,8 @@ def stable_rmiesc_clusters(iters, clusters):
     cc = np.zeros(iters, dtype=np.int)
     cc[:iters//3] = 1
     cc[iters//2:iters*3//4] = clusters
+#    cc = np.zeros(max(2, iters) * 3 // 2, dtype=np.int)
+#    cc[:iters] = clusters
     return cc
 
 def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
@@ -284,7 +287,6 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
     elif clusters is not None:
         if len(clusters) != iterations:
             raise ValueError('len(clusters) must match iterations')
-        clusters = clusters.copy()
 
     if progressCallback:
         # Compute the number of progress steps
@@ -292,9 +294,9 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
         if clusters is None:
             progressB = 1 + (iterations > 1) * len(app)
         else:
-            progressB = 0
+            progressB = 1
             prev = 1
-            for cl in clusters:
+            for cl in clusters[1:]:
                 if cl > 0:
                     prev = cl
                 progressB += prev
@@ -311,135 +313,155 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
         automax = 5
 
     if clusters is not None:
-        # Cluster mode: In each iteration, after correcting all the spectra, cluster them. Then take the
-        # mean of the corrected spectra in each cluster as the new reference for that cluster in the next
-        # iteration.
-        ref = ref.copy()[None, :]    # One reference per cluster
-        ref = ref / (np.abs(ref).mean() / np.abs(app).mean())
-        labels = np.zeros(len(app))  # Cluster labels; initially all in cluster 0
-#        clusters[-1] = 0
-        progstep = 1 # Current progress bar step size
+        # Cluster mode: In each iteration, after correcting all the spectra, cluster them.
+        # Then take the mean of the corrected spectra in each cluster as the new reference
+        # for that cluster in the next iteration. Spectra should still have their own reference
+        # in the EMSC step. To avoid having to loop over all the spectra in a cluster when
+        # solving that equation system, we remove the projection of the reference from the
+        # apparent spectra.
 
-        for iteration in range(iterations):
-            gc.collect()    # Because my old laptop was unhappy with RAM usage otherwise
+        if progressPlotCallback:
+            progressPlotCallback(ref, (0, iterations))
+        projs = ((app @ ref) / (ref @ ref))[:,None] * ref
+        app_deref = app - projs
+        model = compute_model(wn, ref, n_components, a, d, bvals,
+                              konevskikh=konevskikh, linearcomponent=linearcomponent,
+                              variancelimit=pcavariancelimit)
+        if weights is None:
+            cons = np.linalg.lstsq(model.T, app_deref.T, rcond=None)[0]
+        else:
+            cons = np.linalg.lstsq(model.T * weights, app_deref.T * weights, rcond=None)[0]
+        corrected = app - cons[1:].T @ model[1:]
+        residuals = ((corrected - projs)**2).sum(1) #We compare to the previous correction, not the reference
+        ref = []    # Force init
+        if autoiterations:
+            unimproved = np.zeros(len(app), dtype=int)
+
+        if progressCallback:
+            progstep = 1 # Current progress bar step size
+            progressA += progstep
+            progressCallback(progressA, progressB)
+
+        for iteration in range(1, iterations):
+            corrected[corrected < 0] = 0
 
             curc = clusters[iteration] # Current cluster size setting
             if curc > 0:
                 progstep = curc
 
-            # Skip this iteration if every spectrum has stopped improving and the cluster settings
-            # are unchanged
-            if autoiterations:
-                if not iteration or curc != clusters[iteration-1]:
-                    unimproved = np.zeros(len(app), dtype=int)
-                elif (unimproved <= automax).sum() == 0:
-                    progressA += progstep
-                    if progressCallback:
-                        progressCallback(progressA, progressB)
-#                    print('progX',progressA,progressB)
-                    continue
-
             # Possibly recluster the spectra and compute reference spectra
-            if iteration == 0:
-                pass
-            elif curc > 0:
+            if curc > 0:
+                # Find the remaining spectra to process
                 if autoiterations:
-                    notdone = unimproved <= automax
-                    nds = notdone.sum()
-                    curc = min(curc, int(nds))
-                    labels = np.zeros(len(app)) - 1
-                    if curc == nds:
-                        labels[notdone] = range(0, nds)
-                    elif curc > 1:
-                        kmeans = sklearn.cluster.MiniBatchKMeans(curc)
-                        labels[notdone] = kmeans.fit_predict(corrected[notdone,:])
+                    if curc != clusters[iteration-1]:
+                        unimproved = np.zeros(len(app), dtype=int)
+                        nds = len(app)
+                        notdone = range(nds)
                     else:
-                        labels[notdone] = 0
+                        notdone = np.where(unimproved <= automax)[0]
+                        nds = len(notdone)
+                    # Skip this iteration if every spectrum has stopped improving
+                    if nds == 0:
+                        progressA += progstep
+                        if progressCallback:
+                            progressCallback(progressA, progressB)
+                        continue
                 else:
-                    if curc > 1:
-                        kmeans = sklearn.cluster.MiniBatchKMeans(curc)
-                        labels = kmeans.fit_predict(corrected)
-                    else:
-                        labels = np.zeros(len(app), dtype=int)
+                    nds = len(app)
+                    notdone = range(nds)
 
+                # Find the clusters of spectra
+                curc = min(curc, nds)
+                if curc == nds:
+                    cindices = [np.array([i]) for i in notdone] # Each index in its own little array
+                elif curc > 1:
+                    kmeans = sklearn.cluster.MiniBatchKMeans(curc)
+                    labels = np.zeros(len(app)) - 1
+                    labels[notdone] = kmeans.fit_predict(corrected[notdone,:])
+                    cindices = [ np.where(labels == i)[0] for i in range(curc) ] # Quadratic but simple
+                else:
+                    cindices = [ np.array(notdone) ] # One big cluster
+
+                # Compute cluster references
                 if(len(ref) != curc):
                     ref = np.zeros((curc, len(wn)))
+                empties = 0
                 for cl in range(curc):
-                    sel = labels == cl
-                    if sel.sum() == 0:
-                        print('Info: empty cluster at %d, %d' % (iteration, cl))
+                    if len(cindices[cl]):
+                        ref[cl,:] = corrected[cindices[cl]].mean(0)
                     else:
-                        ref[cl,:] = corrected[sel].mean(0)
+                        empties += 1
+                if empties:
+                    print('Info: %d empty cluster(s) at iteration %d' % (empties, iteration))
             else:
                 # Mix old reference and corrected spectrum. This requires the clusters
                 # to remain unchanged.
-                if autoiterations:
-                    labels[unimproved > automax] = -1 # Exclude all that are done already
                 for cl in range(len(ref)):
-                    sel = labels == cl
-                    if sel.sum() > 0:
-                        ref[cl,:] = .5 * corrected[sel].mean(0) + .5 * ref[cl,:]
+                    if len(cindices[cl]):
+                        # Stop processing clusters only when all members are done
+                        if autoiterations and (unimproved[cindices[cl]] > automax).all():
+                            cindices[cl] = []
+                        else:
+                            ref[cl,:] = .5 * corrected[cindices[cl]].mean(0) + .5 * ref[cl,:]
+
+            w = (app * corrected).sum(1) / (corrected * corrected).sum(1)
+            projs = w[:,None] * corrected
+            app_deref = app - projs
 
             if progressPlotCallback:
                 progressPlotCallback(ref, (iteration, iterations))
-            ref[ref < 0] = 0
-
-            if iteration == 0 :
-                projs = [np.dot(app[i], ref[0].T)*(ref[0]/(ref[0] @ ref[0])) for i in range(len(app))]
-            else :
-                projs = [np.dot(app[i], corrected[i].T)*(corrected[i]/(corrected[i] @ corrected[i])) for i in range(len(app))]
-            projs = np.array(projs)
-            app_deref = app - projs
 
             for cl in range(len(ref)):
-                ix = np.where(labels == cl)[0] # Indexes of spectra in this cluster
-                if autoiterations:
+                ix = cindices[cl] # Indexes of spectra in this cluster
+                if len(ix) > 0 and autoiterations:
                     ix = ix[unimproved[ix] <= automax]
-                if ix.size:
-                    model0 = compute_model(wn, ref[cl], n_components, a, d, bvals,
-                                          konevskikh=konevskikh, linearcomponent=linearcomponent,
-                                          variancelimit=pcavariancelimit)
+                if len(ix) == 0:
+                    continue
 
-                    model = model0[1:, :] #Then we don't need the reference part of the model
+                model = compute_model(wn, ref[cl], n_components, a, d, bvals,
+                                      konevskikh=konevskikh, linearcomponent=linearcomponent,
+                                      variancelimit=pcavariancelimit)
+                # Including the reference in the model gives results in agreement with the
+                # unclustered approach.
+                if weights is None:
+                    cons = np.linalg.lstsq(model.T, app_deref[ix].T, rcond=None)[0]
+                else:
+                    cons = np.linalg.lstsq(model.T * weights, app_deref[ix].T * weights, rcond=None)[0]
+                corrs = app[ix] - cons[1:].T @ model[1:]
 
-                    if weights is None:
-                        cons = np.linalg.lstsq(model.T, app_deref[ix].T, rcond=None)[0]
-                    else:
-                        cons = np.linalg.lstsq(model.T * weights, app_deref[ix].T * weights, rcond=None)[0]
-                    corrs = app[ix] - cons.T @ model
-                    if renormalize:
-                        corrs = corrs / cons[0, :, None]
+                # We compare to the previous correction, not the reference
+                resids = ((corrs - projs[ix])**2).sum(1)
 
-                    resids = ((corrs - projs[ix])**2).sum(1) #We compare to the previous correction, not the reference
+                improved = resids < residuals[ix]
 
-                    if iteration == 0:
-                        corrected = corrs
-                        residuals = resids
-                        nimprov = len(resids)
-                    else:
-                        improved = resids < residuals[ix]
-                        iximp = ix[improved]  # Indexes of improved spectra
-                        if autoiterations:
-                            impmore = resids[improved] < residuals[iximp] * targetrelresiduals
-                            unimproved[iximp[impmore]] = 0
-                            unimproved[iximp[np.logical_not(impmore)]] += 1
-                            unimproved[ix[np.logical_not(improved)]] += autoupadd
-                        corrected[iximp, :] = corrs[improved, :]
-                        residuals[iximp] = resids[improved]
-                        nimprov = improved.sum()
+                if autoiterations:
+                    iximp = ix[improved]  # Indexes of improved spectra
+                    impmore = resids[improved] < residuals[iximp] * targetrelresiduals
+                    unimproved[iximp[impmore]] = 0
+                    unimproved[iximp[np.logical_not(impmore)]] += 1
+                    unimproved[ix[np.logical_not(improved)]] += autoupadd
 
-                    if verbose:
-                        print("iter %3d, cluster %3d (%5d px): avgres %7.3g  imprvd %4d  time %f" %
-                              (iteration, cl, len(ix), resids.mean(), nimprov, monotonic()-startt))
+                    corrected[iximp, :] = corrs[improved, :]
+                    residuals[iximp] = resids[improved]
+                else:
+                    corrected[ix,:] = corrs
+                    residuals[ix] = resids
+
+                nimprov = improved.sum()
+
+                if verbose:
+                    print("iter %3d, cluster %3d (%5d px): avgres %7.3g  imprvd %4d  time %f" %
+                          (iteration, cl, len(ix), resids.mean(), nimprov, monotonic()-startt))
                 if progressCallback:
                     progressCallback(progressA + cl + 1, progressB)
             if progressCallback:
                 progressA += progstep
-                if len(ref) < progstep:
-                    progressCallback(progressA, progressB)
-#            print('progY',progressA,progressB)
+                progressCallback(progressA, progressB)
+            gc.collect()    # Because my old laptop was unhappy with RAM usage otherwise
 
     else:
+        ref = ref.copy()
+        ref[ref < 0] = 0
         # For efficiency, compute the model from the input reference spectrum only once
         model = compute_model(wn, ref, n_components, a, d, bvals, konevskikh=konevskikh,
                               linearcomponent=linearcomponent, variancelimit=pcavariancelimit)
@@ -479,8 +501,6 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     corr = app[s] - cons[1:] @ model[1:, :]
                     if renormalize:
                         corr = corr / cons[0]
-                    print("pixel %5d: iter %3d  residual %7.3g  " %
-                          (s, iteration+1, ((corr - model[0, :])**2).sum()))
                     if autoiterations:
                         residual = ((corr - model[0, :])**2).sum()
                         if residual < residuals[s]:
@@ -498,7 +518,7 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
 
                 if verbose:
                     print("pixel %5d: iter %3d  residual %7.3g  time %f" %
-                          (s, iteration+1, residual, monotonic()-startt))
+                          (s, iteration, residual, monotonic()-startt))
                 if progressCallback:
                     progressA += 1
                     progressCallback(progressA, progressB)

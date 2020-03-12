@@ -10,7 +10,8 @@ Created on Wed Mar  4 16:24:50 2020
 from pkg_resources import resource_filename
 import numpy as np
 from scipy.interpolate import PchipInterpolator
-from scipy.io import loadmat
+#from scipy.io import loadmat
+from pymatreader import read_mat
 
 
 def load_reference(wn, what=None, matfilename=None):
@@ -31,7 +32,7 @@ def load_reference(wn, what=None, matfilename=None):
         matfilename = resource_filename('octavvs.reference_spectra', what + ".mat")
 #        matfilename = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),
 #                                       'reference', what + '.mat'))
-    ref = loadmat(matfilename)['AB']
+    ref = read_mat(matfilename)['AB']
     # Handle the case of high-to-low since the interpolator requires low-to-high
     d = 1 if ref[0,0] < ref[-1,0] else -1
     ref = PchipInterpolator(ref[::d,0], ref[::d,1])(wn)
@@ -94,4 +95,21 @@ def pca_nipals(x, ncomp, tol=1e-5, max_iter=1000, copy=True, explainedvariance=N
             if varlim > 0 and (x * x).sum() < varlim:
                 return vecs[:i+1, :]
     return vecs
+
+def find_wn_ranges(wn, ranges):
+    """
+    Find indexes corresponding to the beginning and end of a list of ranges of wavenumbers. The
+    wavenumbers have to be sorted in either direction.
+    Parameters:
+    wn: array of wavenumbers
+    ranges: numpy array of shape (n, 2) with desired wavenumber ranges in order [low,high]
+    Returns: numpy array of shape (n, 2) with indexes of the wavenumbers delimiting those ranges
+    """
+    if isinstance(ranges, list):
+        ranges = np.array(ranges)
+    if(wn[0] < wn[-1]):
+        return np.stack((np.searchsorted(wn, ranges[:,0]),
+                         np.searchsorted(wn, ranges[:,1], 'right')), 1)
+    return len(wn) - np.stack((np.searchsorted(wn[::-1], ranges[:,1], 'right'),
+                              np.searchsorted(wn[::-1], ranges[:,0])), 1)
 
