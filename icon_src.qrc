@@ -1,0 +1,11 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>octavvs/icon/octavvs_prep.ico</file>
+    <file>octavvs/icon/icons8-check-document-32.png</file>
+    <file>octavvs/icon/icons8-close-all-tabs-32.png</file>
+    <file>octavvs/icon/icons8-copy-32.png</file>
+    <file>octavvs/icon/icons8-delete-32.png</file>
+    <file>octavvs/icon/icons8-save-as-80.png</file>
+    <file>octavvs/icon/octavvs_prep_48.ico</file>
+  </qresource>
+</RCC>

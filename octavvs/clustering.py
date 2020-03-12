@@ -12,7 +12,7 @@ import io
 #from PyQt5.QtCore import *
 #from PyQt5.QtGui import QFileDialog
 #from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QDialog
 from PyQt5.Qt import QMainWindow, qApp #, QTimer
 #from PyQt5.QtCore import (QCoreApplication, QObject, QRunnable, QThread, QThreadPool,pyqtSignal, pyqtSlot)
 from PyQt5 import uic
@@ -32,7 +32,15 @@ from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeat
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
 Ui_table = uic.loadUiType(resource_filename(__name__, "mcr/table_ui.ui"))[0]
+Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"))[0]
 
+class DialogAbout(QDialog, Ui_DialogAbout):
+    def __init__(self, parent=None):
+        QDialog.__init__(self, parent)
+        qApp.installEventFilter(self)
+        self.setupUi(self)
+                                                  
+                                                  
 class Table(QMainWindow, Ui_table):
     def __init__(self, parent=None):
         super(Table, self).__init__(parent=None)
@@ -109,10 +117,12 @@ class Table(QMainWindow, Ui_table):
         if filesave:
             __ , ext = os.path.splitext(filesave)
             print(filesave)
-            # if  ext == '.xls':
-            #     filesave = filesave
-            # else:
-            #     filesave = filesave+'.xls'
+            if  ext == '.csv':
+                filesave = filesave
+            else:
+                filesave = filesave+'.csv'
+            
+            
 
 
 class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
@@ -157,7 +167,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.pushButtonTable.clicked.connect(self.TableShow)
         self.pushButtonTableAve.clicked.connect(self.TableAve)
         self.Tableview = Table(self)
+        
+        self.About = DialogAbout()
 
+        self.actionAbout.triggered.connect(self.About.show)
+        self.Tableview.actionabout.triggered.connect(self.About.show)
+        
         self.DataUpdated.connect(self.Tableview.main_data)
         self.SearchUp.connect(self.search_whole_folder)
         self.Onefile.connect(self.readfile)

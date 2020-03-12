@@ -15,7 +15,7 @@ from pkg_resources import resource_filename
 import argparse
 from scipy.optimize import nnls as nnls
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox,  QDialog
 from PyQt5.Qt import QMainWindow,qApp
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot #QCoreApplication, QObject, QRunnable, QThreadPool
 from PyQt5 import uic
@@ -37,7 +37,13 @@ from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeat
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
 Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
+Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"))[0]
 
+class DialogAbout(QDialog, Ui_DialogAbout):
+    def __init__(self, parent=None):
+        QDialog.__init__(self, parent)
+        qApp.installEventFilter(self)
+        self.setupUi(self)
 
 class Second(QMainWindow, Ui_MainWindow2):
     def __init__(self, parent=None):
@@ -124,6 +130,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.loadedFile.connect(self.roiDialog.resetAll)
 
         self.checkBoxInvert.toggled.connect(self.Invert)
+        self.About = DialogAbout()
+
+        self.actionAbout.triggered.connect(self.About.show)
+        self.roiDialog.actionAbout.triggered.connect(self.About.show)
+
+        
         
         self.post_setup()
         

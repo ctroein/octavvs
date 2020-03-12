@@ -19,6 +19,10 @@
   <property name="windowTitle">
    <string>OCTAVVS Clustering</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../../icon_src.qrc">
+    <normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
@@ -1431,6 +1435,23 @@
     </item>
    </layout>
   </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionAbout"/>
+  </widget>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1487,6 +1508,8 @@
   <tabstop>spinBoxNcluster</tabstop>
   <tabstop>lineEditAnotClus</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../../icon_src.qrc"/>
+ </resources>
  <connections/>
 </ui>
