@@ -20,8 +20,8 @@
    <string>OCTAVVS MCR-ALS</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icon_src.qrc">
-    <normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</iconset>
+   <iconset resource="../../icons_src.qrc">
+    <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_3">
@@ -607,7 +607,7 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_15">
+         <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="2,1">
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_7" stretch="1,0">
             <property name="spacing">
@@ -628,6 +628,9 @@
             </item>
             <item>
              <layout class="QGridLayout" name="gridLayout_2">
+              <property name="topMargin">
+               <number>6</number>
+              </property>
               <property name="spacing">
                <number>8</number>
               </property>
@@ -913,31 +916,19 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_11" stretch="1,0">
+           <layout class="QVBoxLayout" name="verticalLayout_11" stretch="0">
             <item>
-             <spacer name="verticalSpacer">
+             <spacer name="horizontalSpacer">
               <property name="orientation">
-               <enum>Qt::Vertical</enum>
+               <enum>Qt::Horizontal</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>20</width>
-                <height>78</height>
+                <width>40</width>
+                <height>20</height>
                </size>
               </property>
              </spacer>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_31">
-              <property name="font">
-               <font>
-                <pointsize>14</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Credits;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Molecular Ecology, Microbial Ecology &lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;and Evolutionary Genetics &lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;&amp;amp;&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Computational Biology&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;and Biological Physics, Lund University&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-             </widget>
             </item>
            </layout>
           </item>
@@ -1025,7 +1016,7 @@
   <tabstop>checkBoxSavePurest</tabstop>
  </tabstops>
  <resources>
-  <include location="../../icon_src.qrc"/>
+  <include location="../../icons_src.qrc"/>
  </resources>
  <connections/>
 </ui>

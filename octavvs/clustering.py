@@ -185,7 +185,6 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.checkBoxinvert.toggled.connect(self.Inverting)
         
     def closeEvent(self, event):
-        self.Tableview.close()
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setText("Warning")
@@ -194,6 +193,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         msgBox.setDefaultButton(QMessageBox.No)
         reply = msgBox.exec_()
         if reply == QMessageBox.Yes:
+            self.Tableview.close()
+            self.About.close()
             plt.close('all')
 #            qApp.quit()
         else:

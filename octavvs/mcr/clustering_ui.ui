@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1582</width>
-    <height>767</height>
+    <width>1281</width>
+    <height>747</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,13 +20,13 @@
    <string>OCTAVVS Clustering</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icon_src.qrc">
-    <normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</iconset>
+   <iconset resource="../../icons_src.qrc">
+    <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
-     <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="1,4">
+     <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="3,5">
       <item>
        <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,1">
         <item>
@@ -73,27 +73,6 @@
            <widget class="QPushButton" name="pushButtonLoadConc">
             <property name="text">
              <string>Load purest spectra and concentrations</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0" colspan="2">
-           <widget class="QComboBox" name="comboBoxSingMul">
-            <item>
-             <property name="text">
-              <string>Single file</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Multiple files</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="0" column="2" colspan="4">
-           <widget class="QPushButton" name="pushButtonLoadSpec">
-            <property name="text">
-             <string>Load spectra</string>
             </property>
            </widget>
           </item>
@@ -219,6 +198,27 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item row="0" column="3" colspan="3">
+           <widget class="QPushButton" name="pushButtonLoadSpec">
+            <property name="text">
+             <string>Load spectra</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="3">
+           <widget class="QComboBox" name="comboBoxSingMul">
+            <item>
+             <property name="text">
+              <string>Single file</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Multiple files</string>
+             </property>
+            </item>
+           </widget>
           </item>
          </layout>
         </item>
@@ -573,7 +573,7 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,1">
+         <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="6,5">
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_7" stretch="1,0">
             <item>
@@ -1509,7 +1509,7 @@
   <tabstop>lineEditAnotClus</tabstop>
  </tabstops>
  <resources>
-  <include location="../../icon_src.qrc"/>
+  <include location="../../icons_src.qrc"/>
  </resources>
  <connections/>
 </ui>

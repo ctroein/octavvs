@@ -142,8 +142,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         
         
 
-    def closeEvent(self, event):
-        self.roiDialog.close()
+    def closeEvent(self, event):      
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setText("Warning")
@@ -153,6 +152,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         reply = msgBox.exec_()
         if reply == QMessageBox.Yes:
             plt.close('all')
+            self.roiDialog.close()
+            self.About.close()
             if hasattr(self, 'calpures'):
                 self.calpures.stop()
 #            self.killer_renew()
@@ -718,6 +719,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     
 
         self.progressBar.setEnabled(True)
+        self.progressBar.setMaximum(self.nfiles+1)
         self.lineEditStatus.setText('Multiple files')
         self.calpures = Multiple_Calculation(self.foldername, nr, f,max_iter, stopping_error, init)
 
@@ -729,6 +731,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.pushButtonPurestCal.setEnabled(False)
 
     def finished_mcr_all(self,count, filename):
+        self.progressBar.setValue(count)
         self.lineEditFileNumber.setText(str(count))
         self.lineEditFilename.setText(basename(filename))
         self.initialization(filename)
@@ -959,9 +962,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         if (status == 'Max iterations reached') or (status == 'converged'):
             self.save_data(copt,sopt)
-            if self.comboBoxSingMult.currentIndex() ==0 or (int(self.lineEditFileNumber.text())==
+            if self.comboBoxSingMult.currentIndex() == 1 and (int(self.lineEditFileNumber.text())==
                                                              int(self.lineEditTotal.text())) :
-                self.pushButtonPurestCal.setEnabled(True)            
+                self.pushButtonPurestCal.setEnabled(True)
+                self.progressBar.setValue(self.nfiles+1)
+                self.lineEditStatus.setText('DONE')
                 self.pushButtonStop.hide()
 
     def lock_all(self,Stat):

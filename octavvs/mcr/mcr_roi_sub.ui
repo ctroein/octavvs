@@ -14,8 +14,8 @@
    <string>OCTAVVS MCR-ALS ROI selection</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icon_src.qrc">
-    <normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</normaloff>:/icon/octavvs/icon/octavvs_prep_48.ico</iconset>
+   <iconset resource="../../icons_src.qrc">
+    <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -96,7 +96,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../icon_src.qrc"/>
+  <include location="../../icons_src.qrc"/>
  </resources>
  <connections/>
 </ui>
