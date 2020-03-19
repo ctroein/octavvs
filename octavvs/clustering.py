@@ -68,12 +68,13 @@ class Table(QMainWindow, Ui_table):
             head = ['Wavenumber']
             head = head + name
             self.tableWidget.setHorizontalHeaderLabels(head)
+            self.head = head
 
         if self.label != ['0']:
             head = ['Wavenumber']
             head = head + self.label
             self.tableWidget.setHorizontalHeaderLabels(head)
-
+            self.head = head
 
         if self.data_tab is not None:
             self.row  = len(self.data_tab)
@@ -116,12 +117,14 @@ class Table(QMainWindow, Ui_table):
         filesave, _ = QFileDialog.getSaveFileName(self,"Save the data","","csv file (*.csv)", options=options)
         if filesave:
             __ , ext = os.path.splitext(filesave)
-            print(filesave)
             if  ext == '.csv':
                 filesave = filesave
             else:
                 filesave = filesave+'.csv'
+            df = pd.DataFrame(self.data_tab,columns=[self.head])
+            df.to_csv(filesave, index=False)
             
+           
             
 
 
