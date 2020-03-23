@@ -255,7 +255,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.ExpandSpecU()
 
     def Invert(self):
-        self.VisSpectra()
+        self.plot_specta.Invert()
+        self.plot_specta.canvas.fig.tight_layout()
+        self.plot_specta.canvas.draw()
+            
+        self.plotPurestSpectra.Invert()
+        self.plotPurestSpectra.canvas.fig.tight_layout()
+        self.plotPurestSpectra.canvas.draw()
+        
         if self.comboBoxMethod.currentIndex() == 2:
             self.Wavenumbercal()
             
@@ -968,6 +975,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.progressBar.setValue(self.nfiles+1)
                 self.lineEditStatus.setText('DONE')
                 self.pushButtonStop.hide()
+            elif self.comboBoxSingMult.currentIndex() == 0:
+                self.pushButtonPurestCal.setEnabled(True)
+                # self.progressBar.setValue(self.nfiles+1)
+                self.lineEditStatus.setText('DONE')
+                self.pushButtonStop.hide()
+            
+            
 
     def lock_all(self,Stat):
         self.pushButtonExpandSpectra.setEnabled(Stat)
