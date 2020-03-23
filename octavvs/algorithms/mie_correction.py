@@ -305,12 +305,8 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
     corrected = None # Just to get rid of warnings in the editor; will be set on iteration 0
 
     # Set parameters for automatic iteration control
-    if renormalize:
-        autoupadd = 3  # Residual going up counts as residual going down too little this many times
-        automax = 3    # Stop when residual has gone down too little this many times
-    else:
-        autoupadd = 1
-        automax = 5
+    autoupadd = 1 # Residual going up counts as residual going down too little this many times
+    automax = 5   # Stop when residual has gone down too little this many times
 
     if clusters is not None:
         # Cluster mode: In each iteration, after correcting all the spectra, cluster them.
@@ -431,8 +427,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
 
                 # We compare to the previous correction, not the reference
                 resids = ((corrs - projs[ix])**2).sum(1)
-
                 improved = resids < residuals[ix]
+
+                if renormalize:
+                    corrs = corrs / (1 + cons[0,:,None])
 
                 if autoiterations:
                     iximp = ix[improved]  # Indexes of improved spectra
@@ -443,6 +441,8 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
 
                     corrected[iximp, :] = corrs[improved, :]
                     residuals[iximp] = resids[improved]
+#                    corrected[ix,:] = corrs
+#                    residuals[ix] = resids
                 else:
                     corrected[ix,:] = corrs
                     residuals[ix] = resids
@@ -460,6 +460,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
             gc.collect()    # Because my old laptop was unhappy with RAM usage otherwise
 
     else:
+        if renormalize:
+            # More aggressive stopping if residual rises
+            autoupadd = 3  # Residual going up counts as residual going down too little this many times
+            automax = 3    # Stop when residual has gone down too little this many times
         ref = ref.copy()
         ref[ref < 0] = 0
         # For efficiency, compute the model from the input reference spectrum only once
