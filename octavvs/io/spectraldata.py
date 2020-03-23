@@ -60,7 +60,11 @@ class SpectralData:
         if fext in ['.txt', '.csv', '.mat']:
             if fext == '.mat':
 #                s = scipy.io.loadmat(filename)
-                s = read_mat(filename)
+                try:
+                    s = read_mat(filename)
+                except TypeError:
+                    # Workaround for uint16_codec bug (pymatreader assumes mio5, not mio4)
+                    s = scipy.io.loadmat(filename)
                 # Assume data are in the biggest matrix in the file
                 ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
                 if 'wh' in s:
