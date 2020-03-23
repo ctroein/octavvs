@@ -36,8 +36,10 @@ class LineDouble(QLineEdit):
         self.max = vmax
         if default is not None:
             self.default = default
-        else:
+        elif self.text() != '':
             self.default = float(self.text())
+        else :
+            self.default = (vmin+vmax)/2.
         assert(vmin <= self.default <= vmax)
 
     def setFormat(self, fmt):
