@@ -34,10 +34,10 @@ from .mcr import ftir_function as ff
 from octavvs.algorithms import correction as mc
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
-
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
 Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
-Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"))[0]
+Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"),
+                                from_imports=True, import_from='octavvs')[0]
 
 class DialogAbout(QDialog, Ui_DialogAbout):
     def __init__(self, parent=None):
@@ -135,14 +135,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.actionAbout.triggered.connect(self.About.show)
         self.roiDialog.actionAbout.triggered.connect(self.About.show)
 
-        
-        
-        self.post_setup()
-        
-        
-        
 
-    def closeEvent(self, event):      
+
+        self.post_setup()
+
+
+
+
+    def closeEvent(self, event):
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setText("Warning")
@@ -251,18 +251,18 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
         self.plot_specta.canvas.draw()
-        
+
         self.ExpandSpecU()
 
     def Invert(self):
         self.VisSpectra()
         if self.comboBoxMethod.currentIndex() == 2:
             self.Wavenumbercal()
-            
+
         if hasattr(self,'nr') :
             if self.comboBoxInitial.currentIndex() == 0:
                 self.InitialVis()
-       
+
 
 
     def ValidationX(self):
@@ -494,7 +494,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 ax.axvline(x=self.wavenumv)
         if self.checkBoxInvert.isChecked():
             ax.invert_xaxis()
-              
+
         plt.xlabel("Wavenumber(1/cm)",fontsize=14)
         plt.ylabel("Absorption(arb. units)",fontsize=14)
         plt.tick_params(axis='both',direction='in', length=8, width=1)
@@ -612,8 +612,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                     self.pos[i,1] = self.ind[points[i]] // nx
                 self.plot_visual.addPoints(self.pos)
                 self.InitialVis()
-             
-    
+
+
     def InitialVis(self):
         self.plotInitSpec.canvas.ax.clear()
         self.plotInitSpec.canvas.ax.plot(self.wavenumber,self.insp.T)
@@ -623,7 +623,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotInitSpec.canvas.draw()
         self.ExpandInitSpectU(self.wavenumber,self.insp.T)
 
-                
+
     def SVDPlot(self):
         self.plotPurestConc.canvas.ax.clear()
         self.plotPurestConc.canvas.draw()
@@ -651,9 +651,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_visual.setImage(self.projection, self.comboBoxCmaps.currentText())
             self.plot_visual.addPoints(self.pos)
             self.InitialVis()
-            self.ExpandProjU(nr)                        
-            
-            
+            self.ExpandProjU(nr)
+
+
         else:
             self.insp = [0,0]
             self.labelInitial.setText("Initial Concentration*")
@@ -716,7 +716,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         max_iter = int(self.lineEditPurIter.text())
         stopping_error = float(self.lineEditTol.text())
         init = self.comboBoxInitial.currentIndex()
-    
+
 
         self.progressBar.setEnabled(True)
         self.progressBar.setMaximum(self.nfiles+1)
@@ -853,16 +853,16 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         nrow, ncol = np.shape(self.dn)
         dauxt = np.zeros((ncol,nrow))
         aux=self.dn.T
-        
+
         for i in range(0,ncol):
             dauxt[i,:]=aux[i,:]/np.sqrt(np.sum(aux[i,:]*aux[i,:]))
 
-       
+
         f = 0.01*float(self.lineEditNoisePercent.text())
         init = self.comboBoxInitial.currentIndex()
-       
-     
-        
+
+
+
         self.calpures = single_report(sp_new, nr, f, max_iter,tol_percent, init)
         self.calpures.purest.connect(self.finished_single_roi)
         self.calpures.start()
@@ -1040,14 +1040,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 #----------------------------------------------------------------------
 class Multiple_Calculation(QThread):
-        
+
     DataInit = pyqtSignal(int, str)
     purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
 
     QThread.setTerminationEnabled()
     def __init__(self, foldername, nr, f, max_iter, stopping_error, init, parent=None):
         QThread.__init__(self, parent)
-        self.foldername = foldername 
+        self.foldername = foldername
         self.nr = nr
         self.max_iter = max_iter
         self.stopping_error = stopping_error
@@ -1059,8 +1059,8 @@ class Multiple_Calculation(QThread):
             inguess = 'Spectra'
         else:
             inguess = 'Concentration'
-        
-        
+
+
 #----------------------------------------------------------------------------------------
         self.logfile = open(self.foldername+"//logfile.txt", "w")
         now = datetime.now()
@@ -1088,8 +1088,8 @@ class Multiple_Calculation(QThread):
         now = datetime.now()
         date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
         self.logfile.write("%s %s %s %s\n" % (int(filenumber+1),date_time, filename, status+" at "+str(niter)))
-        
-        
+
+
         if (filenumber+1) == maxfile:
             self.logfile.close()
 
@@ -1107,7 +1107,7 @@ class Multiple_Calculation(QThread):
         w = csv.writer(open(foldername+"//Fileall.csv", "w"))
         for key, val in sorted(name.items(), key=lambda item: item[1]):
             w.writerow([key, val])
-        
+
         return name
 
     def finished_one(self, filenumber,filename, niter, status, maxfile):
@@ -1141,14 +1141,14 @@ class Multiple_Calculation(QThread):
 
 
     def constraint_norm(self,A):
-        A = A.copy()    
+        A = A.copy()
         A /= A.sum(axis=0)[None, :]
         return A*(A > 0)
-        
+
     def run(self):
         filenames = self.search_whole_folder(self.foldername)
         self.maxfile = len(filenames)
-        
+
         self.count = 0
         for i in range(0,self.maxfile):
             if self.rem:
@@ -1156,12 +1156,12 @@ class Multiple_Calculation(QThread):
                 # self.purest.emit(iter,per,status, Cf.T,Sf.T)
                 break
             else:
-                
+
                 self.filename = filenames[i]
                 self.count = self.count + 1
                 self.sx, self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(self.filename)
-            # self,xplot,splot,sx,sy, p, wavenumber, sp, count     
-            
+            # self,xplot,splot,sx,sy, p, wavenumber, sp, count
+
                 if self.init == 0:
                     insp, points = ff.initi_simplisma(self.sp,self.nr,self.f)
                     C_ = None
@@ -1173,14 +1173,14 @@ class Multiple_Calculation(QThread):
 
                 u,s,v = np.linalg.svd(self.sp)
 
-                self.DataInit.emit(self.count,self.filename)    
+                self.DataInit.emit(self.count,self.filename)
 
                 nrow, ncol = np.shape(self.sp)
-                
-                
-        
+
+
+
                 s = sc.linalg.diagsvd(s,nrow, ncol)
-                
+
                 u = u[:,0:self.nr]
                 s = s[0:self.nr,0:self.nr]
                 v = v[0:self.nr,:]
@@ -1188,7 +1188,7 @@ class Multiple_Calculation(QThread):
 
 
                 dauxt = self.normalize(dn)
-        
+
                 for num in range(self.max_iter):
                     iter = num + 1
                     if self.rem:
@@ -1196,19 +1196,19 @@ class Multiple_Calculation(QThread):
                 # self.purest.emit(iter,per,status, Cf.T,Sf.T)
                         break
                     else:
-                
+
                         if ST_ is not None:
                             Ctemp = self.solve_lineq(ST_.T,dauxt.T)
                             #Constraint
                             # Ctemp = constraint_norm(Ctemp)
-                    
+
                             Dcal = np.dot(Ctemp.T,ST_)
                             error = msea(dauxt,Dcal)
-            
+
                             if iter ==1:
                                 error0 = error.copy()
                                 C_ = Ctemp
-            
+
                             per = 100*abs(error-error0)/error
                             # print(iter,'and',per)
                             if per == 0:
@@ -1217,7 +1217,7 @@ class Multiple_Calculation(QThread):
                                 ST_temp = ST_.copy()
                                 status = 'Iterating'
                                 self.purest.emit(iter,per,status, Cf.T,Sf.T)
-    
+
                             elif  per < self.stopping_error:
                                 Cf = C_.copy()
                                 Sf = ST_.copy()
@@ -1232,20 +1232,20 @@ class Multiple_Calculation(QThread):
                                 Sf = ST_.copy()
                                 status = 'Iterating'
                                 self.purest.emit(iter,per,status, C_.T,Sf.T)
-                
+
                         if C_ is not None:
                             ST_temp = self.solve_lineq(C_.T,dauxt)
                             #Constraint
                             # ST_temp = constraint_norm(ST_temp)
-            
+
                             Dcal = np.dot(C_.T,ST_temp)
                             error = msea(dauxt,Dcal)
-            
+
                             if iter ==1:
                                 error0 = error.copy()
                                 # C_ = Ctemp
                                 ST_ = ST_temp
-            
+
                             per = 100*abs(error-error0)/error
                             # print(iter,'and',per)
                             if per == 0:
@@ -1253,7 +1253,7 @@ class Multiple_Calculation(QThread):
                                 Sf = ST_.copy()
                                 status = 'Iterating'
                                 self.purest.emit(iter,per,status, Cf.T,Sf.T)
-                        
+
                             elif per < self.stopping_error:
                                 Cf = C_.copy()
                                 Sf = ST_.copy()
@@ -1262,20 +1262,20 @@ class Multiple_Calculation(QThread):
                                 self.purest.emit(iter,per,status, Cf.T,Sf.T)
                                 self.finished_one(i,self.filename,iter,status,self.maxfile)
                                 break
-                
+
                             else:
                                 error0 = error.copy()
                                 ST_ = ST_temp.copy()
                                 status = 'Iterating'
                                 self.purest.emit(iter,per,status, C_.T,ST_.T)
-    
+
                         if iter == self.max_iter:
                             status = 'Max iterations reached'
                             self.purest.emit(iter,per,status, C_.T,ST_.T)
                             self.finished_one(i,self.filename,iter,status,self.maxfile)
                             break
- 
-             
+
+
 
  #----------------------------------------------------------------------
 
@@ -1295,7 +1295,7 @@ class single_report(QThread):
         self.stopping_error = stopping_error
         self.init = init
         self.rem = False
-    
+
     def stop(self):
         self.rem = True
 
@@ -1327,7 +1327,7 @@ class single_report(QThread):
 
 
     def constraint_norm(self,A):
-        A = A.copy()    
+        A = A.copy()
         A /= A.sum(axis=0)[None, :]
         return A*(A > 0)
 
@@ -1344,7 +1344,7 @@ class single_report(QThread):
 
         u,s,v = np.linalg.svd(self.sp)
         nrow, ncol = np.shape(self.sp)
-        # nr = 
+        # nr =
         s = sc.linalg.diagsvd(s,nrow, ncol)
         u = u[:,0:self.nr]
         s = s[0:self.nr,0:self.nr]
@@ -1352,7 +1352,7 @@ class single_report(QThread):
         dn = u @ s @ v
 
         dauxt = self.normalize(dn)
-    
+
         for num in range(self.niter):
             iter = num + 1
             if self.rem:
@@ -1360,19 +1360,19 @@ class single_report(QThread):
                 # self.purest.emit(iter,per,status, Cf.T,Sf.T)
                 break
             else:
-                
+
                 if ST_ is not None:
                     Ctemp = self.solve_lineq(ST_.T,dauxt.T)
                     #Constraint
                     # Ctemp = constraint_norm(Ctemp)
-                    
+
                     Dcal = np.dot(Ctemp.T,ST_)
                     error = msea(dauxt,Dcal)
-            
+
                     if iter ==1:
                         error0 = error.copy()
                         C_ = Ctemp
-            
+
                     per = 100*abs(error-error0)/error
                     print(iter,'and',per)
                     if per == 0:
@@ -1394,20 +1394,20 @@ class single_report(QThread):
                         Sf = ST_.copy()
                         # status = 'Iterating'
                         # self.purest.emit(iter,per,status, C_.T,Sf.T)
-                
+
                 if C_ is not None:
                     ST_temp = self.solve_lineq(C_.T,dauxt)
                     #Constraint
                     # ST_temp = constraint_norm(ST_temp)
-            
+
                     Dcal = np.dot(C_.T,ST_temp)
                     error = msea(dauxt,Dcal)
-            
+
                     if iter ==1:
                         error0 = error.copy()
                         # C_ = Ctemp
                         ST_ = ST_temp
-            
+
                     per = 100*abs(error-error0)/error
                     print(iter,'and',per)
                     if per == 0:
@@ -1415,7 +1415,7 @@ class single_report(QThread):
                         Sf = ST_.copy()
                         status = 'Iterating'
                         self.purest.emit(iter,per,status, Cf.T,Sf.T)
-                        
+
                     elif per < self.stopping_error:
                         Cf = C_.copy()
                         Sf = ST_.copy()
@@ -1423,13 +1423,13 @@ class single_report(QThread):
                         status = 'converged'
                         self.purest.emit(iter,per,status, Cf.T,Sf.T)
                         break
-                
+
                     else:
                         error0 = error.copy()
                         ST_ = ST_temp.copy()
                         status = 'Iterating'
                         self.purest.emit(iter,per,status, C_.T,ST_.T)
-    
+
                 if iter == self.niter:
                     status = 'Max iterations reached'
                     self.purest.emit(iter,per,status, C_.T,ST_.T)

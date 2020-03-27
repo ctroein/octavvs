@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1281</width>
+    <width>1359</width>
     <height>747</height>
    </rect>
   </property>
@@ -20,7 +20,7 @@
    <string>OCTAVVS Clustering</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icons_src.qrc">
+   <iconset>
     <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -1508,8 +1508,6 @@
   <tabstop>spinBoxNcluster</tabstop>
   <tabstop>lineEditAnotClus</tabstop>
  </tabstops>
- <resources>
-  <include location="../../icons_src.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

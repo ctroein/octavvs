@@ -20,7 +20,7 @@
    <string>OCTAVVS MCR-ALS</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icons_src.qrc">
+   <iconset>
     <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -1015,8 +1015,6 @@
   <tabstop>checkBoxSaveInit</tabstop>
   <tabstop>checkBoxSavePurest</tabstop>
  </tabstops>
- <resources>
-  <include location="../../icons_src.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
