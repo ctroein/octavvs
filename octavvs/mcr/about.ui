@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>455</width>
+    <width>492</width>
     <height>769</height>
    </rect>
   </property>
@@ -14,7 +14,7 @@
    <string>About </string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icons_src.qrc">
+   <iconset>
     <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
@@ -41,7 +41,7 @@
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="../../icons_src.qrc">:/icons/octavvs/icons/octavvs_prep.ico</pixmap>
+          <pixmap resource="../icons_src.qrc">:/icons/icons/octavvs_prep.ico</pixmap>
          </property>
         </widget>
        </item>
@@ -72,7 +72,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../icons_src.qrc"/>
+  <include location="../icons_src.qrc"/>
  </resources>
  <connections/>
 </ui>

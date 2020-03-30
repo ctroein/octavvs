@@ -31,16 +31,18 @@ from octavvs.mcr import ftir_function as ff
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
-Ui_table = uic.loadUiType(resource_filename(__name__, "mcr/table_ui.ui"))[0]
-Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"))[0]
+Ui_table = uic.loadUiType(resource_filename(__name__, "mcr/table_ui.ui"),
+                          from_imports=True, import_from='octavvs')[0]
+Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"),
+                                from_imports=True, import_from='octavvs')[0]
 
 class DialogAbout(QDialog, Ui_DialogAbout):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         qApp.installEventFilter(self)
         self.setupUi(self)
-                                                  
-                                                  
+
+
 class Table(QMainWindow, Ui_table):
     def __init__(self, parent=None):
         super(Table, self).__init__(parent=None)
@@ -123,9 +125,9 @@ class Table(QMainWindow, Ui_table):
                 filesave = filesave+'.csv'
             df = pd.DataFrame(self.data_tab,columns=[self.head])
             df.to_csv(filesave, index=False)
-            
-           
-            
+
+
+
 
 
 class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
@@ -170,12 +172,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.pushButtonTable.clicked.connect(self.TableShow)
         self.pushButtonTableAve.clicked.connect(self.TableAve)
         self.Tableview = Table(self)
-        
+
         self.About = DialogAbout()
 
         self.actionAbout.triggered.connect(self.About.show)
         self.Tableview.actionabout.triggered.connect(self.About.show)
-        
+
         self.DataUpdated.connect(self.Tableview.main_data)
         self.SearchUp.connect(self.search_whole_folder)
         self.Onefile.connect(self.readfile)
@@ -186,7 +188,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.post_setup()
 
         self.checkBoxinvert.toggled.connect(self.Inverting)
-        
+
     def closeEvent(self, event):
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
@@ -411,9 +413,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
 
-        
+
         self.PlotSpectraSample()
-        
+
         self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
         self.labelMaxwn.setText(str("%.2f" % np.max(self.wavenumber)))
         self.lineEditLength.setText(str(len(self.wavenumber)))
@@ -460,14 +462,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         else:
             self.VisUp.emit()
             self.ClusUp.emit()
-            
+
         if hasattr(self,'df_spec'):
             self.ClusUp.emit()
             if self.pushButtonReduce.isEnabled():
                 pass
             else:
                 self.Reduce()
-        
+
     def PlotSpectraSample(self):
         self.plot_specta.canvas.ax.clear()
         self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
@@ -643,8 +645,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotAverage.canvas.ax.plot(self.wavenumber, self.spmean.T )
         if self.checkBoxinvert.isChecked():
             self.plotAverage.Invert()
-        
-        
+
+
         if nclus <= 8:
             self.plotAverage.canvas.ax.legend(self.label,loc='best')
             self.plotAverage.canvas.fig.tight_layout()
@@ -652,8 +654,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotAverage.canvas.fig.tight_layout()
 
         self.ExpandAveU()
-  
-        
+
+
         self.plotAverage.canvas.draw()
         anotclus=len(set(self.clis))
         self.lineEditAnotClus.setText(str(anotclus))
@@ -688,7 +690,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 ax.axvline(x=self.wavenumv)
         else:
             ax.plot(self.wavenumber, self.datas)
-        
+
         if self.checkBoxinvert.isChecked():
             ax.invert_xaxis()
         plt.xlabel("Wavenumber(1/cm)")#,fontsize=24)
@@ -708,7 +710,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                     ax.axvline(x=self.wavenumv)
             else:
                 ax.plot(self.wavenumber, self.datas)
-            
+
             if self.checkBoxinvert.isChecked():
                 ax.invert_xaxis()
             fig.canvas.draw_idle()
@@ -817,7 +819,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_specta.canvas.ax.clear()
             self.plot_specta.canvas.ax.plot(self.wavenumber, self.datas)
             if self.checkBoxinvert.isChecked():
-                self.plot_specta.Invert()           
+                self.plot_specta.Invert()
             self.plot_specta.canvas.fig.tight_layout()
             self.plot_specta.canvas.draw()
 

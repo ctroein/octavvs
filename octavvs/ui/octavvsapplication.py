@@ -26,7 +26,7 @@ class OctavvsMainWindow(QMainWindow):
 
     fileOptions = QFileDialog.Options() | QFileDialog.DontUseNativeDialog
 
-    octavvs_version = 'v0.0.30'
+    octavvs_version = 'v0.0.31'
 
     def __init__(self, parent=None):
         super().__init__(parent)

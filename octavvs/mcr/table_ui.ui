@@ -14,7 +14,7 @@
    <string>Spreadsheet Data</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../icons_src.qrc">
+   <iconset>
     <normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</normaloff>:/icons/octavvs/icons/octavvs_prep_48.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -73,7 +73,7 @@
      <x>0</x>
      <y>0</y>
      <width>669</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -122,8 +122,8 @@
   </widget>
   <action name="actionSave_as">
    <property name="icon">
-    <iconset resource="../../icons_src.qrc">
-     <normaloff>:/icons/octavvs/icons/icons8-save-as-80.png</normaloff>:/icons/octavvs/icons/icons8-save-as-80.png</iconset>
+    <iconset resource="../icons_src.qrc">
+     <normaloff>:/icons/icons/icons8-save-as-80.png</normaloff>:/icons/icons/icons8-save-as-80.png</iconset>
    </property>
    <property name="text">
     <string>Save as</string>
@@ -131,8 +131,8 @@
   </action>
   <action name="actionClose">
    <property name="icon">
-    <iconset resource="../../icons_src.qrc">
-     <normaloff>:/icons/octavvs/icons/icons8-delete-32.png</normaloff>:/icons/octavvs/icons/icons8-delete-32.png</iconset>
+    <iconset resource="../icons_src.qrc">
+     <normaloff>:/icons/icons/icons8-delete-32.png</normaloff>:/icons/icons/icons8-delete-32.png</iconset>
    </property>
    <property name="text">
     <string>exit</string>
@@ -140,8 +140,8 @@
   </action>
   <action name="actionSelect_all">
    <property name="icon">
-    <iconset resource="../../icons_src.qrc">
-     <normaloff>:/icons/octavvs/icons/icons8-check-document-32.png</normaloff>:/icons/octavvs/icons/icons8-check-document-32.png</iconset>
+    <iconset resource="../icons_src.qrc">
+     <normaloff>:/icons/icons/icons8-check-document-32.png</normaloff>:/icons/icons/icons8-check-document-32.png</iconset>
    </property>
    <property name="text">
     <string>Select all</string>
@@ -149,8 +149,8 @@
   </action>
   <action name="actionCopy">
    <property name="icon">
-    <iconset resource="../../icons_src.qrc">
-     <normaloff>:/icons/octavvs/icons/icons8-copy-32.png</normaloff>:/icons/octavvs/icons/icons8-copy-32.png</iconset>
+    <iconset resource="../icons_src.qrc">
+     <normaloff>:/icons/icons/icons8-copy-32.png</normaloff>:/icons/icons/icons8-copy-32.png</iconset>
    </property>
    <property name="text">
     <string>Copy</string>
@@ -158,8 +158,8 @@
   </action>
   <action name="actionDeselect_all">
    <property name="icon">
-    <iconset resource="../../icons_src.qrc">
-     <normaloff>:/icons/octavvs/icons/icons8-close-all-tabs-32.png</normaloff>:/icons/octavvs/icons/icons8-close-all-tabs-32.png</iconset>
+    <iconset resource="../icons_src.qrc">
+     <normaloff>:/icons/icons/icons8-close-all-tabs-32.png</normaloff>:/icons/icons/icons8-close-all-tabs-32.png</iconset>
    </property>
    <property name="text">
     <string>Deselect all</string>
@@ -172,7 +172,7 @@
   </action>
  </widget>
  <resources>
-  <include location="../../icons_src.qrc"/>
+  <include location="../icons_src.qrc"/>
  </resources>
  <connections/>
 </ui>
