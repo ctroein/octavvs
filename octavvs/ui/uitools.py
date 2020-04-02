@@ -32,7 +32,10 @@ def slider_to_box(slider, box, wn, ixfinder):
 
 def box_to_slider(slider, box, wn, ixfinder):
     "Set a slider from the value in a lineedit, discretized by the wavenumber array wn"
+    oldb = slider.blockSignals(True)
     if wn is not None:
+        if slider.maximum() != len(wn) - 1:
+            slider.setMaximum(len(wn) - 1)
         if box.hasAcceptableInput():
             slider.setValue(ixfinder(wn, box.value()))
         else:
@@ -40,3 +43,5 @@ def box_to_slider(slider, box, wn, ixfinder):
     else:
         slider.setValue(int(round(slider.maximum() *
               (box.value() - constants.WMIN) / (constants.WMAX - constants.WMIN))))
+    slider.blockSignals(oldb)
+
