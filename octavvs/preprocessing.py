@@ -238,11 +238,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     def updateWavenumberRange(self):
         super().updateWavenumberRange()
-        if self.data.wavenumber is not None:
-            wns = len(self.data.wavenumber)
-            # Update sliders before boxes to avoid errors from triggered updates
-            self.horizontalSliderMin.setMaximum(wns-1)
-            self.horizontalSliderMax.setMaximum(wns-1)
 
         wmin = min(self.data.wmin, octavvs.ui.constants.WMIN)
         wmax = max(self.data.wmax, octavvs.ui.constants.WMAX)
@@ -250,9 +245,14 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.lineEditMaxwn.setRange(wmin, wmax, default=wmax)
         self.lineEditNormWavenum.setRange(wmin, wmax, default=.5*(wmin+wmax))
 
-        # Make sure the sliders are in sync with the boxes
-        self.srMinEdit()
-        self.srMaxEdit()
+        if self.data.wavenumber is not None:
+            # Update slider ranges before setting new values
+            uitools.box_to_slider(
+                    self.horizontalSliderMin, self.lineEditMinwn,
+                    self.data.wavenumber, uitools.ixfinder_noless)
+            uitools.box_to_slider(
+                    self.horizontalSliderMax, self.lineEditMaxwn,
+                    self.data.wavenumber, uitools.ixfinder_nomore)
 
 
     def loadFolder(self, *argv, **kwargs):
@@ -263,9 +263,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def updateFile(self, num):
         super().updateFile(num)
 
-        self.plot_visual.setData(self.data.wavenumber, self.data.raw, self.data.wh)
         self.updateWavenumberRange()
-#        self.imageProjection()
+        self.plot_visual.setData(self.data.wavenumber, self.data.raw, self.data.wh)
 
         if self.bcNext:
             self.abcWorker.haltBC = True
@@ -534,28 +533,26 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def srMinSlide(self):
         uitools.slider_to_box(
                 self.horizontalSliderMin, self.lineEditMinwn,
-                self.plot_SGF.getWavenumbers(),
-                uitools.ixfinder_noless)
+                self.data.wavenumber, uitools.ixfinder_noless)
         self.updateSR()
 
     def srMinEdit(self):
         uitools.box_to_slider(
                 self.horizontalSliderMin, self.lineEditMinwn,
-                self.plot_SGF.getWavenumbers(),
-                uitools.ixfinder_noless)
+                self.data.wavenumber, uitools.ixfinder_noless)
+        self.updateSR()
 
     def srMaxSlide(self):
         uitools.slider_to_box(
                 self.horizontalSliderMax, self.lineEditMaxwn,
-                self.plot_SGF.getWavenumbers(),
-                uitools.ixfinder_nomore)
+                self.data.wavenumber, uitools.ixfinder_nomore)
         self.updateSR()
 
     def srMaxEdit(self):
         uitools.box_to_slider(
                 self.horizontalSliderMax, self.lineEditMaxwn,
-                self.plot_SGF.getWavenumbers(),
-                uitools.ixfinder_nomore)
+                self.data.wavenumber, uitools.ixfinder_nomore)
+        self.updateSR()
 
     # BC, Baseline Correction
     bcNames = ['rubberband', 'concaverubberband', 'asls', 'arpls', 'assymtruncq' ]
