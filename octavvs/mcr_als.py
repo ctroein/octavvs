@@ -630,6 +630,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotInitSpec.canvas.draw()
         self.ExpandInitSpectU(self.wavenumber,self.insp.T)
 
+       
+
 
     def SVDPlot(self):
         self.plotPurestConc.canvas.ax.clear()
@@ -659,6 +661,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_visual.addPoints(self.pos)
             self.InitialVis()
             self.ExpandProjU(nr)
+            if self.checkBoxSaveInit.isChecked():
+                self.save_data_init(self.insp.T)
 
 
         else:
@@ -672,6 +676,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotInitSpec.canvas.draw()
             self.ExpandInitSpectU(np.arange(self.sx*self.sy),self.incon.T)
             self.ImageProjection()
+            if self.checkBoxSaveInit.isChecked():
+                self.save_data_init(self.incon.T)
 
 
     def lockmcr(self):
@@ -762,6 +768,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.SVDprocess()
         nr = self.spinBoxSVDComp.value()
         init = self.comboBoxInitial.currentIndex()
+        self.InitialCondition()
         self.calpures = single_report(self.sp,nr,f, max_iter,tol_percent,init)
         self.calpures.purest.connect(self.finished_single)
         self.calpures.start()
@@ -838,7 +845,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             #     self.plotInitSpec.Invert()
             # self.plotInitSpec.canvas.fig.tight_layout()
             # self.plotInitSpec.canvas.draw()
-
+            if self.checkBoxSaveInit.isChecked():
+                self.save_data_init(self.insp.T)
 #            self.pos = np.array([points % self.projection.shape[0], points // self.projection.shape[1]]).T
             self.pos = np.zeros((nr,2))
 
@@ -932,6 +940,18 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.folinit = QFileDialog.getExistingDirectory(self,"Open the input data")
         else:
             pass
+
+
+    def save_data_init(self, data):
+        if self.checkBoxSaveInit.isChecked():
+            # auxi = np.concatenate((sopti,copti), axis = 0)
+            namef = self.lineEditFilename.text()
+            namef = namef.replace('.mat','')
+            if self.comboBoxInitial.currentIndex() == 0:
+                suf= '_init_spec'
+            else:
+                suf = '_init_con'
+            np.savetxt(self.folinit+'/'+namef+suf+'.csv', data, delimiter=',')
 
 
     def SavePurest(self):
@@ -1101,7 +1121,7 @@ class Multiple_Calculation(QThread):
     def logreport(self,filenumber,filename,niter,status,maxfile):
         now = datetime.now()
         date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
-        self.logfile.write("%s %s %s %s\n" % (int(filenumber+1),date_time, filename, status+" at "+str(niter)))
+        self.logfile.write("%s %s %s %s\n" % (int(filenumber+1),date_time, basename(filename), status+" at "+str(niter)))
 
 
         if (filenumber+1) == maxfile:
