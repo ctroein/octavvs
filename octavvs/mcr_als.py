@@ -7,7 +7,7 @@ import gc
 import csv
 import glob
 import os
-# import pandas as pd
+from sklearn.cluster import KMeans
 #import traceback
 from os.path import basename, dirname
 from datetime import datetime
@@ -134,8 +134,17 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         self.actionAbout.triggered.connect(self.About.show)
         self.roiDialog.actionAbout.triggered.connect(self.About.show)
+        self.comboBoxImp.currentIndexChanged.connect(self.VisSpectra)
+        self.spinBoxWlength.valueChanged.connect(self.VisSpectra)
+        self.spinBoxPoly.valueChanged.connect(self.VisSpectra)
 
-
+        self.spinBoxWlength.hide()
+        self.spinBoxPoly.hide()
+        self.labelJ.hide()
+        self.labelWl.hide()
+        self.labelPl.hide()
+        
+        
 
         self.post_setup()
 
@@ -204,18 +213,20 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         try:
             self.lock_all(True)
-            self.sx, self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(fileName)
-            self.sp = mc.nonnegative(self.sp)
+            self.sx, self.sy, self.p ,self.wavenumber, self.spo = ff.readmat(fileName)
+            self.spo = mc.nonnegative(self.spo)
 
             self.lineEditLength.setText(str(len(self.wavenumber)))
             self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
             self.labelMaxwn.setText(str("%.2f" % np.max(self.wavenumber)))
             self.lineEditWavenumber.setText(str("%.2f" % np.min(self.wavenumber)))
 
-            self.index = np.random.randint(0,int(self.sx*self.sy),(20))
+            kmeans = KMeans(n_clusters=8, random_state=0).fit(self.spo.T)
+            self.raw = kmeans.cluster_centers_
+            self.raw = self.raw.T
+            
 
-            self. VisSpectra()
-
+            self.VisSpectra()
 
 
             try:
@@ -245,8 +256,43 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def VisSpectra(self):
+    
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        
+        if self.comboBoxImp.currentIndex() == 0:
+            self.yvis = self.raw.copy()
+            self.spinBoxWlength.hide()
+            self.spinBoxPoly.hide()
+            self.labelJ.hide()
+            self.labelWl.hide()
+            self.labelPl.hide()
+
+            
+        elif self.comboBoxImp.currentIndex() == 1:
+            self.yvis= sc.signal.savgol_filter(self.raw.T,win, polyorder = pol,deriv=1)
+            self.yvis= self.yvis.T
+            self.spinBoxWlength.show()
+            self.spinBoxPoly.show()
+            self.labelJ.show()
+            self.labelWl.show()
+            self.labelPl.show()
+
+            
+        else:
+            self.yvis= sc.signal.savgol_filter(self.raw.T,win, polyorder = pol,deriv=2)
+            self.yvis= self.yvis.T
+            
+            self.spinBoxWlength.show()
+            self.spinBoxPoly.show()
+            self.labelJ.show()
+            self.labelWl.show()
+            self.labelPl.show()
+
+        
+        self.yvis = mc.nonnegative(self.yvis)
         self.plot_specta.canvas.ax.clear()
-        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
+        self.plot_specta.canvas.ax.plot(self.wavenumber,self.yvis)
         if self.checkBoxInvert.isChecked():
             self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
@@ -480,7 +526,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.projection = ff.prowavenum(self.p,self.wavenumber,self.wavenumv)
 
         self.plot_specta.canvas.ax.clear()
-        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
+        self.plot_specta.canvas.ax.plot(self.wavenumber,self.yvis)
         self.plot_specta.canvas.ax.axvline(x=self.wavenumv)
         if self.checkBoxInvert.isChecked():
             self.plot_specta.Invert()
@@ -496,7 +542,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         plt.close("Spectra")
         fig = plt.figure("Spectra")
         ax = fig.subplots()
-        ax.plot(self.wavenumber,self.sp[:,self.index])
+        ax.plot(self.wavenumber,self.yvis)
         if self.comboBoxMethod.currentIndex() == 2:
                 ax.axvline(x=self.wavenumv)
         if self.checkBoxInvert.isChecked():
@@ -514,7 +560,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             fig = plt.figure("Spectra")
             ax = fig.gca()
             ax.clear()
-            ax.plot(self.wavenumber,self.sp[:,self.index])
+            ax.plot(self.wavenumber,self.yvis)
             if self.comboBoxMethod.currentIndex() == 2:
                 ax.axvline(x=self.wavenumv)
             if self.checkBoxInvert.isChecked():
@@ -566,12 +612,27 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             pass
 
     def SVDprocess(self):
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        
         self.nr = self.spinBoxSVDComp.value()
         if self.nr < 20:
             nplot = self.nr+5
         else:
             nplot = self.nr
-
+            
+        if self.comboBoxImp.currentIndex() == 1:
+            self.sp = sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=1)
+            self.sp = self.sp.T
+        
+        elif self.comboBoxImp.currentIndex() == 2:
+            self.sp= sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=2)
+            self.sp= self.sp.T
+        else:
+            self.sp = self.spo.copy()
+    
+            
+            
 
         if not self.coord:
             self.sp = mc.nonnegative(self.sp)
@@ -729,12 +790,16 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         max_iter = int(self.lineEditPurIter.text())
         stopping_error = float(self.lineEditTol.text())
         init = self.comboBoxInitial.currentIndex()
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        implement = int(self.comboBoxImp.currentIndex())
 
 
         self.progressBar.setEnabled(True)
         self.progressBar.setMaximum(self.nfiles+1)
         self.lineEditStatus.setText('Multiple files')
-        self.calpures = Multiple_Calculation(self.foldername, nr, f,max_iter, stopping_error, init)
+        self.calpures = Multiple_Calculation(self.foldername, nr, f,max_iter, 
+                                             stopping_error, init,win, pol,implement)
 
 
         self.calpures.purest.connect(self.finished_single)
@@ -1079,7 +1144,7 @@ class Multiple_Calculation(QThread):
     purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
 
     QThread.setTerminationEnabled()
-    def __init__(self, foldername, nr, f, max_iter, stopping_error, init, parent=None):
+    def __init__(self, foldername, nr, f, max_iter, stopping_error, init,win, pol,implement, parent=None):
         QThread.__init__(self, parent)
         self.foldername = foldername
         self.nr = nr
@@ -1089,6 +1154,9 @@ class Multiple_Calculation(QThread):
         self.f = f
         self.max_iter = max_iter
         self.rem = False
+        self.win = win
+        self.pol = pol
+        self.implement = implement
         if self.init == 0:
             inguess = 'Spectra'
         else:
@@ -1193,8 +1261,20 @@ class Multiple_Calculation(QThread):
 
                 self.filename = filenames[i]
                 self.count = self.count + 1
-                self.sx, self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(self.filename)
+                self.sx, self.sy, self.p ,self.wavenumber, self.spo = ff.readmat(self.filename)
             # self,xplot,splot,sx,sy, p, wavenumber, sp, count
+                if self.implement == 1:
+                    self.sp = sc.signal.savgol_filter(self.spo.T,self.win, polyorder = self.pol,deriv=1)
+                    self.sp = self.sp.T
+            
+                elif self.implement == 2:
+                    self.sp= sc.signal.savgol_filter(self.spo.T,self.win, polyorder = self.pol,deriv=2)
+                    self.sp= self.sp.T
+                else:
+                    self.sp = self.spo.copy()
+                
+                self.sp = mc.nonnegative(self.sp)
+                
 
                 if self.init == 0:
                     insp, points = ff.initi_simplisma(self.sp,self.nr,self.f)
