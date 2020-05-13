@@ -28,51 +28,30 @@
     <item row="0" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="3,5">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,1">
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1,0,1">
         <item>
          <layout class="QGridLayout" name="gridLayout">
           <property name="spacing">
            <number>8</number>
           </property>
-          <item row="3" column="3" colspan="3">
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <property name="spacing">
-             <number>2</number>
-            </property>
+          <item row="0" column="0" colspan="3">
+           <widget class="QComboBox" name="comboBoxSingMul">
             <item>
-             <widget class="QPushButton" name="pushButtonPrevious">
-              <property name="text">
-               <string>Previous</string>
-              </property>
-             </widget>
+             <property name="text">
+              <string>Single file</string>
+             </property>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButtonNext">
-              <property name="text">
-               <string>Next</string>
-              </property>
-             </widget>
+             <property name="text">
+              <string>Multiple files</string>
+             </property>
             </item>
-           </layout>
-          </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Filename</string>
-            </property>
            </widget>
           </item>
           <item row="2" column="0" colspan="2">
            <widget class="QLabel" name="label_2">
             <property name="text">
              <string>File number </string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="3">
-           <widget class="QPushButton" name="pushButtonLoadConc">
-            <property name="text">
-             <string>Load purest spectra and concentrations</string>
             </property>
            </widget>
           </item>
@@ -93,7 +72,7 @@
           <item row="2" column="2" colspan="4">
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <property name="spacing">
-             <number>8</number>
+             <number>4</number>
             </property>
             <item>
              <widget class="QLineEdit" name="lineEditFileNum">
@@ -118,22 +97,8 @@
             </item>
            </layout>
           </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>Purest directory</string>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="2" colspan="4">
            <widget class="QLineEdit" name="lineEditDirPurest">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2" colspan="4">
-           <widget class="QLineEdit" name="lineEditFilename">
             <property name="readOnly">
              <bool>true</bool>
             </property>
@@ -146,8 +111,67 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="QPushButton" name="pushButtonLoadConc">
+            <property name="text">
+             <string>Load purest spectra and concentrations</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3" colspan="3">
+           <widget class="QPushButton" name="pushButtonLoadSpec">
+            <property name="text">
+             <string>Load spectra</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Filename</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Purest directory</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2" colspan="4">
+           <widget class="QLineEdit" name="lineEditFilename">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3" colspan="3">
+           <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <property name="spacing">
+             <number>2</number>
+            </property>
+            <item>
+             <widget class="QPushButton" name="pushButtonPrevious">
+              <property name="text">
+               <string>Previous</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonNext">
+              <property name="text">
+               <string>Next</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
           <item row="6" column="2" colspan="4">
            <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <property name="spacing">
+             <number>4</number>
+            </property>
             <item>
              <widget class="QLineEdit" name="lineEditLength">
               <property name="readOnly">
@@ -199,28 +223,83 @@
             </item>
            </layout>
           </item>
-          <item row="0" column="3" colspan="3">
-           <widget class="QPushButton" name="pushButtonLoadSpec">
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_19">
             <property name="text">
-             <string>Load spectra</string>
+             <string>Implementation</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="0" colspan="3">
-           <widget class="QComboBox" name="comboBoxSingMul">
+          <item row="7" column="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_24" stretch="3,0">
+            <property name="spacing">
+             <number>4</number>
+            </property>
             <item>
-             <property name="text">
-              <string>Single file</string>
-             </property>
+             <widget class="QComboBox" name="comboBoxImp">
+              <item>
+               <property name="text">
+                <string>Raw</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>1st Derivative</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>2nd Derivative</string>
+               </property>
+              </item>
+             </widget>
             </item>
             <item>
-             <property name="text">
-              <string>Multiple files</string>
-             </property>
+             <widget class="QLabel" name="labelWl">
+              <property name="text">
+               <string>Window_length</string>
+              </property>
+             </widget>
             </item>
+           </layout>
+          </item>
+          <item row="7" column="5">
+           <widget class="QSpinBox" name="spinBoxPoly">
+            <property name="minimum">
+             <number>2</number>
+            </property>
+            <property name="maximum">
+             <number>12</number>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="4">
+           <widget class="QLabel" name="labelPl">
+            <property name="text">
+             <string>     &gt;    Poly_order</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QSpinBox" name="spinBoxWlength">
+            <property name="minimum">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <number>33</number>
+            </property>
+            <property name="singleStep">
+             <number>2</number>
+            </property>
+            <property name="value">
+             <number>17</number>
+            </property>
            </widget>
           </item>
          </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_21"/>
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_6" stretch="1,0">
@@ -252,6 +331,9 @@
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_8">
+          <property name="spacing">
+           <number>4</number>
+          </property>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="0,1,0,1">
             <item>

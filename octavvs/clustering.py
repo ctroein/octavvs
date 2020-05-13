@@ -21,6 +21,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.preprocessing import StandardScaler
+from scipy.signal import savgol_filter
 
 import matplotlib
 matplotlib.use('QT5Agg')
@@ -28,6 +29,7 @@ import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QTableWidgetItem, QTableWidgetSelectionRange
 
 from octavvs.mcr import ftir_function as ff
+from octavvs.algorithms import correction as mc
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
@@ -188,6 +190,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.post_setup()
 
         self.checkBoxinvert.toggled.connect(self.Inverting)
+        
+        self.comboBoxImp.currentIndexChanged.connect(self.Select_spectra)
+        self.spinBoxWlength.valueChanged.connect(self.Select_spectra)
+        self.spinBoxPoly.valueChanged.connect(self.Select_spectra)
+
 
     def closeEvent(self, event):
         msgBox = QMessageBox()
@@ -391,7 +398,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             pass
 
         try:
-            self.sx,self.sy, self.p ,self.wavenumber, self.sp = ff.readmat(fileName)
+            self.sx,self.sy, self.pin ,self.wavenumber, self.spo = ff.readmat(fileName)
+            self.spo = mc.nonnegative(self.spo)
+            self.lineEditHeight.setText(str(self.sy))
+            self.lineEditWidth.setText(str(self.sx))
         except:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
@@ -405,13 +415,21 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             pass
 
 
-        self.index = np.random.randint(0,int(self.sx*self.sy),(20))
+        
+        # self.index = np.random.randint(0,int(self.sx*self.sy),(20))
+        kmeans = KMeans(n_clusters=8, random_state=0).fit(self.spo.T)
+        self.raw = kmeans.cluster_centers_
+        self.raw = self.raw.T
+
+        
+        self.Select_spectra()
+        
         self.clear_all()
         self.lock_un(True)
         self.lineEditFilename.setText((basename(fileName).replace('.mat','')))
         self.lineEditDirSpectra.setText(fileName)
 
-        self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
+        
 
 
         self.PlotSpectraSample()
@@ -421,15 +439,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditLength.setText(str(len(self.wavenumber)))
         self.lineEditWavenumber.setText(str("%.2f" % np.min(self.wavenumber)))
 
-        try:
-            x = int(self.lineEditHeight.text())
-            y = int(self.lineEditWidth.text())
-            z = int(self.lineEditLength.text())
-            self.p = np.reshape(self.p,(z,x,y))
-        except ValueError:
-            self.lineEditWidth.setText(str(self.sx))
-            self.lineEditHeight.setText(str(self.sy))
-
+ 
         self.ProjUp.emit()
 
         if self.img is not None:
@@ -470,9 +480,87 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             else:
                 self.Reduce()
 
+    def Select_spectra(self):
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        if self.comboBoxImp.currentIndex() == 0:
+            self.sp = self.spo.copy()
+            self.sp = mc.nonnegative(self.sp)
+            self.p = self.pin.copy() 
+        elif self.comboBoxImp.currentIndex() == 1:
+            self.sp = savgol_filter(self.spo.T,win, polyorder = pol,deriv=1)
+            self.sp = self.sp.T
+            self.sp = mc.nonnegative(self.sp)
+            self.p = self.sp.reshape(np.shape(self.pin),order='C')
+                
+        elif self.comboBoxImp.currentIndex() == 2:
+            self.sp = savgol_filter(self.spo.T,win, polyorder = pol,deriv=2)
+            self.sp = self.sp.T
+            self.sp = mc.nonnegative(self.sp)
+            self.p = self.sp.reshape(np.shape(self.pin),order='C')
+            
+          
+        try:
+            x = int(self.lineEditHeight.text())
+            y = int(self.lineEditWidth.text())
+            z = int(self.lineEditLength.text())
+            self.p = np.reshape(self.p,(z,x,y))
+        except ValueError:
+            self.lineEditWidth.setText(str(self.sx))
+            self.lineEditHeight.setText(str(self.sy))
+
+        self.ProjUp.emit()
+        self.PlotSpectraSample()
+        if hasattr(self,'df_spec'):
+            self.ClusUp.emit()
+
+
+
+
     def PlotSpectraSample(self):
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        
+        if self.comboBoxImp.currentIndex() == 0:
+            self.yvis = self.raw.copy()
+            self.spinBoxWlength.hide()
+            self.spinBoxPoly.hide()
+            
+            self.spinBoxWlength.hide()
+            self.spinBoxPoly.hide()
+            self.labelWl.hide()
+            self.labelPl.hide()
+
+            
+        elif self.comboBoxImp.currentIndex() == 1:
+            self.yvis= savgol_filter(self.raw.T,win, polyorder = pol,deriv=1)
+            self.yvis= self.yvis.T
+            
+            self.spinBoxWlength.show()
+            self.spinBoxPoly.show()
+
+            self.spinBoxWlength.show()
+            self.spinBoxPoly.show()
+            
+            self.labelWl.show()
+            self.labelPl.show()
+
+            
+        else:
+            self.yvis= savgol_filter(self.raw.T,win, polyorder = pol,deriv=2)
+            self.yvis= self.yvis.T
+            self.labelWl.show()
+            self.labelPl.show()
+            self.spinBoxWlength.show()
+            self.spinBoxPoly.show()
+
+
+        self.DataUpdated.emit(np.column_stack((self.wavenumber,self.yvis)),0,['0'])
+        
+        self.yvis = mc.nonnegative(self.yvis)
+        
         self.plot_specta.canvas.ax.clear()
-        self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
+        self.plot_specta.canvas.ax.plot(self.wavenumber,self.yvis)
         if self.checkBoxinvert.isChecked():
             self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
@@ -491,20 +579,46 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
             self.lineEditDirPurest.setText(filepurest)
             dfpurest = pd.read_csv(filepurest, header= None)
-            self.df_spec = dfpurest.iloc[:int(self.lineEditLength.text()),:]
-            self.df_conc = dfpurest.iloc[int(self.lineEditLength.text()):,:]
+            if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
+                compen = 0
+                self.comboBoxImp.setCurrentIndex(0)
+            else:
+                compen = 1
+                self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
+                self.spinBoxPoly.setValue(int(dfpurest.iloc[0,2]))
+                self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
+                self.Select_spectra()
+
+                                 
+                        
+            
+            self.df_spec = dfpurest.iloc[compen:int(self.lineEditLength.text()),:]
+            self.df_conc = dfpurest.iloc[compen+int(self.lineEditLength.text()):,:]
             self.ClusUp.emit()
             self.Nclus_on()
             for comp1 in range(0,len(self.df_conc.T)):
                 self.comboBoxVisualize.addItem("component_"+str(comp1+1))
 
-    def AutoLoad(self,filepurest):
+    def AutoLoad(self,filepurest):       
         self.comboBoxVisualize.clear()
         self.comboBoxVisualize.addItem('Spectra and White Light Image')
         self.lineEditDirPurest.setText(filepurest)
         dfpurest = pd.read_csv(filepurest, header= None)
-        self.df_spec = dfpurest.iloc[:int(self.lineEditLength.text()),:]
-        self.df_conc = dfpurest.iloc[int(self.lineEditLength.text()):,:]
+        
+        if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
+            compen = 0
+            self.comboBoxImp.setCurrentIndex(0)
+        else:
+            compen = 1
+            self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
+            self.spinBoxPoly.setValue(int(dfpurest.iloc[0,2]))
+            self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
+            self.Select_spectra()
+        
+        
+        
+        self.df_spec = dfpurest.iloc[compen:int(self.lineEditLength.text()),:]
+        self.df_conc = dfpurest.iloc[compen+int(self.lineEditLength.text()):,:]
 
         # self.ClusteringCal()
         self.ClusUp.emit()
@@ -685,7 +799,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         fig = plt.figure('Spectra', tight_layout={'pad':.5})
         ax = fig.subplots()
         if self.comboBoxVisualize.currentIndex() == 0:
-            ax.plot(self.wavenumber,self.sp[:,self.index])
+            ax.plot(self.wavenumber,self.yvis)
             if self.comboBoxMethod.currentIndex() == 2:
                 ax.axvline(x=self.wavenumv)
         else:
@@ -705,7 +819,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             ax = fig.gca()
             ax.clear()
             if self.comboBoxVisualize.currentIndex() == 0:
-                ax.plot(self.wavenumber,self.sp[:,self.index])
+                ax.plot(self.wavenumber,self.yvis)
                 if self.comboBoxMethod.currentIndex() == 2:
                     ax.axvline(x=self.wavenumv)
             else:
@@ -801,7 +915,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             # self.plot_specta.canvas.ax.plot(self.wavenumber,self.sp[:,self.index])
             # self.plot_specta.canvas.fig.tight_layout()
             # self.plot_specta.canvas.draw()
-            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.sp[:,self.index])),0,['0'])
+            self.DataUpdated.emit(np.column_stack((self.wavenumber,self.yvis)),0,['0'])
 
         if 'component_' in self.comboBoxVisualize.currentText():
             import re

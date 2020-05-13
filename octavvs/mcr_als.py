@@ -213,8 +213,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         try:
             self.lock_all(True)
-            self.sx, self.sy, self.p ,self.wavenumber, self.spo = ff.readmat(fileName)
+            self.sx, self.sy, self.pin,self.wavenumber, self.spo = ff.readmat(fileName)
             self.spo = mc.nonnegative(self.spo)
+            
 
             self.lineEditLength.setText(str(len(self.wavenumber)))
             self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
@@ -227,17 +228,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             
 
             self.VisSpectra()
-
-
-            try:
-                x = int(self.lineEditHeight.text())
-                y = int(self.lineEditWidth.text())
-                z = int(self.lineEditLength.text())
-                self.p = np.reshape(self.p,(z,x,y))
-            except ValueError:
-                self.lineEditWidth.setText(str(self.sx))
-                self.lineEditHeight.setText(str(self.sy))
-
+            self.Select_spectra()
+            
+       
         except:
             # This exception handling must be made much more specific. What exception, what lines?
             raise
@@ -252,11 +245,43 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_whitelight.load(fileName.replace(fileName.split('.0')[-1],'.jpg'))
 #        self.plot_whitelight.load(os.path.splitext(fileName)[0]+'.jpg')
         self.loadedFile.emit()
-        self.ImageProjection()
+        
 
+
+    def Select_spectra(self):
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        if self.comboBoxImp.currentIndex() == 0:
+            self.sp = mc.nonnegative(self.spo)
+            self.p = self.sp.reshape(np.shape(self.pin),order='C') 
+        elif self.comboBoxImp.currentIndex() == 1:
+            self.sp = sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=1)
+            self.sp = self.sp.T
+            self.sp = mc.nonnegative(self.sp)
+            self.p = self.sp.reshape(np.shape(self.pin),order='C')
+                
+        elif self.comboBoxImp.currentIndex() == 2:
+            self.sp = sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=2)
+            self.sp = self.sp.T
+            self.sp = mc.nonnegative(self.sp)
+            self.p = self.sp.reshape(np.shape(self.pin),order='C')
+            
+        try:
+            x = int(self.lineEditHeight.text())
+            y = int(self.lineEditWidth.text())
+            z = int(self.lineEditLength.text())
+            self.p = np.reshape(self.p,(z,x,y))
+        except ValueError:
+            self.lineEditWidth.setText(str(self.sx))
+            self.lineEditHeight.setText(str(self.sy))
+
+        self.ImageProjection()
+    
+    
+    
 
     def VisSpectra(self):
-    
+        self.Select_spectra()
         win = int(self.spinBoxWlength.value())
         pol = int(self.spinBoxPoly.value())
         
@@ -990,8 +1015,17 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def save_data(self, copt, sopt):
+        win = int(self.spinBoxWlength.value())
+        pol = int(self.spinBoxPoly.value())
+        met = int(self.comboBoxImp.currentIndex()) 
+        meta = np.zeros((1,copt.shape[-1]))
+        meta[0,0] = met
+        meta[0,1] = win
+        meta[0,2] = pol
+                                              
+        
         if self.checkBoxSavePurest.isChecked():
-            auxi = np.concatenate((sopt,copt), axis = 0)
+            auxi = np.concatenate((meta,sopt,copt), axis = 0)
             namef = self.lineEditFilename.text()
             namef = namef.replace('.mat','')
             np.savetxt(self.folpurest+'/'+namef+self.lineEditSuffix.text()+'.csv', auxi, delimiter=',')
