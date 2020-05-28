@@ -580,10 +580,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.lineEditDirPurest.setText(filepurest)
             dfpurest = pd.read_csv(filepurest, header= None)
             if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
-                compen = 0
+                self.compen = 0
                 self.comboBoxImp.setCurrentIndex(0)
             else:
-                compen = 1
+                self.compen = 1
                 self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
                 self.spinBoxPoly.setValue(int(dfpurest.iloc[0,2]))
                 self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
@@ -592,8 +592,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                                  
                         
             
-            self.df_spec = dfpurest.iloc[compen:int(self.lineEditLength.text()),:]
-            self.df_conc = dfpurest.iloc[compen+int(self.lineEditLength.text()):,:]
+            self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+1,:]
+            self.df_conc = dfpurest.iloc[self.compen+int(self.lineEditLength.text()):,:]
             self.ClusUp.emit()
             self.Nclus_on()
             for comp1 in range(0,len(self.df_conc.T)):
@@ -606,10 +606,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         dfpurest = pd.read_csv(filepurest, header= None)
         
         if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
-            compen = 0
+            self.compen = 0
             self.comboBoxImp.setCurrentIndex(0)
         else:
-            compen = 1
+            self.compen = 1
             self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
             self.spinBoxPoly.setValue(int(dfpurest.iloc[0,2]))
             self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
@@ -617,8 +617,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         
         
         
-        self.df_spec = dfpurest.iloc[compen:int(self.lineEditLength.text()),:]
-        self.df_conc = dfpurest.iloc[compen+int(self.lineEditLength.text()):,:]
+        self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+1,:]
+        self.df_conc = dfpurest.iloc[self.compen+int(self.lineEditLength.text()):,:]
 
         # self.ClusteringCal()
         self.ClusUp.emit()
