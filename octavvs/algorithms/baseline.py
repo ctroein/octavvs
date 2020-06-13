@@ -48,7 +48,11 @@ def mp_bgcorrection(func, y, lim_single=8, lim_tp=40, progressCallback=None):
         return y.copy()
     if y.ndim < 2:
         return func(y)
-    cpus = min(len(os.sched_getaffinity(0)), len(y))
+    if hasattr(os, 'sched_getaffinity'):
+        cpus = len(os.sched_getaffinity(os.getpid()))
+    else:
+        cpus = os.cpu_count()
+    cpus = min(cpus, len(y))
     if cpus == 1 or len(y) <= lim_single:
         cpus = 1
         it = map(func, y)
@@ -158,7 +162,7 @@ def arpls(y, lam, ratio=1e-6, niter=1000, progressCallback=None):
     L = y.shape[-1]
     D = sparse.csc_matrix(np.diff(np.eye(L), 2))
     D = lam * D.dot(D.T)
-    
+
     def arpls_one(yy):
         w = np.ones(L)
         for i in range(niter):
