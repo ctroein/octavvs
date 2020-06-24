@@ -592,7 +592,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                                  
                         
             
-            self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+1,:]
+            self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+self.compen,:]
             self.df_conc = dfpurest.iloc[self.compen+int(self.lineEditLength.text()):,:]
             self.ClusUp.emit()
             self.Nclus_on()
@@ -617,7 +617,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         
         
         
-        self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+1,:]
+        self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+self.compen,:]
         self.df_conc = dfpurest.iloc[self.compen+int(self.lineEditLength.text()):,:]
 
         # self.ClusteringCal()
