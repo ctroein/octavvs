@@ -1198,7 +1198,10 @@ class Multiple_Calculation(QThread):
 
 
 #----------------------------------------------------------------------------------------
-        self.logfile = open(self.foldername+"//logfile.txt", "w")
+        now = datetime.now()
+        date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
+        newformat = now.strftime('%m-%d-%Y_%H-%M-%S')
+        self.logfile = open(self.foldername+"//logfile_"+newformat+".txt", "w")
         now = datetime.now()
         date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
         self.logfile.write("%s\n" % ("Octavvs Project"))
