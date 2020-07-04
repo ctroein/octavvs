@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1920</width>
-    <height>1080</height>
+    <width>1423</width>
+    <height>955</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -314,7 +314,7 @@ margin: 5px;
          </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="1,1,1,4">
+         <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="1,1,4">
           <item>
            <widget class="QLabel" name="label_36">
             <property name="text">
@@ -324,9 +324,25 @@ margin: 5px;
           </item>
           <item>
            <widget class="QComboBox" name="comboBoxReference">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reference spectrum used to initialize the RMieSC algorithm; choose a non-scattered spectrum from a sample as similar as possible to that studied.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
+            <item>
+             <property name="text">
+              <string>Mean</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Percentile</string>
+             </property>
+            </item>
             <item>
              <property name="text">
               <string>Casein</string>
@@ -350,20 +366,79 @@ margin: 5px;
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButtonLoadOther">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load your own reference spectrum. This should be a MATLAB matrix called 'AB' with two columns: wavenumber and intensity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <widget class="QStackedWidget" name="stackedSC">
+            <property name="currentIndex">
+             <number>0</number>
             </property>
-            <property name="text">
-             <string>Load other</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="lineEditReferenceName">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
+            <widget class="QWidget" name="page">
+             <layout class="QHBoxLayout" name="horizontalLayout_24" stretch="1,1,1">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Percentile</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="LineDouble" name="lineEditSCRefPercentile"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonCreateReference">
+                <property name="text">
+                 <string>Create from dataset</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="page_5">
+             <layout class="QHBoxLayout" name="horizontalLayout_25">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="pushButtonLoadOther">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load your own reference spectrum. This should be a MATLAB matrix called 'AB' with two columns: wavenumber and intensity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Load other</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="lineEditReferenceName">
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
            </widget>
           </item>
          </layout>
@@ -1113,8 +1188,6 @@ margin: 5px;
   <tabstop>pushButtonSCRefresh</tabstop>
   <tabstop>pushButtonSCStop</tabstop>
   <tabstop>comboBoxReference</tabstop>
-  <tabstop>pushButtonLoadOther</tabstop>
-  <tabstop>lineEditReferenceName</tabstop>
   <tabstop>spinBoxNIteration</tabstop>
   <tabstop>checkBoxClusters</tabstop>
   <tabstop>spinBoxNclusScat</tabstop>

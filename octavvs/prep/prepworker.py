@@ -12,6 +12,7 @@ import os.path
 from collections import namedtuple
 import numpy as np
 import scipy.signal, scipy.io
+from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import SpectralData
@@ -39,17 +40,21 @@ class PrepParameters:
         self.scDo = False
         self.scRef = 'Casein'
         self.scOtherRef = ''
+        self.scRefPercentile = 50
         self.scIters = 50
         self.scClusters = 30
         self.scStable = True
-        self.scAlgorithm = 'Bassan'
+        self.scAlgorithm = 'bassan'
         self.scResolution = 10
         self.scAmin = 1.1
         self.scAmax = 1.4
         self.scDmin = 2
         self.scDmax = 8
-        self.scLinear = True
-        self.scRenormalize = False
+        self.scConstant = True
+        self.scLinear = False
+        self.scPrefitReference = True
+        self.scPenalize = False
+        self.scPenalizeLambda = 10.
         self.scPCADynamic = False
         self.scPCA = 7
         self.scPCAMax = 12
@@ -74,6 +79,13 @@ class PrepParameters:
         self.normMethod = 'none'
         self.normWavenum = 1655
 
+    def setAlgorithm(self, algo: str):
+        algs = ['bassan', 'konevskikh', 'rasskazov']
+        alg = next((a for a in algs if a in algo.lower()), None)
+        if alg is None:
+            raise ValueError('Algorithm must be one of '+str(algs))
+        self.scAlgorithm = alg
+
     def save(self, filename):
         with open(filename, 'w') as fp:
             json.dump(vars(self), fp, indent=4)
@@ -82,6 +94,7 @@ class PrepParameters:
         with open(filename, 'r') as fp:
             data = json.load(fp)
             self.__dict__.update(data)
+        self.setAlgorithm(self.scAlgorithm)
 
 
 
@@ -101,7 +114,7 @@ class PrepWorker(QObject):
     loadFailed = pyqtSignal(str, str, str)
 
     batchProgress = pyqtSignal(int, int)
-    batchDone = pyqtSignal(str)
+    batchDone = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         QObject.__init__(self, parent)
@@ -130,23 +143,25 @@ class PrepWorker(QObject):
             raise InterruptedError('interrupted by user')
         self.progress.emit(*pargs)
 
-    def loadReference(self, data, ref, otherref):
+    def loadReference(self, data, ref, otherref='', percentile=50):
         """
         Load an RMieSC reference spectrum, at wavenumbers that match the currently
         loaded file.
         """
-#        try:
-        if ref.lower() == 'other':
+        if ref == 'Mean':
+            return data.raw.mean(0)
+        elif ref == 'Percentile':
+            return np.percentile(data.raw, percentile, axis=0)
+        elif ref == 'Other':
             if otherref == '':
                 raise RuntimeError('Specify a reference spectrum file')
             return correction.load_reference(data.wavenumber, matfilename=otherref)
         else:
             return correction.load_reference(data.wavenumber, what=ref.lower())
-#        except FileNotFoundError as e:
-#            raise RuntimeError('Unable to load reference spectrum: ' + str(e))
 
     def callACandSC(self, data, params, wn, y):
-        """ Helper function for running RMieSC and/or atmospheric correction
+        """
+        Run atmospheric correction and/or CRMieSC
         """
         if params.acDo:
             self.emitProgress(-1, 100)
@@ -158,30 +173,71 @@ class PrepWorker(QObject):
 
         if params.scDo:
             self.emitProgress(-2, 100)
-            ref = self.loadReference(data, params.scRef, params.scOtherRef)
+            ref = self.loadReference(data, params.scRef,
+                                     otherref=params.scOtherRef,
+                                     percentile=params.scRefPercentile)
             yold = y
             clust = params.scClusters * (-1 if params.scStable else 1) if params.scClustering else 0
-            algos = {'Konevskikh': True, 'Bassan': False}
 #            print(params.scAmin, params.scAmax, params.scResolution)
+            modelparams=dict(
+                n_components=params.scPCAMax if params.scPCADynamic else params.scPCA,
+                variancelimit=params.scPCAVariance*.01 if params.scPCADynamic else 0,
+                a=np.linspace(params.scAmin, params.scAmax, params.scResolution),
+                d=np.linspace(params.scDmin, params.scDmax, params.scResolution),
+                bvals=params.scResolution,
+                model=params.scAlgorithm,
+                constantcomponent=params.scConstant,
+                linearcomponent=params.scLinear)
             y = correction.rmiesc(
                     wn, y, ref,
                     iterations=params.scIters,
                     clusters=clust,
-                    n_components=params.scPCAMax if params.scPCADynamic else params.scPCA,
-                    pcavariancelimit=params.scPCAVariance*.01 if params.scPCADynamic else 0,
-                    a=np.linspace(params.scAmin, params.scAmax, params.scResolution),
-                    d=np.linspace(params.scDmin, params.scDmax, params.scResolution),
-                    bvals=params.scResolution,
-                    konevskikh=algos[params.scAlgorithm],
-                    linearcomponent=params.scLinear,
+                    modelparams=modelparams,
                     weighted=False,
                     autoiterations=params.scAutoIters,
                     targetrelresiduals=1-params.scMinImprov*.01,
-                    progressCallback=self.emitProgress,
-                    progressPlotCallback=self.progressPlot.emit,
+                    zeroregionpenalty=params.scPenalizeLambda if params.scPenalize else None,
+                    prefit_reference=params.scPrefitReference,
                     verbose=True,
-                    renormalize=params.scRenormalize)
+                    progressCallback=self.emitProgress,
+                    progressPlotCallback=self.progressPlot.emit)
             self.done.emit(wn, yold, y)
+        return y
+
+    def callSGFandSRandBC(self, params, wn, y):
+        """
+        Run three more preprocessing steps
+        """
+        if params.sgfDo:
+            self.emitProgress(-3, 100)
+            y = scipy.signal.savgol_filter(y, params.sgfWindow, params.sgfOrder, axis=1)
+
+        if params.srDo:
+            a = len(wn) - wn[::-1].searchsorted(params.srMax, 'right')
+            b = len(wn) - wn[::-1].searchsorted(params.srMin, 'left')
+            wn = wn[a:b]
+            y = y[:, a:b]
+
+        if params.bcDo:
+            self.emitProgress(-4, 100)
+            if params.bcMethod == 'rubberband':
+                y -= baseline.rubberband(
+                        wn, y, progressCallback=self.emitProgress)
+            elif params.bcMethod == 'concaverubberband':
+                y -= baseline.concaverubberband(
+                        wn, y, iters=params.bcIters,
+                        progressCallback=self.emitProgress)
+            elif params.bcMethod == 'asls':
+                y -= baseline.asls(
+                        y, lam=params.bcLambda, p=params.bcP,
+                        progressCallback=self.emitProgress)
+            elif params.bcMethod == 'arpls':
+                y -= baseline.arpls(
+                        y, lam=params.bcLambdaArpls,
+                        progressCallback=self.emitProgress)
+            else:
+                raise ValueError('unknown baseline correction method '+str(params.bcMethod))
+
         return y
 
     @pyqtSlot(SpectralData, dict)
@@ -207,6 +263,7 @@ class PrepWorker(QObject):
             traceback.print_exc()
             self.failed.emit(repr(e), traceback.format_exc())
 
+
     @pyqtSlot(SpectralData, PrepParameters, str, bool)
     def bigBatch(self, data, params, folder, preservepath):
         """
@@ -219,8 +276,6 @@ class PrepWorker(QObject):
             will be placed in the corresponding subdirectory of the output directory.
         """
         try:
-#            scipy.io.savemat(os.path.join(folder, '00.start'), {'nada': [[0]] } )
-
             for fi in range(len(data.filenames)):
                 self.batchProgress.emit(fi, len(data.filenames))
                 if not self.loadFile(data, fi):
@@ -230,40 +285,11 @@ class PrepWorker(QObject):
                 y = data.raw
 
                 y = self.callACandSC(data, params, wn, y)
-
-                if params.sgfDo:
-                    self.emitProgress(-3, 100)
-                    y = scipy.signal.savgol_filter(y, params.sgfWindow, params.sgfOrder, axis=1)
-
-                if params.srDo:
-                    a = len(wn) - wn[::-1].searchsorted(params.srMax, 'right')
-                    b = len(wn) - wn[::-1].searchsorted(params.srMin, 'left')
-                    wn = wn[a:b]
-                    y = y[:, a:b]
-
-                if params.bcDo:
-                    self.emitProgress(-4, 100)
-                    if params.bcMethod == 'rubberband':
-                        y -= baseline.rubberband(
-                                wn, y, progressCallback=self.emitProgress)
-                    elif params.bcMethod == 'concaverubberband':
-                        y -= baseline.concaverubberband(
-                                wn, y, iters=params.bcIters,
-                                progressCallback=self.emitProgress)
-                    elif params.bcMethod == 'asls':
-                        y -= baseline.asls(
-                                y, lam=params.bcLambda, p=params.bcP,
-                                progressCallback=self.emitProgress)
-                    elif params.bcMethod == 'arpls':
-                        y -= baseline.arpls(
-                                y, lam=params.bcLambdaArpls,
-                                progressCallback=self.emitProgress)
-                    else:
-                        raise ValueError('unknown baseline correction method '+str(params.bcMethod))
+                y = self.callSGFandSRandBC(params, wn, y)
 
                 if params.normDo:
-                    y = normalization.normalize_spectra(params.normMethod, y, wn,
-                                                        wavenum=params.normWavenum)
+                    y = normalization.normalize_spectra(
+                        params.normMethod, y, wn, wavenum=params.normWavenum)
 
                 # Figure out where to save the file
                 filename = data.curFile
@@ -279,14 +305,77 @@ class PrepWorker(QObject):
 
                 y = np.hstack((wn[:,None], y.T))
                 scipy.io.savemat(filename, {'AB': y, 'wh': data.wh } )
+            self.batchDone.emit(True)
+            return
 
         except InterruptedError:
             self.stopped.emit()
         except Exception as e:
             traceback.print_exc()
             self.failed.emit(repr(e), traceback.format_exc())
+        self.batchDone.emit(False)
 
-        self.batchDone.emit('')
+    @pyqtSlot(SpectralData, PrepParameters, str)
+    def createReference(self, data, params, outfile):
+        """
+        Create reference spectrum from all the files listed in 'data', using
+        a subset of the processing steps.
+        Parameters:
+            data: SpectralData object with one or more files
+            params: PrepParameters object from the user
+            outfile: name of output file
+        """
+        params.scDo = False
+        params.srDo = False
+        wns = []
+        ys = []
+        print('files to process', data.filenames)
+        try:
+            for fi in range(len(data.filenames)):
+                self.batchProgress.emit(fi, len(data.filenames))
+                if not self.loadFile(data, fi):
+                    continue
+
+                wn = data.wavenumber
+                y = data.raw
+
+                y = self.callACandSC(data, params, wn, y)
+                y = self.callSGFandSRandBC(params, wn, y)
+
+                if params.scRef == 'Percentile':
+                    y = np.percentile(y, params.scRefPercentile, axis=0)[None, :]
+                else:
+                    y = y.mean(0)[None, :]
+
+                if params.normDo:
+                    y = normalization.normalize_spectra(
+                        params.normMethod, y, wn,
+                        wavenum=params.normWavenum)
+                wns.append(wn)
+                ys.append(y[0])
+
+            # Do all images have the same wavenumbers?
+            if all(np.array_equal(v, wns[0]) for v in wns):
+                ys = np.median(ys, axis=0)
+            else:
+                w1 = min(v.min() for v in wns)
+                w2 = max(v.max() for v in wns)
+                maxres = max((len(v) - 1) / (v.max() - v.min()) for v in wns)
+                wn = np.linspace(w1, w2, num=maxres * (w2 - w1) + 1)
+                interpol = interp1d(np.concatenate(wns), np.concatenate(ys))
+                ys = interpol(wn)
+
+            ab = np.hstack((wn[:, None], ys[:, None]))
+            scipy.io.savemat(outfile, {'AB': ab } )
+            self.batchDone.emit(True)
+            return
+
+        except InterruptedError:
+            self.stopped.emit()
+        except Exception as e:
+            traceback.print_exc()
+            self.failed.emit(repr(e), traceback.format_exc())
+        self.batchDone.emit(False)
 
 
 class ABCWorker(QObject):

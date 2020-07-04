@@ -27,9 +27,16 @@ from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeat
 
 Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
 Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(__name__, "prep/scadvanced.ui"))[0]
+Ui_DialogCreateReference = uic.loadUiType(resource_filename(
+    __name__, "prep/create_reference.ui"))[0]
 
 
 class DialogSCAdvanced(QDialog, Ui_DialogSCAdvanced):
+    def __init__(self, parent=None):
+        QDialog.__init__(self, parent)
+        self.setupUi(self)
+
+class DialogCreateReference(QDialog, Ui_DialogCreateReference):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
@@ -41,6 +48,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     startAC = pyqtSignal(np.ndarray, np.ndarray, dict)
     startBC = pyqtSignal(np.ndarray, np.ndarray, str, dict)
     startBatch = pyqtSignal(SpectralData, PrepParameters, str, bool)
+    startCreateReference = pyqtSignal(SpectralData, PrepParameters, str)
 
     bcLambdaRange = np.array([0, 8])
     bcPRange = np.array([-5, 0])
@@ -56,7 +64,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.splitter.setSizes([1e5]*3)
 
         self.data = SpectralData()
-        self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch
+        self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch, 3 for reference
 
         # Avoid repeating spinboxes
         self.spinBoxItersBC.setStyle(NoRepeatStyle())
@@ -95,6 +103,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.comboBoxReference.currentIndexChanged.connect(self.updateSC)
         self.pushButtonLoadOther.clicked.connect(self.loadOtherReference)
         self.comboBoxReference.currentIndexChanged.connect(self.updateSC)
+        self.lineEditSCRefPercentile.editingFinished.connect(self.updateSC)
         self.pushButtonLoadOther.clicked.connect(self.updateSC)
         self.spinBoxNIteration.valueChanged.connect(self.updateSC)
         self.checkBoxClusters.toggled.connect(self.scClustersToggle)
@@ -102,6 +111,12 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxStabilize.toggled.connect(self.updateSC)
         self.pushButtonSCStop.clicked.connect(self.scStop)
         self.pushButtonRunStop.clicked.connect(self.scStop)
+
+        self.dialogCreateReference = DialogCreateReference()
+        self.pushButtonCreateReference.clicked.connect(self.dialogCreateReference.show)
+        self.pushButtonCreateReference.clicked.connect(self.dialogCreateReference.raise_)
+        self.dialogCreateReference.pushButtonCreateReference.clicked.connect(self.createReference)
+        self.dialogCreateReference.pushButtonStop.clicked.connect(self.scStop)
 
         self.dialogSCAdvanced = DialogSCAdvanced()
         self.pushButtonSCAdvanced.clicked.connect(self.dialogSCAdvanced.show)
@@ -112,8 +127,13 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.dialogSCAdvanced.lineEditSCamax.editingFinished.connect(self.updateSC)
         self.dialogSCAdvanced.lineEditSCdmin.editingFinished.connect(self.updateSC)
         self.dialogSCAdvanced.lineEditSCdmax.editingFinished.connect(self.updateSC)
+        self.dialogSCAdvanced.checkBoxSCConstant.toggled.connect(self.updateSC)
         self.dialogSCAdvanced.checkBoxSCLinear.toggled.connect(self.updateSC)
-        self.dialogSCAdvanced.checkBoxSCRenormalize.toggled.connect(self.updateSC)
+        self.dialogSCAdvanced.checkBoxSCPrefitReference.toggled.connect(self.updateSC)
+        self.dialogSCAdvanced.checkBoxSCPenalize.toggled.connect(self.updateSC)
+        self.dialogSCAdvanced.lineEditSCPenalizeLambda.setRange(1e-3, 1e3)
+        self.dialogSCAdvanced.lineEditSCPenalizeLambda.setFormat("%g")
+        self.dialogSCAdvanced.lineEditSCPenalizeLambda.editingFinished.connect(self.updateSC)
         self.dialogSCAdvanced.spinBoxSCPCA.valueChanged.connect(self.updateSC)
         self.dialogSCAdvanced.radioButtonSCPCAFixed.toggled.connect(self.toggleSCPCA)
         self.dialogSCAdvanced.radioButtonSCPCADynamic.toggled.connect(self.toggleSCPCA)
@@ -125,7 +145,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.dialogSCAdvanced.lineEditSCMinImprov.setRange(0, 99)
         self.dialogSCAdvanced.lineEditSCMinImprov.setFormat("%g")
         self.dialogSCAdvanced.lineEditSCMinImprov.editingFinished.connect(self.updateSC)
-
 
         self.plot_AC.updated.connect(self.updateSGF)
         self.plot_SGF.clicked.connect(self.plot_SGF.popOut)
@@ -178,6 +197,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.worker.fileLoaded.connect(self.updateFile)
         self.worker.loadFailed.connect(self.showLoadErrorMessage)
         self.startBatch.connect(self.worker.bigBatch)
+        self.startCreateReference.connect(self.worker.createReference)
         self.worker.batchDone.connect(self.batchDone)
         self.workerThread.start()
 
@@ -200,6 +220,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.lineEditMaxwn.setFormat("%.2f")
         self.lineEditBCThresh.setRange(1e-6, 1e6)
 
+        self.lineEditSCRefPercentile.setFormat("%g")
+        self.lineEditSCRefPercentile.setRange(0., 100.)
         self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
         self.dialogSCAdvanced.lineEditSCamax.setFormat("%.4g")
         self.dialogSCAdvanced.lineEditSCdmin.setFormat("%.4g")
@@ -221,7 +243,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         if savePath is not None:
             if paramFile is None:
-                self.errorMsg.showMessage("Running from the command line without passing a parameter file does nothing.")
+                self.errorMsg.showMessage("Running from the command line "+
+                                          "without passing a parameter file does nothing.")
             savePath = os.path.normpath(savePath)
             self.runBatch(foldername=savePath)
 
@@ -234,6 +257,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.abcWorkerThread.wait()
         self.deleteLater()
         self.dialogSCAdvanced.close()
+        self.dialogCreateReference.close()
 #        qApp.quit()
 
     def updateWavenumberRange(self):
@@ -305,16 +329,13 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     # AC, Atmospheric correction
     def loadACReference(self):
         startdir = resource_filename('octavvs', "reference_spectra")
-#        startdir = os.path.realpath(os.path.join(
-#                os.getcwd(), os.path.dirname(__file__), 'miccs', 'reference'))
-        ref, _ = QFileDialog.getOpenFileName(self, "Load atmospheric reference spectrum",
-                                             directory=self.settings.value('atmRefDir', startdir),
-                                             filter="Matrix file (*.mat)",
-                                             options=MyMainWindow.fileOptions)
+        ref = self.getLoadFileName(
+            "Load atmospheric reference spectrum",
+            filter="Matrix file (*.mat)",
+            settingname='atmRefDir', settingdefault=startdir)
         if not ref:
             return
         self.lineEditACReference.setText(ref)
-        self.settings.setValue('atmRefDir', dirname(ref))
         self.updateAC()
 
     def updateAC(self):
@@ -357,19 +378,19 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     @pyqtSlot(str)
     def acFailed(self, err):
         if err != '':
-            self.errorMsg.showMessage('AC failed: ' + err)
+            self.errorMsg.showMessage('AC failed:<pre>\n' + err + '</pre>')
         self.acDone(None, None, None, None)
 
 
     # SC, Scattering correction
     def loadOtherReference(self):
-        ref, _ = QFileDialog.getOpenFileName(self, "Open reference spectrum",
-                                             filter="Matrix file (*.mat)",
-                                             directory=self.settings.value('scRefDir', None),
-                                             options=MyMainWindow.fileOptions)
+        startdir = resource_filename('octavvs', "reference_spectra")
+        ref = self.getLoadFileName(
+            "Load reference spectrum for CRMieSC",
+            filter="Matrix file (*.mat)",
+            settingname='scRefDir', settingdefault=startdir)
         self.lineEditReferenceName.setText(ref)
-        self.settings.setValue('scRefDir', dirname(ref))
-        self.comboBoxReference.setCurrentIndex(3)
+        self.comboBoxReference.setCurrentText('Other')
 
     def scClustersToggle(self):
         self.spinBoxNclusScat.setEnabled(self.checkBoxClusters.isChecked())
@@ -384,6 +405,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         # Make shadowed options irrelevant to the comparison
         if p['scRef'] != 'Other':
             p['scOtherRef'] = ''
+        if p['scRef'] != 'Percentile':
+            p['scRefPercentile'] = 0
         if not p['scClustering']:
             p['scClusters'] = 0
             p['scStable'] = False
@@ -423,6 +446,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.updateSC()
 
     def updateSC(self):
+        isperc = self.comboBoxReference.currentIndex() < 2
+        self.stackedSC.setCurrentIndex(0 if isperc else 1)
         if self.rmiescRunning:
             return
         changed = self.scSettingsChanged()
@@ -436,10 +461,12 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.fileLoader.setEnabled(onoff)
         self.pushButtonRun.setEnabled(onoff)
         self.pushButtonSCRefresh.setEnabled(onoff)
+        self.dialogCreateReference.pushButtonCreateReference.setEnabled(onoff)
         if newstate:
             self.progressBarSC.setValue(0)
         self.pushButtonSCStop.setEnabled(newstate == 1)
         self.pushButtonRunStop.setEnabled(newstate == 2)
+        self.dialogCreateReference.pushButtonStop.setEnabled(newstate == 3)
         self.rmiescRunning = newstate
 
     def refreshSC(self):
@@ -460,6 +487,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.worker.halt = True
         self.pushButtonSCStop.setEnabled(False)
         self.pushButtonRunStop.setEnabled(False)
+        self.dialogCreateReference.pushButtonStop.setEnabled(False)
 
     @pyqtSlot()
     def scStopped(self):
@@ -472,7 +500,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     @pyqtSlot(str, str)
     def scFailed(self, err, trace):
-        self.errorMsg.showMessage('RMieSC failed:\n' + err + "\n\n" + trace)
+        self.errorMsg.showMessage('RMieSC failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
         self.scStopped()
 
     @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
@@ -608,7 +636,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def bcFailed(self, err):
         if err != '':
             print(err)
-            self.errorMsg.showMessage('BC failed: <pre>' + err + '</pre>')
+            self.errorMsg.showMessage('BC failed:<pre>\n' + err + '</pre>')
         self.bcDone(None, None, None)
 
     def bcMethod(self):
@@ -688,18 +716,22 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         p.scDo = self.checkBoxSC.isChecked()
         p.scRef = self.comboBoxReference.currentText()
         p.scOtherRef = self.lineEditReferenceName.text()
+        p.scRefPercentile = self.lineEditSCRefPercentile.value()
         p.scIters = self.spinBoxNIteration.value()
         p.scClustering = self.checkBoxClusters.isChecked()
         p.scClusters = self.spinBoxNclusScat.value()
         p.scStable = self.checkBoxStabilize.isChecked()
-        p.scAlgorithm = self.dialogSCAdvanced.comboBoxSCAlgo.currentText()
+        p.setAlgorithm(self.dialogSCAdvanced.comboBoxSCAlgo.currentText())
         p.scResolution = self.dialogSCAdvanced.spinBoxSCResolution.value()
         p.scAmin = self.dialogSCAdvanced.lineEditSCamin.value()
         p.scAmax = self.dialogSCAdvanced.lineEditSCamax.value()
         p.scDmin = self.dialogSCAdvanced.lineEditSCdmin.value()
         p.scDmax = self.dialogSCAdvanced.lineEditSCdmax.value()
+        p.scConstant = self.dialogSCAdvanced.checkBoxSCConstant.isChecked()
         p.scLinear = self.dialogSCAdvanced.checkBoxSCLinear.isChecked()
-        p.scRenormalize = self.dialogSCAdvanced.checkBoxSCRenormalize.isChecked()
+        p.scPrefitReference = self.dialogSCAdvanced.checkBoxSCPrefitReference.isChecked()
+        p.scPenalize = self.dialogSCAdvanced.checkBoxSCPenalize.isChecked()
+        p.scPenalizeLambda = self.dialogSCAdvanced.lineEditSCPenalizeLambda.value()
         p.scPCADynamic = self.dialogSCAdvanced.radioButtonSCPCADynamic.isChecked()
         p.scPCA = self.dialogSCAdvanced.spinBoxSCPCA.value()
         p.scPCAMax = self.dialogSCAdvanced.spinBoxSCPCAMax.value()
@@ -730,7 +762,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 "Save preprocessing settings",
                 filter="Setting files (*.pjs);;All files (*)",
                 settingname='settingsDir',
-                suffix='pjs')
+                savesuffix='pjs')
         if filename:
             try:
                 self.getParameters().save(filename)
@@ -753,18 +785,27 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxSC.setChecked(p.scDo)
         self.comboBoxReference.setCurrentText(p.scRef)
         self.lineEditReferenceName.setText(p.scOtherRef)
+        self.lineEditSCRefPercentile.setValue(p.scRefPercentile)
         self.spinBoxNIteration.setValue(p.scIters)
         self.spinBoxNclusScat.setValue(p.scClusters)
         self.checkBoxClusters.setChecked(p.scClustering)
         self.checkBoxStabilize.setChecked(p.scStable)
-        self.dialogSCAdvanced.comboBoxSCAlgo.setCurrentText(p.scAlgorithm)
+
+        # Find the right algorithm - the name just needs to be in there somewhere
+        cb = self.dialogSCAdvanced.comboBoxSCAlgo
+        algnum = next((i for i in range(cb.count()) if
+                       p.scAlgorithm in cb.itemText(i).lower()), None)
+        if algnum is not None:
+            cb.setCurrentIndex(algnum)
+
         self.dialogSCAdvanced.spinBoxSCResolution.setValue(p.scResolution)
         self.dialogSCAdvanced.lineEditSCamin.setValue(p.scAmin)
         self.dialogSCAdvanced.lineEditSCamax.setValue(p.scAmax)
         self.dialogSCAdvanced.lineEditSCdmin.setValue(p.scDmin)
         self.dialogSCAdvanced.lineEditSCdmax.setValue(p.scDmax)
+        self.dialogSCAdvanced.checkBoxSCConstant.setChecked(p.scConstant)
         self.dialogSCAdvanced.checkBoxSCLinear.setChecked(p.scLinear)
-        self.dialogSCAdvanced.checkBoxSCRenormalize.setChecked(p.scRenormalize)
+        self.dialogSCAdvanced.checkBoxSCPrefitReference.setChecked(p.scPrefitReference)
         self.dialogSCAdvanced.radioButtonSCPCADynamic.setChecked(p.scPCADynamic)
         self.dialogSCAdvanced.spinBoxSCPCA.setValue(p.scPCA)
         self.dialogSCAdvanced.spinBoxSCPCAMax.setValue(p.scPCAMax)
@@ -856,26 +897,54 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             preservepath = True
         elif len(all_paths) > 1:
             yn = QMessageBox.question(self, 'Multiple directories',
-                      'Input files are in multiple directories. Should this directory structure '+
-                      'be replicated in the output directory?')
+                      'Input files are in multiple directories. Should this '+
+                      'directory structure be replicated in the output directory?')
             preservepath = yn == QMessageBox.Yes
 
         self.toggleRunning(2)
         self.scNewSettings = self.getSCSettings()
         self.startBatch.emit(self.data, params, foldername, preservepath)
 
+    def createReference(self, checked=False):
+        """
+        Run the selected preprocessing steps (sans SC and SR) on all data, then
+        save the average spectrum as a reference for scattering correction.
+        The 'checked' parameter is just a placeholder to match QPushButton.clicked().
+        """
+        assert not self.rmiescRunning
+        if len(self.data.filenames) < 1:
+            self.errorMsg.showMessage('Load some data first')
+            return
+        params = self.getParameters()
+
+        startdir = resource_filename('octavvs', "reference_spectra")
+        filename = self.getLoadFileName(
+            "Save reference spectrum",
+            savesuffix='mat',
+            filter="Matrix file (*.mat)",
+            settingname='scRefDir', settingdefault=startdir)
+        if not filename:
+            return
+
+        self.toggleRunning(3)
+        self.scNewSettings = self.getSCSettings()
+        self.startCreateReference.emit(self.data, params, filename)
+        self.lineEditReferenceName.setText(filename)
+
     @pyqtSlot(int, int)
     def batchProgress(self, a, b):
         self.progressBarRun.setValue(a)
         self.progressBarRun.setMaximum(b)
 
-    @pyqtSlot(str)
-    def batchDone(self, err):
+    @pyqtSlot(bool)
+    def batchDone(self, success):
         self.worker.halt = False
         self.progressBarSC.setValue(0)
         self.progressBarRun.setValue(0)
-        if err != '':
-            self.errorMsg.showMessage(err)
+        # if err != '':
+        #     self.errorMsg.showMessage(err)
+        if success and self.rmiescRunning == 3:
+            self.comboBoxReference.setCurrentText('Other')
         self.toggleRunning(0)
 
 

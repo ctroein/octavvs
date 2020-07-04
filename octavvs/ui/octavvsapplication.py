@@ -69,9 +69,11 @@ class OctavvsMainWindow(QMainWindow):
         return q
 
     def getLoadSaveFileName(self, title, filter=None, settingname=None,
-                            savesuffix=None, multiple=False):
+                            savesuffix=None, multiple=False,
+                            settingdefault=None):
         "Show a file dialog and select one or more files"
-        setting = self.settings.value(settingname, None) if settingname is not None else None
+        setting = self.settings.value(settingname, settingdefault
+                                      ) if settingname is not None else None
         directory = setting if type(setting) is str else None
         dialog = QFileDialog(parent=self, caption=title,
                              directory=directory, filter=filter)
@@ -92,27 +94,23 @@ class OctavvsMainWindow(QMainWindow):
         self.settings.setValue(settingname, os.path.dirname(files[0]))
         return files if multiple else files[0]
 
-    def getSaveFileName(self, title, suffix='', filter=None, settingname=None):
+    def getSaveFileName(self, title, suffix='', **kwargs):
         "Show a file dialog and select an output file"
-        return self.getLoadSaveFileName(title=title, filter=filter,
-                                        settingname=settingname, savesuffix=suffix)
+        return self.getLoadSaveFileName(title=title, savesuffix=suffix, **kwargs)
 
-    def getLoadFileName(self, title, filter=None, settingname=None):
+    def getLoadFileName(self, title, **kwargs):
         "Show a file dialog and select an input file"
-        return self.getLoadSaveFileName(title=title, filter=filter,
-                                        settingname=settingname)
+        return self.getLoadSaveFileName(title=title, **kwargs)
 
-    def getLoadFileNames(self, title, filter=None, settingname=None):
+    def getLoadFileNames(self, title, **kwargs):
         "Show a file dialog and select an input file"
-        return self.getLoadSaveFileName(title=title, filter=filter,
-                                        settingname=settingname, multiple=True)
+        return self.getLoadSaveFileName(title=title, multiple=True, **kwargs)
 
-    def getImageFileName(self, title, settingname=None):
+    def getImageFileName(self, title, **kwargs):
         "Show a file dialog and select a single image file"
-        return self.getLoadSaveFileName(
-                title=title,
+        return self.getLoadSaveFileName(title=title,
                 filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
-                settingname=settingname)
+                **kwargs)
 
     def getDirectoryName(self, title, settingname=None, savesetting=True):
         "Show a file dialog and select a directory"
