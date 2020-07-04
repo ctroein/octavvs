@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>510</width>
-    <height>423</height>
+    <width>522</width>
+    <height>439</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,14 +21,8 @@
     <layout class="QGridLayout" name="gridLayout">
      <item row="5" column="0">
       <widget class="QLabel" name="label_8">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of PCA components to retain when reducing the extinction spectra. Dynamic control computes and keeps as many components as needed to explain a given fraction of the variance; this is quite sensitive and should probably be about 99.9 to 99.99. The linear term is unlikely to be useful but have been included for comparison.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of PCA components to retain when reducing the extinction spectra. Dynamic control computes and keeps as many components as needed to explain a given fraction of the variance; this is quite sensitive and should probably be about 99.9 to 99.99.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>PCA components</string>
@@ -37,14 +31,8 @@
      </item>
      <item row="3" column="0">
       <widget class="QLabel" name="label_3">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="toolTip">
-        <string>Range of the index of diffraction</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Range of the index of diffraction of the scattering particles&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Refractive index range</string>
@@ -53,14 +41,8 @@
      </item>
      <item row="4" column="0">
       <widget class="QLabel" name="label_5">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="toolTip">
-        <string>Range of particle sizes</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Range of sizes for the scattering particles&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Sphere size range</string>
@@ -69,12 +51,6 @@
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_2">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="toolTip">
         <string>Number of values for each of the 2 or 3 parameters used in the model to generate extinction spectra.</string>
        </property>
@@ -118,115 +94,14 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label">
        <property name="toolTip">
-        <string>Use the original 3-parameter model of Bassan et al. or the 2-parameter model of Konevskikh et al. when generating extinction spectra.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choice of model for computing how light is scattered.&lt;/p&gt;&lt;p&gt;Bassan: The original (slow and approximate) 3-parameter model of Bassan et al., based on the van de Hulst approximation for spherical scatterers.&lt;/p&gt;&lt;p&gt;Konevskikh: The faster 2-parameter model of Konevskikh et al., based on more accurate equations for scattering in the presence of absorption. These equations are also used by Solheim et al.&lt;/p&gt;&lt;p&gt;Rasskazov: Cylindrical, yet to be implemented&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Extinction matrix model</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="2">
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <layout class="QGridLayout" name="gridLayout_3" columnstretch="1,1,0">
-         <item row="2" column="1">
-          <widget class="LineDouble" name="lineEditSCPCAVariance">
-           <property name="text">
-            <string>99.96</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QLabel" name="label_10">
-           <property name="text">
-            <string>%</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QLabel" name="label_9">
-           <property name="text">
-            <string>max.</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QRadioButton" name="radioButtonSCPCAFixed">
-           <property name="text">
-            <string>Fixed</string>
-           </property>
-           <property name="checked">
-            <bool>false</bool>
-           </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroup</string>
-           </attribute>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QSpinBox" name="spinBoxSCPCAMax">
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>40</number>
-           </property>
-           <property name="value">
-            <number>14</number>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QRadioButton" name="radioButtonSCPCADynamic">
-           <property name="text">
-            <string>Dynamic</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroup</string>
-           </attribute>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_11">
-           <property name="text">
-            <string>Explained variance</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QSpinBox" name="spinBoxSCPCA">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>20</number>
-           </property>
-           <property name="value">
-            <number>7</number>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QCheckBox" name="checkBoxSCLinear">
-           <property name="toolTip">
-            <string>Include line with constant slope in the linear model, as was the case in the original model by Bassan et al.</string>
-           </property>
-           <property name="text">
-            <string>Linear term</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </item>
-     <item row="7" column="2">
+     <item row="8" column="2">
       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,0,1,0">
        <item>
         <widget class="QCheckBox" name="checkBoxSCAutoIters">
@@ -301,16 +176,15 @@
          <string>Konevskikh</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Rasskazov (cylindrical)</string>
+        </property>
+       </item>
       </widget>
      </item>
-     <item row="7" column="0">
+     <item row="8" column="0">
       <widget class="QLabel" name="label_12">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;With automatic iteration control, spectra are considered to have converged when the residual repeatedly does not improve by more than the stated percentage. Even without this feature, the lowest encountered residual determines what iteration of a spectrum is returned.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
@@ -343,25 +217,150 @@
        </item>
       </layout>
      </item>
-     <item row="6" column="0">
+     <item row="7" column="0">
       <widget class="QLabel" name="label_16">
        <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;See the article for a discussion on renormalization of the reference spectrum in the Solheim et al. algorithm.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Constant/linear term: Add a constant and/or linear (proportional to wavenumber) term to the EMSC model. The linear term is unlikely to be useful but has been included for comparison with earlier software.&lt;/p&gt;&lt;p&gt;Penalize non-peak regions: Experimental penalty on nonzero values in parts of the spectrum where the reference is below 1% of its maximum.&lt;/p&gt;&lt;p&gt;Experimental option: varies...&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Correction options</string>
        </property>
       </widget>
      </item>
-     <item row="6" column="2">
-      <layout class="QHBoxLayout" name="horizontalLayout_5">
-       <item>
-        <widget class="QCheckBox" name="checkBoxSCRenormalize">
+     <item row="7" column="2">
+      <layout class="QGridLayout" name="gridLayout_2" columnstretch="3,0,1">
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="checkBoxSCPenalize">
          <property name="text">
-          <string>Renormalize reference</string>
+          <string>Penalize non-peak regions</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;λ&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="LineDouble" name="lineEditSCPenalizeLambda">
+         <property name="text">
+          <string>1</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="checkBoxSCLinear">
+         <property name="toolTip">
+          <string>Include line with constant slope in the linear model, as was the case in the original model by Bassan et al.</string>
+         </property>
+         <property name="text">
+          <string>Linear term</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="checkBoxSCConstant">
+         <property name="text">
+          <string>Constant term</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="3">
+        <widget class="QCheckBox" name="checkBoxSCPrefitReference">
+         <property name="text">
+          <string>Include cluster-reference in model</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="5" column="2">
+      <layout class="QGridLayout" name="gridLayout_3" columnstretch="1,1,0">
+       <item row="2" column="1">
+        <widget class="LineDouble" name="lineEditSCPCAVariance">
+         <property name="text">
+          <string>99.96</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>%</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>max.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QRadioButton" name="radioButtonSCPCAFixed">
+         <property name="text">
+          <string>Fixed</string>
          </property>
          <property name="checked">
           <bool>false</bool>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">buttonGroup</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QSpinBox" name="spinBoxSCPCAMax">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>40</number>
+         </property>
+         <property name="value">
+          <number>14</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QRadioButton" name="radioButtonSCPCADynamic">
+         <property name="text">
+          <string>Dynamic</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">buttonGroup</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>Explained variance</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="spinBoxSCPCA">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>20</number>
+         </property>
+         <property name="value">
+          <number>7</number>
          </property>
         </widget>
        </item>
@@ -404,7 +403,6 @@
   <tabstop>radioButtonSCPCADynamic</tabstop>
   <tabstop>spinBoxSCPCAMax</tabstop>
   <tabstop>lineEditSCPCAVariance</tabstop>
-  <tabstop>checkBoxSCLinear</tabstop>
   <tabstop>checkBoxSCAutoIters</tabstop>
   <tabstop>lineEditSCMinImprov</tabstop>
  </tabstops>

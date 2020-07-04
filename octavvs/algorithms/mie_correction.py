@@ -17,6 +17,14 @@ from scipy.interpolate import PchipInterpolator
 from scipy.signal import hilbert
 #from scipy.io import loadmat, savemat
 
+from pymatreader import read_mat
+from pkg_resources import resource_filename
+from scipy.interpolate import RectBivariateSpline
+
+import matplotlib
+matplotlib.use('QT5Agg')
+import matplotlib.pyplot as plt
+
 from .util import pca_nipals, find_wn_ranges
 
 def kkre(wn, ref):
@@ -67,9 +75,11 @@ def hilbert_n(wn, ref, zeropad=500):
             hilbert_n.nim[hilbert_n.npad:hilbert_n.npad+len(wn)] = ref[::-1]
     else:
         if hilbert_n.increasing:
-            hilbert_n.nim[hilbert_n.npad:hilbert_n.npad+len(wn)] = PchipInterpolator(wn, ref)(hilbert_n.lin)
+            hilbert_n.nim[hilbert_n.npad:hilbert_n.npad+len(wn)] = \
+                PchipInterpolator(wn, ref)(hilbert_n.lin)
         else:
-            hilbert_n.nim[hilbert_n.npad:hilbert_n.npad+len(wn)] = PchipInterpolator(wn[::-1], ref[::-1])(hilbert_n.lin)
+            hilbert_n.nim[hilbert_n.npad:hilbert_n.npad+len(wn)] = \
+                PchipInterpolator(wn[::-1], ref[::-1])(hilbert_n.lin)
     nreal = -np.imag(hilbert(hilbert_n.nim))
     if hilbert_n.npad:
         nreal = nreal[hilbert_n.npad:-hilbert_n.npad]
@@ -77,57 +87,55 @@ def hilbert_n(wn, ref, zeropad=500):
         return nreal if hilbert_n.increasing else nreal[::-1]
     return PchipInterpolator(hilbert_n.lin, nreal)(wn)
 
-def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcomponent=False,
-                  variancelimit = None):
+def compute_model(wn, ref, model='konevskikh', n_components=7,
+                  a=np.linspace(1.1, 1.5, 10), d=None,
+                  bvals=10, constantcomponent=True,
+                  linearcomponent=False, variancelimit=None):
     """
-    Compute the extinction matrix for resonant Mie scattering, then PCA transform it.
+    Compute the extinction matrix for resonant Mie scattering, then PCA transform
+    it. The model components will all be orthogonal to the reference
     Parameters:
     wn: array of wavenumbers
     ref: reference spectrum
     n_components: number of PCA components to use
     a: array of values for the parameter a (index of refraction)
-    d: array of values for the parameter d*4pi (sphere size)
+    d: array of values for the parameter d (sphere size, units µm)
     bvals: number of values for parameter b (mixing of a and real part of n from absorption ref)
-    konevskikh: if True, use the faster method by Konevskikh et al.
-    variancelimit: if a number (around 0.9996), use as many PCA components as needed to
-       explain this fraction of the variance of the extinction matrix
+    model: 'bassan': original 3-parameter model by Bassan et al.
+        'konevskikh': faster and more accurate 2-param model by Konevskikh et al.
+        'rasskazov': cylindrical model by Rasskazov et al.
+    constantcomponent: include a constant component in the EMSC model
+    linearcomponent: include a component proportional to wn
+    variancelimit: if not None, use as many PCA components as needed to
+       explain this fraction of the variance of the extinction matrix (around 0.9996)
     """
 
-    # Compute the scaled real part of the refractive index by Kramers-Kronig transform:
-    # We skip a factor 2pi because it's normalized away anyway.
-#    n_im = ref / wn
-#    nkk = -np.imag(hilbert(n_im)) if wn[0] < wn[-1] else -np.imag(hilbert(n_im[::-1]))[::-1]
-
-    # I'm a bit confused about the division/multiplication by wn.
-    # Bassan's matlab code uses wn*ref in kkre
-        # bassan2010 says k (=n_im) is proportional to ref
-        # but various sources say k is ref/wn * const
-    # My kkre reproduces's Bassan with the same wn*ref
-    # My hilbert_n gives the same output with Hilbert transform of ref
-    # Causin's python code Hilbert transforms ref for Bassan's algorith but ref/wn for Konevskikh's!
-    # Solheim's matlab code Hilbert transforms ref/wn
-
-    if konevskikh:
-#        nim = ref / ref.max() / (wn * 100)
-        nim = ref / (wn * 100)
+    if model == 'konevskikh':
+        nim = ref / ref.max() / (wn * 100)
+        # nim = ref / (wn * 100)
         nre = hilbert_n(wn, nim, 300)
         nmin = nre.min()
-#        print('refmax', ref.max(), 'nrange', nmin, nre.max())
+        # print('refmax', ref.max(), 'nre', nmin, nre.max(), 'nim', nim.min(), nim.max())
         if nmin < -1:
             nre = nre / -nmin
             nim = nim / -nmin
+        # d in m times the factor 4*pi
+        dd = d * (4e-6 * np.pi)
         # My revised distribution of alpha_0 and gamma
-#        alpha_0 = 1e-2 * np.linspace(d[0] * (a[0]-1), d[-1] * (a[-1]-1), len(a))
-#        gamma = .25 * 2 * np.log(10) / np.pi * np.linspace(1 / alpha_0[0], 1 / alpha_0[-1], len(alpha_0))
+        alpha_0 = np.linspace(dd[0] * (a[0]-1), dd[-1] * (a[-1]-1), len(a))
+        gamma = .25 * 2 * np.log(10) / np.pi * np.linspace(1 / alpha_0[0], 1 / alpha_0[-1], len(alpha_0))
         # Solheim's distributions of alpha_0 and gamma
-        alpha_0 = 1e-2 * d * (a - 1)
-        gamma = .25  * 2 * np.log(10) / np.pi / alpha_0
+        # alpha_0 = dd * (a - 1)
+        # gamma = .25  * 2 * np.log(10) / np.pi / alpha_0
+
         Q = np.empty((len(alpha_0) * len(gamma), len(wn)))  # Initialize the extinction matrix
 
 #        print('alpha_0', alpha_0)
 #        print('gamma', gamma)
         # Build the extinction matrix
         n_row = 0
+        # maxrho = 0
+        # maxbeta = 0
         for a0 in alpha_0:
             for g in gamma:
                 rho = a0 * (1. + g * nre) * wn * 100
@@ -136,6 +144,8 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
                 beta = np.arctan2(nim, denom)
                 cosb = np.cos(beta)
                 cosbrho = cosb / rho
+                # maxbeta = max(maxbeta, beta.max())
+                # maxrho = max(maxrho, rho.max())
 
                 # Following Konevskikh et al 2016
                 Q[n_row] = 2. - 4. * cosbrho * (np.exp(-rho * tanbeta) *
@@ -143,29 +153,67 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
                      cosbrho * np.cos(2 * beta))
 
                 n_row += 1
+        # print('maxbeta', maxbeta, 'maxrho', maxrho)
 #        savemat('everything-p.mat', locals())
-    else:
-        nkk = kkre(wn, ref/wn) # should divide by wn here (or not multiply by wn in the function)
-#        nkk = hilbert_n(wn, ref / wn, 300) # should divide by wn
+    elif model == 'bassan':
+        # I'm a bit confused about the division/multiplication by wn.
+        # Bassan's matlab code uses wn*ref in kkre
+            # bassan2010 says k (=n_im) is proportional to ref
+            # but various sources say k is ref/wn * const
+        # My kkre reproduces's Bassan with the same wn*ref
+        # My hilbert_n gives the same output with Hilbert transform of ref
+        # Causin's python code Hilbert transforms ref for Bassan's algorith but ref/wn for Konevskikh's!
+        # Solheim's matlab code Hilbert transforms ref/wn
+
+        nkk = kkre(wn, ref / wn)
+#        nkk = hilbert_n(wn, ref / wn, 300)
         nkk = nkk / abs(nkk.min())
 
         # Build the extinction matrix
         Q = np.empty((len(a) * bvals * len(d), len(wn)))  # Initialize the extinction matrix
         n_row = 0
+        # d in cm times the factor 4*pi
+        dd = d * (4e-4 * np.pi)
         for i in range(len(a)):
             b = np.linspace(0.0, a[i] - 1.01, bvals)  # Range of amplification factors of nkk
             for j in range(len(b)):
                 n = a[i] + b[j] * nkk  # Compute the real refractive index
-                for k in range(len(d)):
-                    rho = d[k] * (n - 1.) * wn
+                for k in range(len(dd)):
+                    rho = dd[k] * (n - 1.) * wn
                     #  Compute the extinction coefficients for each combination of a, b and d:
                     Q[n_row] = 2. - 4. / rho * np.sin(rho) + \
                                4. / (rho * rho) * (1. - np.cos(rho))
                     n_row += 1
+    elif model == 'rasskazov':
+        nim = ref / ref.max() / (wn * 100)
+        nre = hilbert_n(wn, nim, 300)
+        nmin = nre.min()
+        if nmin < -1:
+            nre = nre / -nmin
+            nim = nim / -nmin
 
-    n_nonpca = 3 if linearcomponent else 2
+        if not hasattr(compute_model, 'qtable'):
+            qtable = read_mat(resource_filename(
+                'octavvs.reference_spectra', "Q_table.mat"))
+            print('shape', qtable['n_table'].shape)
+            compute_model.qtable = RectBivariateSpline(
+                qtable['x_table'], qtable['n_table'],
+                qtable['Qsca_table'])
 
-#    savemat('everything_python.mat', {'Q':Q})
+        dd = d * (1e-4 * np.pi)
+        Q = np.empty((len(a) * bvals * len(dd), len(wn)))
+        n_row = 0
+        for i in range(len(a)):
+            b = np.linspace(0.0, a[i] - 1.01, bvals)
+            for bb in b:
+                n = a[i] + bb * nre
+                for r in dd:
+                    x = r * wn
+                    Q[n_row] = compute_model.qtable(x, n, grid=False)
+    else:
+        raise ValueError("model must be one of 'bassan', 'konevskihk' or 'rasskazov'")
+
+    n_nonpca = 1 + bool(constantcomponent) + bool(linearcomponent)
 
     # Orthogonalization of the model to improve numeric stability
     refn = ref / np.sqrt(ref@ref)
@@ -185,9 +233,12 @@ def compute_model(wn, ref, n_components, a, d, bvals, konevskikh=True, linearcom
 #    model[n_nonpca:, :] = pca.loadings[:,:n_components].T
 
     model[0,:] = ref
-    model[1,:] = 1
+    # These model components will not be orthogonal to the PCA components
+    if constantcomponent:
+        model[1,:] = 1 - refn.sum() * refn
     if linearcomponent:
-        model[2,:] = np.linspace(0., 1., len(wn))
+        lin = np.linspace(0., 1., len(wn))
+        model[n_nonpca-1,:] = lin - (lin @ refn[:,None]) * refn
 #        for i in range(1, n_nonpca):
 #            model[i,:] = model[i,:] - refn * (model[i,:] @ refn)
 #        for i in range(1, n_nonpca):
@@ -223,12 +274,104 @@ def stable_rmiesc_clusters(iters, clusters):
 #    cc[:iters] = clusters
     return cc
 
-def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
-           pcavariancelimit=None,
-           verbose=False, a=np.linspace(1.1, 1.5, 10), d=np.linspace(2.0, 8.0, 10),
-           bvals=10, progressCallback = None, progressPlotCallback=None,
-           konevskikh=False, linearcomponent=True, weighted=False, renormalize=False,
-           autoiterations=False, targetrelresiduals=0.95):
+def solve_model(qmodel, app, individual_references=None,
+                weights=None, scaledzeroweights=None,
+                prefit_reference=False):
+    """
+    Solve the EMSC least squares problem for one or more spectra.
+    Parameters:
+    qmodel: EMSC model; (component, wn)
+    app: Apparent spectra; (N, wn)
+    individual_references: corrected spectra from previous iteration, only
+    needed if different from the current reference; (N, wn)
+    weights: Array of weights for the fitting; (wn) or None
+    scaledzeroweights: penalty on nonzero solutions, to be applied in regions
+    where the reference is near-zero. Array of sqrt(1+lamba**2) where lambda
+    may be a constant >0 in near-zero regions and 0 elsewhere.
+    prefit_reference: if True, fit reference by projection before fitting
+    the linear model; this vastly improves stability
+    """
+    if weights is not None:
+        qmodel = qmodel * weights
+        app = app * weights
+    elif scaledzeroweights is not None:
+        qmodel[1:, :] = qmodel[1:, :] * scaledzeroweights
+        # if not prefit_reference:
+        #     smod[0, :] = qmodel[0, :]
+        app = app * scaledzeroweights
+
+    if individual_references is not None:
+        w = (app * individual_references).sum(1) / (
+            individual_references * individual_references).sum(1)
+        projs = w[:,None] * individual_references
+        app = app - projs
+
+        if prefit_reference:
+            cons = np.linalg.lstsq(qmodel[1:, :].T, app.T, rcond=None)[0]
+            corrected = app - cons.T @ qmodel[1:, :]
+        else:
+            cons = np.linalg.lstsq(qmodel.T, app.T, rcond=None)[0]
+            corrected = app - cons[1:, :].T @ qmodel[1:, :]
+
+        corrected = corrected + projs
+        residuals = ((corrected - individual_references)**2).sum(1)
+        # print('resids', residuals.mean(), w.mean(), cons[0].mean(), cons[1].mean())
+    else:
+        cons = np.linalg.lstsq(qmodel.T, app.T, rcond=None)[0]
+        corrected = app - cons[1:, :].T @ qmodel[1:, :]
+        residuals = ((corrected - qmodel[0, :])**2).sum(1)
+        # print('resids', residuals, cons[0], cons[1])
+
+    return cons, corrected, residuals
+
+
+def compute_and_solve_model(wn, app, ref, modelparams, solvingparams,
+                            individual_references=None, plot=None):
+    """
+    Returns:
+        corrected: spectra
+        residuals: .
+    """
+    onedim = np.ndim(app) == 1
+    if onedim:
+        app = app[None, :]
+
+    qmodel = compute_model(wn, ref, **modelparams)
+    cons, corrected, residuals = solve_model(
+        qmodel, app, individual_references=individual_references,
+        **solvingparams)
+
+    # if plot:
+    #     fig = plt.figure('model components', tight_layout=dict(pad=.6))
+    #     ax = fig.gca()
+    #     cs = cons[:, 0] if cons.ndim > 1 else cons
+    #     ax.plot(wn, qmodel.T * cs,
+    #             color=plt.cm.jet(plot[0]/plot[1]), linewidth=1)
+    #     fig.canvas.draw_idle()
+
+    #     w = (app * ref).sum(app.ndim - 1) / (ref * ref).sum()
+    #     projs = (w[:,None] if w.ndim else w) * ref
+    #     fig = plt.figure('spectrum sans ref', tight_layout=dict(pad=.6))
+    #     ax = fig.gca()
+    #     ax.plot(wn, (app-projs).T, color=plt.cm.jet(plot[0]/plot[1]), linewidth=1)
+    #     ax.plot(wn, projs.T, linewidth=1, c='k')
+    #     fig.canvas.draw_idle()
+
+    #     fig = plt.figure('component weights', tight_layout=dict(pad=.6))
+    #     ax = fig.gca()
+    #     # print('cons', cs)
+    #     ax.plot(cs, color=plt.cm.jet(plot[0]/plot[1]), linewidth=1)
+    #     fig.canvas.draw_idle()
+
+    if onedim:
+        return corrected[0], residuals[0]
+    return corrected, residuals
+
+def rmiesc(wn, app, ref, iterations=10, clusters=None, modelparams={},
+           weighted=False, zeroregionpenalty=None,
+           prefit_reference=True, autoiterations=False,
+           targetrelresiduals=0.95, verbose=False,
+           progressCallback=None, progressPlotCallback=None):
     """
     Correct scattered spectra using Bassan's algorithm. This implementation does no orthogonalization
     of the extinction matrix or PCA components relative to the reference, nor is the reference smoothed
@@ -237,44 +380,38 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
     wn: sorted array of wavenumbers (high-to-low or low-to-high)
     app: apparent spectrum, shape (pixels, wavenumbers)
     ref: reference spectrum; array (wavenumbers)
-    n_components: number of principal components to be calculated for the extinction matrix
     iterations: number of iterations of the algorithm
     clusters: if not None, cluster pixels into this many clusters in each iteration and use
         a common reference spectrum for each cluster. May be given as a list with one value per
         iteration, in which case 0 means to reuse clusters from the previous iteration and mix
         new/old references for stable convergence.
         If clusters is negative, use stable_rmiesc_clusters to generate the list.
-    verbose: print progress information
-    a: indexes of refraction to use in model
-    d: sphere sizes to use in model, in micrometers
-    bvals: number of values for the model parameter b
-    progressCallback(int a, int b): callback function called to indicated that the processing
-        is complete to a fraction a/b.
-    progressPlotCallback(array ref, (a, b)): like the above with a (cluster) reference spectrum
-    konevskikh: if True, use the faster method by Konevskikh et al.
-    linearcomponent: if True, include a linear term in the model (used in Bassan's paper only).
-    weighted: if true, downweight the 1800-2800 region when fitting the model.
-    renormalize: if True, renormalize spectra against reference in each generation.
+    modelparams: parameters used in compute_model:
+        n_components: number of principal components to be calculated for the extinction matrix
+        a: indexes of refraction to use in model
+        d: sphere sizes to use in model, in micrometers
+        bvals: number of values for the model parameter b
+        model: model to use for the extinction matrix; see compute_model
+        linearcomponent: if True, include a linear term in the model (used in Bassan's paper only).
+        variancelimit: if a number (around 0.9996), use as many PCA components as needed to
+            explain this fraction of the variance of the extinction matrix
+    weighted: downweight the 1800 to 2800 cm-1 region when fitting
+    zeroregionpenalty: penalize regions where the reference is near-zero
+    prefit_reference: vastly improve stability by fitting reference before scattering
     autoiterations; if True, iterate until residuals stop improving
     targetrelresiduals: if autoiterations, stop when this relative change in residuals is seen
+    verbose: print progress information
+    progressCallback(int a, int b): callback function called to indicate that
+        the processing is complete to a fraction a/b.
+    progressPlotCallback(array ref, (a, b)): like the above with a (cluster) reference spectrum
     Return: corrected apparent spectra (the best encountered if autoiterations, else the final ones)
     """
-
-    # Make a rescaled copy of d and include the factor 4*pi
-    d = d * 4e-4  * np.pi;
 
     # The input can be a single spectrum or a matrix of spectra. If the former, squeeze at the end.
     squeeze = False
     if app.ndim == 1:
         app = app[None,:]
         squeeze = True
-
-    if weighted:
-        weights = np.ones_like(wn)
-        weights[range(*find_wn_ranges(wn, [[1800, 2800]])[0])] = .001 ** .5
-        weights = weights[:, None]
-    else:
-        weights = None
 
     if np.isscalar(clusters):
         if clusters == 0:
@@ -287,6 +424,20 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
     elif clusters is not None:
         if len(clusters) != iterations:
             raise ValueError('len(clusters) must match iterations')
+
+    if weighted:
+        weights = np.ones_like(wn)
+        weights[range(*find_wn_ranges(wn, [[1800, 2800]])[0])] = .001 ** .5
+        # weights = weights[:, None]
+    else:
+        weights = None
+    solvingparams = dict(weights=weights,
+                         prefit_reference=prefit_reference)
+    if zeroregionpenalty:
+        solvingparams['scaledzeroweights'] = np.sqrt(
+            1 + ((ref < ref.max() * .01) * zeroregionpenalty) ** 2)
+    else:
+        solvingparams['scaledzeroweights'] = None
 
     if progressCallback:
         # Compute the number of progress steps
@@ -308,6 +459,7 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
     autoupadd = 1 # Residual going up counts as residual going down too little this many times
     automax = 5   # Stop when residual has gone down too little this many times
 
+
     if clusters is not None:
         # Cluster mode: In each iteration, after correcting all the spectra, cluster them.
         # Then take the mean of the corrected spectra in each cluster as the new reference
@@ -318,17 +470,10 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
 
         if progressPlotCallback:
             progressPlotCallback(ref, (0, iterations))
-        projs = ((app @ ref) / (ref @ ref))[:,None] * ref
-        app_deref = app - projs
-        model = compute_model(wn, ref, n_components, a, d, bvals,
-                              konevskikh=konevskikh, linearcomponent=linearcomponent,
-                              variancelimit=pcavariancelimit)
-        if weights is None:
-            cons = np.linalg.lstsq(model.T, app_deref.T, rcond=None)[0]
-        else:
-            cons = np.linalg.lstsq(model.T * weights, app_deref.T * weights, rcond=None)[0]
-        corrected = app - cons[1:].T @ model[1:]
-        residuals = ((corrected - projs)**2).sum(1) #We compare to the previous correction, not the reference
+
+        corrected, residuals = compute_and_solve_model(
+            wn, app, ref,
+            modelparams=modelparams, solvingparams=solvingparams)
         ref = []    # Force init
         if autoiterations:
             unimproved = np.zeros(len(app), dtype=int)
@@ -341,7 +486,7 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
         for iteration in range(1, iterations):
             corrected[corrected < 0] = 0
 
-            curc = clusters[iteration] # Current cluster size setting
+            curc = clusters[iteration] # Current cluster size
             if curc > 0:
                 progstep = curc
 
@@ -369,14 +514,17 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                 # Find the clusters of spectra
                 curc = min(curc, nds)
                 if curc == nds:
-                    cindices = [np.array([i]) for i in notdone] # Each index in its own little array
+                    # Each index in its own little array
+                    cindices = [np.array([i]) for i in notdone]
                 elif curc > 1:
                     kmeans = sklearn.cluster.MiniBatchKMeans(curc)
                     labels = np.zeros(len(app)) - 1
                     labels[notdone] = kmeans.fit_predict(corrected[notdone,:])
-                    cindices = [ np.where(labels == i)[0] for i in range(curc) ] # Quadratic but simple
+                    # Quadratic but simple
+                    cindices = [np.where(labels == i)[0] for i in range(curc)]
                 else:
-                    cindices = [ np.array(notdone) ] # One big cluster
+                    # One big cluster
+                    cindices = [np.array(notdone)]
 
                 # Compute cluster references
                 if(len(ref) != curc):
@@ -400,10 +548,6 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                         else:
                             ref[cl,:] = .5 * corrected[cindices[cl]].mean(0) + .5 * ref[cl,:]
 
-            w = (app * corrected).sum(1) / (corrected * corrected).sum(1)
-            projs = w[:,None] * corrected
-            app_deref = app - projs
-
             if progressPlotCallback:
                 progressPlotCallback(ref, (iteration, iterations))
 
@@ -414,23 +558,11 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                 if len(ix) == 0:
                     continue
 
-                model = compute_model(wn, ref[cl], n_components, a, d, bvals,
-                                      konevskikh=konevskikh, linearcomponent=linearcomponent,
-                                      variancelimit=pcavariancelimit)
-                # Including the reference in the model gives results in agreement with the
-                # unclustered approach.
-                if weights is None:
-                    cons = np.linalg.lstsq(model.T, app_deref[ix].T, rcond=None)[0]
-                else:
-                    cons = np.linalg.lstsq(model.T * weights, app_deref[ix].T * weights, rcond=None)[0]
-                corrs = app[ix] - cons[1:].T @ model[1:]
+                corrs, resids = compute_and_solve_model(
+                    wn, app[ix], ref[cl], individual_references=corrected[ix],
+                    modelparams=modelparams, solvingparams=solvingparams)
 
-                # We compare to the previous correction, not the reference
-                resids = ((corrs - projs[ix])**2).sum(1)
                 improved = resids < residuals[ix]
-
-                if renormalize:
-                    corrs = corrs / (1 + cons[0,:,None])
 
                 if autoiterations:
                     iximp = ix[improved]  # Indexes of improved spectra
@@ -460,25 +592,13 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
             gc.collect()    # Because my old laptop was unhappy with RAM usage otherwise
 
     else:
-        if renormalize:
-            # More aggressive stopping if residual rises
-            autoupadd = 3  # Residual going up counts as residual going down too little this many times
-            automax = 3    # Stop when residual has gone down too little this many times
         ref = ref.copy()
         ref[ref < 0] = 0
         # For efficiency, compute the model from the input reference spectrum only once
-        model = compute_model(wn, ref, n_components, a, d, bvals, konevskikh=konevskikh,
-                              linearcomponent=linearcomponent, variancelimit=pcavariancelimit)
-
-        if weights is None:
-            cons = np.linalg.lstsq(model.T, app.T, rcond=None)[0]
-        else:
-            cons = np.linalg.lstsq(model.T * weights, app.T * weights, rcond=None)[0]
-        corrected = app - cons[1:, :].T @ model[1:, :]
-        if renormalize:
-            corrected = corrected / cons[0, :, None]
-        if autoiterations:
-            residuals = ((corrected - model[0, :])**2).sum(1)
+        corrected, residuals = compute_and_solve_model(
+            wn, app, ref,
+            modelparams=modelparams, solvingparams=solvingparams,
+            plot=(0, iterations))
 
         if progressPlotCallback:
             progressPlotCallback(ref, (0, len(app) + 1))
@@ -495,21 +615,17 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                 ref = corrected[s, :]  # Corrected spectrum as new reference
                 for iteration in range(1, iterations):
                     ref[ref < 0] = 0. # No negative values in reference spectrum
-                    model = compute_model(wn, ref, n_components, a, d, bvals,
-                                          konevskikh=konevskikh, linearcomponent=linearcomponent,
-                                          variancelimit=pcavariancelimit)
-                    if weights is None:
-                        cons = np.linalg.lstsq(model.T, app[s], rcond=None)[0]
-                    else:
-                        cons = np.linalg.lstsq(model.T * weights, app[s] * weights[:, 0], rcond=None)[0]
-                    corr = app[s] - cons[1:] @ model[1:, :]
-                    if renormalize:
-                        corr = corr / cons[0]
+                    corr, residual = compute_and_solve_model(
+                        wn, app[s], ref=ref,
+                        modelparams=modelparams, solvingparams=solvingparams,
+                        plot=(iteration, iterations))
+                    print("pixel %5d: iter %3d  residual %7.3g" %
+                          (s, iteration, residual))
                     if autoiterations:
-                        residual = ((corr - model[0, :])**2).sum()
                         if residual < residuals[s]:
                             corrected[s, :] = corr
-                            unimproved =  unimproved + 1 if residual > residuals[s] * targetrelresiduals else 0
+                            unimproved =  unimproved + 1 if \
+                                residual > residuals[s] * targetrelresiduals else 0
                             residuals[s] = residual
                         else:
                             unimproved += autoupadd
@@ -518,7 +634,6 @@ def rmiesc(wn, app, ref, n_components=7, iterations=10, clusters=None,
                     ref = corr
                 if not autoiterations:
                     corrected[s, :] = corr
-                    residual = ((corr / cons[0] - model[0, :])**2).sum()
 
                 if verbose:
                     print("pixel %5d: iter %3d  residual %7.3g  time %f" %
