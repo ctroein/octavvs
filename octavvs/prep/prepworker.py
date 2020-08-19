@@ -329,7 +329,6 @@ class PrepWorker(QObject):
         params.srDo = False
         wns = []
         ys = []
-        print('files to process', data.filenames)
         try:
             for fi in range(len(data.filenames)):
                 self.batchProgress.emit(fi, len(data.filenames))
@@ -339,14 +338,13 @@ class PrepWorker(QObject):
                 wn = data.wavenumber
                 y = data.raw
 
-                y = self.callACandSC(data, params, wn, y)
-                y = self.callSGFandSRandBC(params, wn, y)
-
                 if params.scRef == 'Percentile':
                     y = np.percentile(y, params.scRefPercentile, axis=0)[None, :]
                 else:
                     y = y.mean(0)[None, :]
 
+                y = self.callACandSC(data, params, wn, y)
+                y = self.callSGFandSRandBC(params, wn, y)
                 if params.normDo:
                     y = normalization.normalize_spectra(
                         params.normMethod, y, wn,
