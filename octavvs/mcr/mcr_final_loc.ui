@@ -51,6 +51,16 @@
                 <string>Multiple files</string>
                </property>
               </item>
+              <item>
+               <property name="text">
+                <string>Continuing</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Selected Files</string>
+               </property>
+              </item>
              </widget>
             </item>
             <item>
@@ -203,7 +213,7 @@
               <item>
                <widget class="QLineEdit" name="lineEditFileNumber">
                 <property name="readOnly">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
