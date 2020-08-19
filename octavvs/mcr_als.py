@@ -101,6 +101,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.comboBoxMethod.currentIndexChanged.connect(self.ImageProjection)
         self.horizontalSliderWavenumber.valueChanged.connect(self.Wavenumbercal)
         self.comboBoxCmaps.currentTextChanged.connect(self.plot_visual.setCmap)
+        
+        self.comboBoxCmaps.currentTextChanged.connect(self.ImageProjection)
         self.loadedFile.connect(self.plot_visual.clearMarkings)
 
         self.pushButtonSVD.clicked.connect(self.SVDprocess)
@@ -126,6 +128,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.roiDialog.Plot_ROI.captured.connect(self.setRoi)
         self.roiDialog.Plot_ROI.captured.connect(self.plot_visual.setRoi)
         self.projectionUpdated.connect(self.roiDialog.ImageProjection)
+        self.projectionUpdated.connect(self.ExpandProjU)
+
         self.comboBoxCmaps.currentTextChanged.connect(self.roiDialog.setCmap)
         self.loadedFile.connect(self.roiDialog.resetAll)
 
@@ -180,7 +184,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.pushButtonLocal.setEnabled(False)
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            self.foldername = QFileDialog.getExistingDirectory(self,"Open the input data")
+            name,_ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
+            self.foldername = dirname(name)
             if self.foldername:
                 self.progressBar.show()
                 self.search_whole_folder(self.foldername)
@@ -198,13 +203,41 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.progressBar.hide()
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            fileName, _ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
-            if fileName:
+            filename, _ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
+            if filename:
+                self.allnames = [filename]                
                 self.coord = []
                 self.clear_prev()
                 self.lineEditTotal.setText(str(1))
-                self.initialization(fileName)
+                self.initialization(filename)
                 self.lineEditFileNumber.setText(str(1))
+        
+        elif self.comboBoxSingMult.currentIndex() == 3:
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            fileNames, _ = QFileDialog.getOpenFileNames(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
+            if fileNames:
+                print(fileNames)
+                count = 0
+                name =  {}
+                foldername = dirname(fileNames[0])
+                for file in fileNames:
+                    name[count] = file
+                    count += 1
+                # count = 0
+                
+                w = csv.writer(open(foldername+"//Fileall.csv", "w"))
+                for key, val in sorted(name.items(), key=lambda item: item[1]):
+#                    for key, val in sorted(name.items()):
+                    w.writerow([key, val])        
+                
+                self.allnames = name
+                self.nfiles = count
+                self.lineEditTotal.setText(str(count))
+                self.lineEditFileNumber.setText(str(1))
+                self.initialization(name[0])
+                self.SVDprocess()
+        
 
     def initialization(self,fileName):
 
@@ -415,13 +448,15 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             for file in glob.glob('*.mat'):
                 name[count] = str(i+'/'+file)
                 count += 1
-
+        
+        
         if count != 0:
             w = csv.writer(open(foldername+"//Fileall.csv", "w"))
             for key, val in sorted(name.items(), key=lambda item: item[1]):
 #            for key, val in sorted(name.items()):
                 w.writerow([key, val])
-
+                
+            self.allnames = name
             self.nfiles = count
             self.lineEditTotal.setText(str(count))
             self.lineEditFileNumber.setText(str(1))
@@ -479,7 +514,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 plt.plot(self.pos[j,0],self.pos[j,1],marker='p', color = 'black')
         plt.show()
 
-    def ExpandProjU(self,nr):
+
+    @pyqtSlot()
+    def ExpandProjU(self):
+        nr = self.spinBoxSVDComp.value()
         if plt.fignum_exists("Image Projection"):
             fig = plt.figure("Image Projection")
             ax = fig.gca()
@@ -746,7 +784,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_visual.setImage(self.projection, self.comboBoxCmaps.currentText())
             self.plot_visual.addPoints(self.pos)
             self.InitialVis()
-            self.ExpandProjU(nr)
+            self.ExpandProjU()
             if self.checkBoxSaveInit.isChecked():
                 self.save_data_init(self.insp.T)
 
@@ -810,8 +848,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def runall(self):
         nr = self.spinBoxSVDComp.value()
-        f = float(self.lineEditNoisePercent.text())
-        f = f*0.01
+        f = 0.01*float(self.lineEditNoisePercent.text())
         max_iter = int(self.lineEditPurIter.text())
         stopping_error = float(self.lineEditTol.text())
         init = self.comboBoxInitial.currentIndex()
@@ -823,7 +860,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.progressBar.setEnabled(True)
         self.progressBar.setMaximum(self.nfiles+1)
         self.lineEditStatus.setText('Multiple files')
-        self.calpures = Multiple_Calculation(self.foldername, nr, f,max_iter, 
+        self.calpures = Multiple_Calculation(self.allnames, nr, f,max_iter, 
                                              stopping_error, init,win, pol,implement)
 
 
@@ -847,23 +884,33 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def runsingle(self):
         if not self.coord:
-            self.runsingle_noroi()
+            self.nfiles = 1
+            self.runall()
         else:
             self.runsingle_roi()
 
-    def runsingle_noroi(self):
-        max_iter = int(self.lineEditPurIter.text())
-        tol_percent = float(self.lineEditTol.text())
-        f = 0.01*float(self.lineEditNoisePercent.text())
-        self.SVDprocess()
-        nr = self.spinBoxSVDComp.value()
-        init = self.comboBoxInitial.currentIndex()
-        self.InitialCondition()
-        self.calpures = single_report(self.sp,nr,f, max_iter,tol_percent,init)
-        self.calpures.purest.connect(self.finished_single)
-        self.calpures.start()
-        self.pushButtonStop.show()
-        self.pushButtonPurestCal.setEnabled(False)
+    # def runsingle_noroi(self):
+    #     max_iter = int(self.lineEditPurIter.text())
+    #     tol_percent = float(self.lineEditTol.text())
+    #     f = 0.01*float(self.lineEditNoisePercent.text())
+    #     self.SVDprocess()
+    #     nr = self.spinBoxSVDComp.value()
+    #     init = self.comboBoxInitial.currentIndex()
+    #     self.InitialCondition()
+    #     self.calpures = single_report(self.sp,nr,f, max_iter,tol_percent,init)
+
+    #     self.calpures = Multiple_Calculation(self.allnames, nr, f,max_iter, 
+    #                                          stopping_error, init,win, pol,implement)
+
+        
+        
+        
+    #     self.calpures.purest.connect(self.finished_single)
+    #     self.calpures.start()
+    #     self.pushButtonStop.show()
+    #     self.pushButtonPurestCal.setEnabled(False)
+
+
 
     def killer(self):
         msgBox = QMessageBox()
@@ -1178,9 +1225,9 @@ class Multiple_Calculation(QThread):
     purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
 
     QThread.setTerminationEnabled()
-    def __init__(self, foldername, nr, f, max_iter, stopping_error, init,win, pol,implement, parent=None):
+    def __init__(self, filenames, nr, f, max_iter, stopping_error, init,win, pol,implement, parent=None):
         QThread.__init__(self, parent)
-        self.foldername = foldername
+        self.foldername = dirname(filenames[0])
         self.nr = nr
         self.max_iter = max_iter
         self.stopping_error = stopping_error
@@ -1191,12 +1238,13 @@ class Multiple_Calculation(QThread):
         self.win = win
         self.pol = pol
         self.implement = implement
+        self.filenames = filenames
         if self.init == 0:
             inguess = 'Spectra'
         else:
             inguess = 'Concentration'
 
-
+        print(self.foldername)
 #----------------------------------------------------------------------------------------
         now = datetime.now()
         date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
@@ -1232,22 +1280,6 @@ class Multiple_Calculation(QThread):
         if (filenumber+1) == maxfile:
             self.logfile.close()
 
-
-    def search_whole_folder(self, foldername):
-        count = 0
-        name =  {}
-        a = [x[0] for x in os.walk(foldername)]
-        for i in a:
-            os.chdir(i)
-            for file in glob.glob('*.mat'):
-                name[count] = str(i+'/'+file)
-                count += 1
-
-        w = csv.writer(open(foldername+"//Fileall.csv", "w"))
-        for key, val in sorted(name.items(), key=lambda item: item[1]):
-            w.writerow([key, val])
-
-        return name
 
     def finished_one(self, filenumber,filename, niter, status, maxfile):
         if status == 'converged' or status =='Max iterations reached':
@@ -1285,8 +1317,7 @@ class Multiple_Calculation(QThread):
         return A*(A > 0)
 
     def run(self):
-        filenames = self.search_whole_folder(self.foldername)
-        self.maxfile = len(filenames)
+        self.maxfile = len(self.filenames)
 
         self.count = 0
         for i in range(0,self.maxfile):
@@ -1296,7 +1327,7 @@ class Multiple_Calculation(QThread):
                 break
             else:
 
-                self.filename = filenames[i]
+                self.filename = self.filenames[i]
                 self.count = self.count + 1
                 self.sx, self.sy, self.p ,self.wavenumber, self.spo = ff.readmat(self.filename)
             # self,xplot,splot,sx,sy, p, wavenumber, sp, count
