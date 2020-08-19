@@ -101,7 +101,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.comboBoxMethod.currentIndexChanged.connect(self.ImageProjection)
         self.horizontalSliderWavenumber.valueChanged.connect(self.Wavenumbercal)
         self.comboBoxCmaps.currentTextChanged.connect(self.plot_visual.setCmap)
-        
+
         self.comboBoxCmaps.currentTextChanged.connect(self.ImageProjection)
         self.loadedFile.connect(self.plot_visual.clearMarkings)
 
@@ -147,8 +147,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.labelJ.hide()
         self.labelWl.hide()
         self.labelPl.hide()
-        
-        
+
+
 
         self.post_setup()
 
@@ -205,13 +205,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             options |= QFileDialog.DontUseNativeDialog
             filename, _ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
             if filename:
-                self.allnames = [filename]                
+                self.allnames = [filename]
                 self.coord = []
                 self.clear_prev()
                 self.lineEditTotal.setText(str(1))
                 self.initialization(filename)
                 self.lineEditFileNumber.setText(str(1))
-        
+
         elif self.comboBoxSingMult.currentIndex() == 3:
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
@@ -225,19 +225,19 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                     name[count] = file
                     count += 1
                 # count = 0
-                
+
                 w = csv.writer(open(foldername+"//Fileall.csv", "w"))
                 for key, val in sorted(name.items(), key=lambda item: item[1]):
 #                    for key, val in sorted(name.items()):
-                    w.writerow([key, val])        
-                
+                    w.writerow([key, val])
+
                 self.allnames = name
                 self.nfiles = count
                 self.lineEditTotal.setText(str(count))
                 self.lineEditFileNumber.setText(str(1))
                 self.initialization(name[0])
                 self.SVDprocess()
-        
+
 
     def initialization(self,fileName):
 
@@ -248,7 +248,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.lock_all(True)
             self.sx, self.sy, self.pin,self.wavenumber, self.spo = ff.readmat(fileName)
             self.spo = mc.nonnegative(self.spo)
-            
+
 
             self.lineEditLength.setText(str(len(self.wavenumber)))
             self.labelMinwn.setText(str("%.2f" % np.min(self.wavenumber)))
@@ -258,12 +258,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             kmeans = KMeans(n_clusters=8, random_state=0).fit(self.spo.T)
             self.raw = kmeans.cluster_centers_
             self.raw = self.raw.T
-            
+
 
             self.VisSpectra()
             self.Select_spectra()
-            
-       
+
+
         except:
             # This exception handling must be made much more specific. What exception, what lines?
             raise
@@ -278,7 +278,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_whitelight.load(fileName.replace(fileName.split('.0')[-1],'.jpg'))
 #        self.plot_whitelight.load(os.path.splitext(fileName)[0]+'.jpg')
         self.loadedFile.emit()
-        
+
 
 
     def Select_spectra(self):
@@ -286,19 +286,19 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         pol = int(self.spinBoxPoly.value())
         if self.comboBoxImp.currentIndex() == 0:
             self.sp = mc.nonnegative(self.spo)
-            self.p = self.sp.reshape(np.shape(self.pin),order='C') 
+            self.p = self.sp.reshape(np.shape(self.pin),order='C')
         elif self.comboBoxImp.currentIndex() == 1:
             self.sp = sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=1)
             self.sp = self.sp.T
             self.sp = mc.nonnegative(self.sp)
             self.p = self.sp.reshape(np.shape(self.pin),order='C')
-                
+
         elif self.comboBoxImp.currentIndex() == 2:
             self.sp = sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=2)
             self.sp = self.sp.T
             self.sp = mc.nonnegative(self.sp)
             self.p = self.sp.reshape(np.shape(self.pin),order='C')
-            
+
         try:
             x = int(self.lineEditHeight.text())
             y = int(self.lineEditWidth.text())
@@ -309,15 +309,15 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.lineEditHeight.setText(str(self.sy))
 
         self.ImageProjection()
-    
-    
-    
+
+
+
 
     def VisSpectra(self):
         self.Select_spectra()
         win = int(self.spinBoxWlength.value())
         pol = int(self.spinBoxPoly.value())
-        
+
         if self.comboBoxImp.currentIndex() == 0:
             self.yvis = self.raw.copy()
             self.spinBoxWlength.hide()
@@ -326,7 +326,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.labelWl.hide()
             self.labelPl.hide()
 
-            
+
         elif self.comboBoxImp.currentIndex() == 1:
             self.yvis= sc.signal.savgol_filter(self.raw.T,win, polyorder = pol,deriv=1)
             self.yvis= self.yvis.T
@@ -336,18 +336,18 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.labelWl.show()
             self.labelPl.show()
 
-            
+
         else:
             self.yvis= sc.signal.savgol_filter(self.raw.T,win, polyorder = pol,deriv=2)
             self.yvis= self.yvis.T
-            
+
             self.spinBoxWlength.show()
             self.spinBoxPoly.show()
             self.labelJ.show()
             self.labelWl.show()
             self.labelPl.show()
 
-        
+
         self.yvis = mc.nonnegative(self.yvis)
         self.plot_specta.canvas.ax.clear()
         self.plot_specta.canvas.ax.plot(self.wavenumber,self.yvis)
@@ -362,11 +362,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
         self.plot_specta.canvas.draw()
-            
+
         self.plotPurestSpectra.Invert()
         self.plotPurestSpectra.canvas.fig.tight_layout()
         self.plotPurestSpectra.canvas.draw()
-        
+
         if self.comboBoxMethod.currentIndex() == 2:
             self.Wavenumbercal()
 
@@ -448,14 +448,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             for file in glob.glob('*.mat'):
                 name[count] = str(i+'/'+file)
                 count += 1
-        
-        
+
+
         if count != 0:
             w = csv.writer(open(foldername+"//Fileall.csv", "w"))
             for key, val in sorted(name.items(), key=lambda item: item[1]):
 #            for key, val in sorted(name.items()):
                 w.writerow([key, val])
-                
+
             self.allnames = name
             self.nfiles = count
             self.lineEditTotal.setText(str(count))
@@ -506,13 +506,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandProj(self):
         nr = self.spinBoxSVDComp.value()
-        plt.close("Image Projection")
-        plt.figure("Image Projection")
-        plt.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+        fig = plt.figure("Image Projection")
+        fig.clear()
+        ax = fig.gca()
+        ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         if len(self.splot ) != 1 :
             for j in range(0,nr):
-                plt.plot(self.pos[j,0],self.pos[j,1],marker='p', color = 'black')
-        plt.show()
+                ax.plot(self.pos[j,0],self.pos[j,1],marker='p', color = 'black')
+        fig.show()
 
 
     @pyqtSlot()
@@ -677,25 +678,25 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def SVDprocess(self):
         win = int(self.spinBoxWlength.value())
         pol = int(self.spinBoxPoly.value())
-        
+
         self.nr = self.spinBoxSVDComp.value()
         if self.nr < 20:
             nplot = self.nr+5
         else:
             nplot = self.nr
-            
+
         if self.comboBoxImp.currentIndex() == 1:
             self.sp = sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=1)
             self.sp = self.sp.T
-        
+
         elif self.comboBoxImp.currentIndex() == 2:
             self.sp= sc.signal.savgol_filter(self.spo.T,win, polyorder = pol,deriv=2)
             self.sp= self.sp.T
         else:
             self.sp = self.spo.copy()
-    
-            
-            
+
+
+
 
         if not self.coord:
             self.sp = mc.nonnegative(self.sp)
@@ -754,7 +755,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotInitSpec.canvas.draw()
         self.ExpandInitSpectU(self.wavenumber,self.insp.T)
 
-       
+
 
 
     def SVDPlot(self):
@@ -860,7 +861,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.progressBar.setEnabled(True)
         self.progressBar.setMaximum(self.nfiles+1)
         self.lineEditStatus.setText('Multiple files')
-        self.calpures = Multiple_Calculation(self.allnames, nr, f,max_iter, 
+        self.calpures = Multiple_Calculation(self.allnames, nr, f,max_iter,
                                              stopping_error, init,win, pol,implement)
 
 
@@ -899,12 +900,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     #     self.InitialCondition()
     #     self.calpures = single_report(self.sp,nr,f, max_iter,tol_percent,init)
 
-    #     self.calpures = Multiple_Calculation(self.allnames, nr, f,max_iter, 
+    #     self.calpures = Multiple_Calculation(self.allnames, nr, f,max_iter,
     #                                          stopping_error, init,win, pol,implement)
 
-        
-        
-        
+
+
+
     #     self.calpures.purest.connect(self.finished_single)
     #     self.calpures.start()
     #     self.pushButtonStop.show()
@@ -1064,13 +1065,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def save_data(self, copt, sopt):
         win = int(self.spinBoxWlength.value())
         pol = int(self.spinBoxPoly.value())
-        met = int(self.comboBoxImp.currentIndex()) 
+        met = int(self.comboBoxImp.currentIndex())
         meta = np.zeros((1,copt.shape[-1]))
         meta[0,0] = met
         meta[0,1] = win
         meta[0,2] = pol
-                                              
-        
+
+
         if self.checkBoxSavePurest.isChecked():
             auxi = np.concatenate((meta,sopt,copt), axis = 0)
             namef = self.lineEditFilename.text()
@@ -1146,8 +1147,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 # self.progressBar.setValue(self.nfiles+1)
                 self.lineEditStatus.setText('DONE')
                 self.pushButtonStop.hide()
-            
-            
+
+
 
     def lock_all(self,Stat):
         self.pushButtonExpandSpectra.setEnabled(Stat)
@@ -1334,15 +1335,15 @@ class Multiple_Calculation(QThread):
                 if self.implement == 1:
                     self.sp = sc.signal.savgol_filter(self.spo.T,self.win, polyorder = self.pol,deriv=1)
                     self.sp = self.sp.T
-            
+
                 elif self.implement == 2:
                     self.sp= sc.signal.savgol_filter(self.spo.T,self.win, polyorder = self.pol,deriv=2)
                     self.sp= self.sp.T
                 else:
                     self.sp = self.spo.copy()
-                
+
                 self.sp = mc.nonnegative(self.sp)
-                
+
 
                 if self.init == 0:
                     insp, points = ff.initi_simplisma(self.sp,self.nr,self.f)
