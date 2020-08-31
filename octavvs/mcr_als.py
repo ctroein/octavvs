@@ -7,7 +7,7 @@ import gc
 import csv
 import glob
 import os
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
 #import traceback
 from os.path import basename, dirname
 from datetime import datetime
@@ -255,7 +255,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.labelMaxwn.setText(str("%.2f" % np.max(self.wavenumber)))
             self.lineEditWavenumber.setText(str("%.2f" % np.min(self.wavenumber)))
 
-            kmeans = KMeans(n_clusters=8, random_state=0).fit(self.spo.T)
+            kmeans = MiniBatchKMeans(n_clusters=8, random_state=0).fit(self.spo.T)
             self.raw = kmeans.cluster_centers_
             self.raw = self.raw.T
 
@@ -510,6 +510,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         fig.clear()
         ax = fig.gca()
         ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+        plt.colorbar(ax.imshow(self.projection,str(self.comboBoxCmaps.currentText())))
         if len(self.splot ) != 1 :
             for j in range(0,nr):
                 ax.plot(self.pos[j,0],self.pos[j,1],marker='p', color = 'black')
@@ -521,8 +522,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         nr = self.spinBoxSVDComp.value()
         if plt.fignum_exists("Image Projection"):
             fig = plt.figure("Image Projection")
+            fig.clear()
             ax = fig.gca()
             ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+            plt.colorbar(ax.imshow(self.projection,str(self.comboBoxCmaps.currentText())))
             if len(self.splot ) != 1 :
                 for j in range(0,nr):
                     ax.plot(self.pos[j,0],self.pos[j,1],marker='p', color = 'black')
@@ -534,10 +537,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandSVD(self):
         if len(self.splot ) != 1 :
-            plt.close("SVD Plot")
-            plt.figure("SVD Plot")
-            plt.plot(self.xplot,self.splot,'-o')
-            plt.show()
+            # plt.close("SVD Plot")
+            fig = plt.figure("SVD Plot")
+            ax = fig.gca() 
+            ax.plot(self.xplot,self.splot,'-o')
+            fig.show()
         else:
             pass
 
@@ -563,8 +567,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 if self.checkBoxInvert.isChecked():
                     ax.invert_xaxis()
             else:
-                plt.plot(np.arange(self.sx*self.sy),self.incon.T)
-            plt.show("Initial")
+                ax.plot(np.arange(self.sx*self.sy),self.incon.T)
+            fig.show()
 
 
     def ExpandInitSpectU(self,x,y):
@@ -603,20 +607,21 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def ExpandSpec(self):
-        plt.close("Spectra")
+        # plt.close("Spectra")
         fig = plt.figure("Spectra")
-        ax = fig.subplots()
+        ax = fig.gca()
+        ax.clear()
         ax.plot(self.wavenumber,self.yvis)
         if self.comboBoxMethod.currentIndex() == 2:
                 ax.axvline(x=self.wavenumv)
         if self.checkBoxInvert.isChecked():
             ax.invert_xaxis()
 
-        plt.xlabel("Wavenumber(1/cm)",fontsize=14)
-        plt.ylabel("Absorption(arb. units)",fontsize=14)
-        plt.tick_params(axis='both',direction='in', length=8, width=1)
-        plt.tick_params(axis='both',which='major',labelsize=14)
-        plt.show()
+        ax.set_xlabel("Wavenumber(1/cm)",fontsize=14)
+        ax.set_ylabel("Absorption(arb. units)",fontsize=14)
+        ax.tick_params(axis='both',direction='in', length=8, width=1)
+        ax.tick_params(axis='both',which='major',labelsize=14)
+        fig.show()
 
 
     def ExpandSpecU(self):
@@ -637,10 +642,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandPurConc(self):
         if len(self.copt)  != 1:
-            plt.close("Purest Concentrations")
-            plt.figure("Purest Concentrations")
-            plt.plot(np.arange(len(self.copt)),self.copt)
-            plt.show("Purest Concentrations")
+            # plt.close("Purest Concentrations")
+            fig = plt.figure("Purest Concentrations")
+            ax = fig.subplots()
+            ax.plot(np.arange(len(self.copt)),self.copt)
+            fig.show()
 
     def ExpandPurConcU(self,copt):
         if plt.fignum_exists("Purest Concentrations"):
@@ -655,13 +661,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandPurSp(self):
         if len(self.sopt) != 1:
-            plt.close("Purest Spectra")
+            # plt.close("Purest Spectra")
             fig = plt.figure("Purest Spectra")
             ax = fig.subplots()
             if self.checkBoxInvert.isChecked():
                 ax.invert_xaxis()
             ax.plot(self.wavenumber,self.sopt)
-            plt.show("Purest Spectra")
+            fig.show()
 
     def ExpandPurSpU(self, sopt):
         if plt.fignum_exists("Purest Spectra") and len(sopt) == len(self.wavenumber):

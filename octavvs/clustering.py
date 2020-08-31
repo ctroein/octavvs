@@ -417,7 +417,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         
         # self.index = np.random.randint(0,int(self.sx*self.sy),(20))
-        kmeans = KMeans(n_clusters=8, random_state=0).fit(self.spo.T)
+        kmeans = MiniBatchKMeans(n_clusters=8, random_state=0).fit(self.spo.T)
+        
         self.raw = kmeans.cluster_centers_
         self.raw = self.raw.T
 
@@ -446,6 +447,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_White.canvas.ax.clear()
             self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
+            self.plot_White.canvas.ax.set_axis_off() 
             self.plot_White.canvas.draw()
 
 
@@ -636,22 +638,29 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_White.canvas.ax.clear()
             self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
+            self.plot_White.canvas.ax.set_axis_off() 
             self.plot_White.canvas.draw()
             # self.Cvisualize()
             self.VisUp.emit()
 
 
     def ExpandCluster(self):
-        plt.close("Segmentation Map")
-        plt.figure("Segmentation Map", tight_layout={'pad':.5})
-        plt.imshow(self.mapping,cmap=self.cmap)
-        plt.colorbar()
-        plt.show()
+        fig = plt.figure("Segmentation Map", tight_layout={'pad':.5})
+        fig.clear()
+        ax = fig.gca()
+        ax.imshow(self.mapping,cmap=self.cmap)
+        plt.colorbar(ax.imshow(self.mapping,cmap=self.cmap))
+        fig.show()
 
 
     def ExpandClusterU(self):
         if plt.fignum_exists("Segmentation Map"):
-            self.ExpandCluster()
+            fig = plt.figure("Segmentation Map", tight_layout={'pad':.5})
+            fig.clear()
+            ax = fig.gca()
+            ax.imshow(self.mapping,cmap=self.cmap)
+            plt.colorbar(ax.imshow(self.mapping,cmap=self.cmap))
+            fig.canvas.draw_idle()
         else:
             pass
 
@@ -736,6 +745,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotCluster.canvas.ax.clear()
         self.plotCluster.canvas.ax.imshow(self.mapping,cmap=self.cmap)
         self.plotCluster.canvas.fig.tight_layout()
+        self.plotCluster.canvas.ax.set_axis_off() 
         self.plotCluster.canvas.draw()
 
 
@@ -767,8 +777,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         else:
             self.plotAverage.canvas.fig.tight_layout()
 
-        self.ExpandAveU()
-
+        self.ExpandAveU()   
 
         self.plotAverage.canvas.draw()
         anotclus=len(set(self.clis))
@@ -777,26 +786,45 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def ExpandAve(self):
-        plt.close("Average Spectra")
         fig = plt.figure("Average Spectra", tight_layout={'pad':.5})
-        ax = fig.add_subplot(111)
+        fig.clear()
+        ax = fig.gca()
         ax.set_prop_cycle(color=self.color)
         ax.plot(self.wavenumber, self.spmean.T)
         if self.checkBoxinvert.isChecked():
             ax.invert_xaxis()
-        plt.legend(self.label,loc='best')
-        plt.show("Average Spectra")
+        ax.legend(self.label,loc='best')
+        ax.set_xlabel("Wavenumber(1/cm)",fontsize=14)
+        ax.set_ylabel("Absorption(arb. units)",fontsize=14)
+        ax.tick_params(axis='both',direction='in', length=8, width=1)
+        ax.tick_params(axis='both',which='major',labelsize=14)
+        fig.show()
 
     def ExpandAveU(self):
         if plt.fignum_exists("Average Spectra"):
-            self.ExpandAve()
+            fig = plt.figure("Average Spectra", tight_layout={'pad':.5})
+            fig.clear()
+            ax = fig.gca()
+            ax.set_prop_cycle(color=self.color)
+            ax.plot(self.wavenumber, self.spmean.T)
+            if self.checkBoxinvert.isChecked():
+                ax.invert_xaxis()
+            ax.legend(self.label,loc='best')
+            ax.set_xlabel("Wavenumber(1/cm)",fontsize=14)
+            ax.set_ylabel("Absorption(arb. units)",fontsize=14)
+            ax.tick_params(axis='both',direction='in', length=8, width=1)
+            ax.tick_params(axis='both',which='major',labelsize=14)
+            fig.canvas.draw_idle()    
         else:
             pass
 
 
+
+
     def ExpandSpectra(self):
-        plt.close('Spectra')
+        # plt.close('Spectra')
         fig = plt.figure('Spectra', tight_layout={'pad':.5})
+        fig.clear()
         ax = fig.subplots()
         if self.comboBoxVisualize.currentIndex() == 0:
             ax.plot(self.wavenumber,self.yvis)
@@ -807,11 +835,11 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         if self.checkBoxinvert.isChecked():
             ax.invert_xaxis()
-        plt.xlabel("Wavenumber(1/cm)")#,fontsize=24)
-        plt.ylabel("Absorption(arb. units)")#,fontsize=24)
-        plt.tick_params(axis='both',direction='in', length=8, width=1)
-        plt.tick_params(axis='both',which='major')#,labelsize=24)
-        plt.show()
+        ax.set_xlabel("Wavenumber(1/cm)")#,fontsize=24)
+        ax.set_ylabel("Absorption(arb. units)")#,fontsize=24)
+        ax.tick_params(axis='both',direction='in', length=8, width=1)
+        ax.tick_params(axis='both',which='major')#,labelsize=24)
+        fig.show()
 
     def ExpandSpectraU(self):
         if plt.fignum_exists("Spectra"):
@@ -827,22 +855,32 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
             if self.checkBoxinvert.isChecked():
                 ax.invert_xaxis()
+                
+            ax.set_xlabel("Wavenumber(1/cm)")#,fontsize=24)
+            ax.set_ylabel("Absorption(arb. units)")#,fontsize=24)
+            ax.tick_params(axis='both',direction='in', length=8, width=1)
+            ax.tick_params(axis='both',which='major')#,labelsize=24)
             fig.canvas.draw_idle()
+            
         else:
             pass
 
     def ExpandProjection(self):
-        plt.close("Image Projection")
-        plt.figure("Image Projection", tight_layout={'pad':.5})
-        plt.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
-        plt.colorbar()
-        plt.show()
+        # plt.close("Image Projection")
+        fig = plt.figure("Image Projection", tight_layout={'pad':.5})
+        fig.clear()
+        ax = fig.gca()
+        ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+        plt.colorbar(ax.imshow(self.projection,str(self.comboBoxCmaps.currentText())))
+        fig.show()
 
     def ExpandProjU(self):
         if plt.fignum_exists("Image Projection"):
             fig = plt.figure("Image Projection")
-            fig.clf()
-            plt.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+            fig.clear()
+            ax = fig.gca()
+            ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
+            plt.colorbar(ax.imshow(self.projection,str(self.comboBoxCmaps.currentText())))
             fig.canvas.draw_idle()
         else:
             pass
@@ -853,6 +891,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
+        self.plot_visual.canvas.ax.set_axis_off() 
         self.plot_visual.canvas.draw()
         self.VisUp.emit()
         self.ExpandProjU()
@@ -877,6 +916,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
+        self.plot_visual.canvas.ax.set_axis_off() 
         self.plot_visual.canvas.draw()
 
         self.ExpandProjU()
@@ -895,6 +935,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
+        self.plot_visual.canvas.ax.set_axis_off() 
         self.plot_visual.canvas.draw()
 
         self.ExpandProjU()
@@ -908,6 +949,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.plotMultiVisual.canvas.ax.clear()
                 self.plotMultiVisual.canvas.ax.imshow(self.img)
                 self.plotMultiVisual.canvas.fig.tight_layout()
+                self.plotMultiVisual.canvas.ax.set_axis_off() 
                 self.plotMultiVisual.canvas.draw()
 
             self.PlotSpectraSample()
@@ -927,6 +969,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotMultiVisual.canvas.ax.clear()
             self.plotMultiVisual.canvas.ax.imshow(self.component,str(self.comboBoxCmaps.currentText()))
             self.plotMultiVisual.canvas.fig.tight_layout()
+            self.plotMultiVisual.canvas.ax.set_axis_off() 
             self.plotMultiVisual.canvas.draw()
 
             self.datas = self.df_spec.iloc[:,val].to_numpy()
@@ -947,26 +990,28 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def ExpandVis(self):
-        plt.close('Image Projection')
-        plt.figure('Image Projection', tight_layout={'pad':.5})
+        # plt.close('Image Projection')
+        fig = plt.figure('Image Visualization', tight_layout={'pad':.5})
+        fig.clear()
+        ax = fig.gca()
         if self.comboBoxVisualize.currentIndex() == 0:
-            plt.imshow(self.img)
-            plt.show()
+            ax.imshow(self.img)
         else:
-            plt.imshow(self.component,str(self.comboBoxCmaps.currentText()))
-            plt.colorbar()
-        plt.show()
+            ax.imshow(self.component,str(self.comboBoxCmaps.currentText()))
+            plt.colorbar(ax.imshow(self.component,str(self.comboBoxCmaps.currentText())))
+        fig.show()
 
 
     def ExpandVisU(self):
-        if plt.fignum_exists('Image Projection'):
-            fig = plt.figure('Image Projection')
+        if plt.fignum_exists('Image Visualization'):
+            fig = plt.figure('Image Visualization')
+            fig.clear()
             ax = fig.gca()
-            ax.clear()
             if self.comboBoxVisualize.currentIndex() == 0:
                 ax.imshow(self.img)
             else:
                 ax.imshow(self.component,str(self.comboBoxCmaps.currentText()))
+                plt.colorbar(ax.imshow(self.component,str(self.comboBoxCmaps.currentText())))
             fig.canvas.draw_idle()
         else:
             pass

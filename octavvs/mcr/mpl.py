@@ -18,6 +18,17 @@ class MplWidget(Canvas):
         self.ax.invert_xaxis()
 
 
+class MplWidgetC(Canvas):
+    def __init__(self, parent=None):
+        self.fig = Figure(tight_layout=dict(pad=0.4))
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_axis_off() 
+        self.ax.set_position([0,0,1,1])
+        self.canvas = self
+        Canvas.__init__(self, self.fig)
+ 
+   
+
 
 class Mpl_Proj(MplWidget):
     def __init__(self, parent=None):

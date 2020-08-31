@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1359</width>
+    <width>1369</width>
     <height>747</height>
    </rect>
   </property>
@@ -522,7 +522,7 @@
              <number>1</number>
             </property>
             <item>
-             <widget class="MplWidget" name="plot_visual" native="true"/>
+             <widget class="MplWidgetC" name="plot_visual" native="true"/>
             </item>
             <item>
              <widget class="QPushButton" name="pushButtonExpandProjection">
@@ -539,7 +539,7 @@
              <number>1</number>
             </property>
             <item>
-             <widget class="MplWidget" name="plot_White" native="true"/>
+             <widget class="Mpl_Proj" name="plot_White" native="true"/>
             </item>
             <item>
              <widget class="QPushButton" name="pushButtonLoadWhite">
@@ -577,7 +577,7 @@
              </widget>
             </item>
             <item>
-             <widget class="MplWidget" name="plotMultiVisual" native="true">
+             <widget class="MplWidgetC" name="plotMultiVisual" native="true">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                 <horstretch>1</horstretch>
@@ -629,7 +629,7 @@
                </widget>
               </item>
               <item>
-               <widget class="MplWidget" name="plotCluster" native="true">
+               <widget class="MplWidgetC" name="plotCluster" native="true">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                   <horstretch>1</horstretch>
@@ -1538,6 +1538,18 @@
  <customwidgets>
   <customwidget>
    <class>MplWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/mcr/mpl.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Mpl_Proj</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/mcr/mpl.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MplWidgetC</class>
    <extends>QWidget</extends>
    <header location="global">octavvs/mcr/mpl.h</header>
    <container>1</container>
