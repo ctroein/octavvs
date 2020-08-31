@@ -506,7 +506,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandProj(self):
         nr = self.spinBoxSVDComp.value()
-        fig = plt.figure("Image Projection")
+        fig = plt.figure("Image Projection",tight_layout={'pad':.5})
         fig.clear()
         ax = fig.gca()
         ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
@@ -521,7 +521,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def ExpandProjU(self):
         nr = self.spinBoxSVDComp.value()
         if plt.fignum_exists("Image Projection"):
-            fig = plt.figure("Image Projection")
+            fig = plt.figure("Image Projection",tight_layout={'pad':.5})
             fig.clear()
             ax = fig.gca()
             ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
@@ -538,7 +538,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def ExpandSVD(self):
         if len(self.splot ) != 1 :
             # plt.close("SVD Plot")
-            fig = plt.figure("SVD Plot")
+            fig = plt.figure("SVD Plot",tight_layout={'pad':.5})
             ax = fig.gca() 
             ax.plot(self.xplot,self.splot,'-o')
             fig.show()
@@ -548,7 +548,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandSVDU(self,x,s):
         if plt.fignum_exists("SVD Plot"):
-            fig = plt.figure("SVD Plot")
+            fig = plt.figure("SVD Plot",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
             ax.plot(x,s,'-o')
@@ -558,9 +558,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def ExpandInitSpect(self):
-        plt.close("Initial")
-        fig = plt.figure("Initial")
-        ax = fig.subplots()
+        # plt.close("Initial")
+        fig = plt.figure("Initial",tight_layout={'pad':.5})
+        ax = fig.gca() 
         if len(self.insp) != 1:
             if self.comboBoxInitial.currentIndex() == 0:
                 ax.plot(self.wavenumber,self.insp.T)
@@ -573,7 +573,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandInitSpectU(self,x,y):
         if plt.fignum_exists("Initial"):
-            fig = plt.figure("Initial")
+            fig = plt.figure("Initial",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
             ax.plot(x,y)
@@ -608,7 +608,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandSpec(self):
         # plt.close("Spectra")
-        fig = plt.figure("Spectra")
+        fig = plt.figure("Spectra",tight_layout={'pad':.5})
         ax = fig.gca()
         ax.clear()
         ax.plot(self.wavenumber,self.yvis)
@@ -626,7 +626,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandSpecU(self):
         if plt.fignum_exists("Spectra"):
-            fig = plt.figure("Spectra")
+            fig = plt.figure("Spectra",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
             ax.plot(self.wavenumber,self.yvis)
@@ -643,14 +643,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def ExpandPurConc(self):
         if len(self.copt)  != 1:
             # plt.close("Purest Concentrations")
-            fig = plt.figure("Purest Concentrations")
+            fig = plt.figure("Purest Concentrations",tight_layout={'pad':.5})
             ax = fig.subplots()
             ax.plot(np.arange(len(self.copt)),self.copt)
             fig.show()
 
     def ExpandPurConcU(self,copt):
         if plt.fignum_exists("Purest Concentrations"):
-            fig = plt.figure("Purest Concentrations")
+            fig = plt.figure("Purest Concentrations",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
             ax.plot(np.arange(len(copt)),copt)
@@ -662,7 +662,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def ExpandPurSp(self):
         if len(self.sopt) != 1:
             # plt.close("Purest Spectra")
-            fig = plt.figure("Purest Spectra")
+            fig = plt.figure("Purest Spectra",tight_layout={'pad':.5})
             ax = fig.subplots()
             if self.checkBoxInvert.isChecked():
                 ax.invert_xaxis()
@@ -671,7 +671,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def ExpandPurSpU(self, sopt):
         if plt.fignum_exists("Purest Spectra") and len(sopt) == len(self.wavenumber):
-            fig = plt.figure("Purest Spectra")
+            fig = plt.figure("Purest Spectra",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
             ax.plot(self.wavenumber, sopt)
@@ -1064,7 +1064,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
         if (status == 'Max iterations reached') or (status == 'converged'):
             self.pushButtonPurestCal.setEnabled(True)
-            self.save_data(bea,sopt)
+            self.pushButtonStop.hide()
+            if self.checkBoxSavePurest.isChecked():
+                self.save_data(bea,sopt)
 
 
 
@@ -1072,18 +1074,18 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         win = int(self.spinBoxWlength.value())
         pol = int(self.spinBoxPoly.value())
         met = int(self.comboBoxImp.currentIndex())
-        meta = np.zeros((1,copt.shape[-1]))
+        meta = np.zeros((3,len(sopt.T)))
         meta[0,0] = met
-        meta[0,1] = win
-        meta[0,2] = pol
+        meta[1,0] = win
+        meta[2,0] = pol
 
 
-        if self.checkBoxSavePurest.isChecked():
-            auxi = np.concatenate((meta,sopt,copt), axis = 0)
-            namef = self.lineEditFilename.text()
-            namef = namef.replace('.mat','')
-            np.savetxt(self.folpurest+'/'+namef+self.lineEditSuffix.text()+'.csv', auxi, delimiter=',')
-#            QApplication.primaryScreen().grabWindow(self.winId()).save(self.folpurest+'/'+namef+'_SC'+'.png')
+        # if self.checkBoxSavePurest.isChecked():
+        auxi = np.concatenate((meta,sopt,copt), axis = 0)
+        namef = self.lineEditFilename.text()
+        namef = namef.replace('.mat','')
+        np.savetxt(self.folpurest+'/'+namef+self.lineEditSuffix.text()+'.csv', auxi, delimiter=',')
+
 
 
     def SaveInit(self):
@@ -1141,7 +1143,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditStatus.setText(status)
 
         if (status == 'Max iterations reached') or (status == 'converged'):
-            self.save_data(copt,sopt)
+            if self.checkBoxSavePurest.isChecked():
+                self.save_data(copt,sopt)
             if self.comboBoxSingMult.currentIndex() == 1 and (int(self.lineEditFileNumber.text())==
                                                              int(self.lineEditTotal.text())) :
                 self.pushButtonPurestCal.setEnabled(True)

@@ -581,13 +581,28 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
             self.lineEditDirPurest.setText(filepurest)
             dfpurest = pd.read_csv(filepurest, header= None)
+            
+            #Old System Before implementing First or Second Derivatives
             if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
                 self.compen = 0
                 self.comboBoxImp.setCurrentIndex(0)
-            else:
+            
+            #Old System after implementing First or Second Derivatives, but error
+            #if  nr = 2, but mostly we never use nr = 2, but I keep this to read 
+            #old data                
+            elif (int(self.lineEditLength.text())+int(self.sx*self.sy)) + 1 == len(dfpurest):
                 self.compen = 1
                 self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
                 self.spinBoxPoly.setValue(int(dfpurest.iloc[0,2]))
+                self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
+                self.Select_spectra()
+
+
+            # New System, there is no error even we use nr = 2
+            elif (int(self.lineEditLength.text())+int(self.sx*self.sy)) +3 == len(dfpurest):
+                self.compen = 3
+                self.spinBoxWlength.setValue(int(dfpurest.iloc[1,0]))
+                self.spinBoxPoly.setValue(int(dfpurest.iloc[2,0]))
                 self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
                 self.Select_spectra()
 
@@ -607,13 +622,26 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditDirPurest.setText(filepurest)
         dfpurest = pd.read_csv(filepurest, header= None)
         
+        #Old System Before implementing First or Second Derivatives
         if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
             self.compen = 0
             self.comboBoxImp.setCurrentIndex(0)
-        else:
+
+        #Old System after implementing First or Second Derivatives, but error
+        #if  nr = 2, but mostly we never use nr = 2, but I keep this to read 
+        #old data                
+        if (int(self.lineEditLength.text())+int(self.sx*self.sy)) + 1 == len(dfpurest):
             self.compen = 1
             self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
             self.spinBoxPoly.setValue(int(dfpurest.iloc[0,2]))
+            self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
+            self.Select_spectra()
+
+        # New System, there is no error even we use nr = 2
+        if (int(self.lineEditLength.text())+int(self.sx*self.sy)) + 3 == len(dfpurest):
+            self.compen = 3
+            self.spinBoxWlength.setValue(int(dfpurest.iloc[1,0]))
+            self.spinBoxPoly.setValue(int(dfpurest.iloc[2,0]))
             self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
             self.Select_spectra()
         

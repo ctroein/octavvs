@@ -237,6 +237,9 @@
             </property>
             <item>
              <widget class="QComboBox" name="comboBoxImp">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <item>
                <property name="text">
                 <string>Raw</string>
@@ -265,6 +268,9 @@
           </item>
           <item row="7" column="5">
            <widget class="QSpinBox" name="spinBoxPoly">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="minimum">
              <number>2</number>
             </property>
@@ -282,6 +288,9 @@
           </item>
           <item row="7" column="3">
            <widget class="QSpinBox" name="spinBoxWlength">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="minimum">
              <number>3</number>
             </property>
