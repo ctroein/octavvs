@@ -359,6 +359,10 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.ExpandSpecU()
 
     def Invert(self):
+        self.ExpandSpecU()
+        self.ExpandPurSpU()
+        # self.ExpandInitSpectU()
+        
         self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
         self.plot_specta.canvas.draw()
@@ -539,6 +543,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         if len(self.splot ) != 1 :
             # plt.close("SVD Plot")
             fig = plt.figure("SVD Plot",tight_layout={'pad':.5})
+            fig.clear()
             ax = fig.gca() 
             ax.plot(self.xplot,self.splot,'-o')
             fig.show()
@@ -546,12 +551,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             pass
 
 
-    def ExpandSVDU(self,x,s):
+    def ExpandSVDU(self):
         if plt.fignum_exists("SVD Plot"):
             fig = plt.figure("SVD Plot",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
-            ax.plot(x,s,'-o')
+            ax.plot(self.xplot,self.splot,'-o')
             fig.canvas.draw_idle()
         else:
             pass
@@ -669,12 +674,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             ax.plot(self.wavenumber,self.sopt)
             fig.show()
 
-    def ExpandPurSpU(self, sopt):
-        if plt.fignum_exists("Purest Spectra") and len(sopt) == len(self.wavenumber):
+    def ExpandPurSpU(self):
+        if plt.fignum_exists("Purest Spectra") and len(self.sopt) == len(self.wavenumber):
             fig = plt.figure("Purest Spectra",tight_layout={'pad':.5})
             ax = fig.gca()
             ax.clear()
-            ax.plot(self.wavenumber, sopt)
+            ax.plot(self.wavenumber, self.sopt)
             if self.checkBoxInvert.isChecked():
                 ax.invert_xaxis()
             fig.canvas.draw_idle()
@@ -733,7 +738,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotSVD.canvas.ax.clear()
             self.plotSVD.canvas.ax.plot(self.xplot,self.splot,'-o')
             self.plotSVD.canvas.draw()
-            self.ExpandSVDU(self.xplot,self.splot)
+            self.ExpandSVDU()
 
             per = float(self.lineEditNoisePercent.text())
             self.f = per*0.01
@@ -774,7 +779,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotSVD.canvas.ax.plot(self.xplot,self.splot,'-o')
         self.plotSVD.canvas.draw()
 #        if self.comboBoxPurest.currentIndex() == 0:
-        self.ExpandSVDU(self.xplot,self.splot)
+        self.ExpandSVDU()
         self.InitialCondition()
 
 
@@ -972,7 +977,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotSVD.canvas.ax.clear()
         self.plotSVD.canvas.ax.plot(self.xplot,self.splot,'-o')
         self.plotSVD.canvas.draw()
-        self.ExpandSVDU(self.xplot,self.splot)
+        self.ExpandSVDU()
 
         per = float(self.lineEditNoisePercent.text())
         self.f = per*0.01
@@ -1033,7 +1038,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.sopt = sopt
 
         self.ExpandPurConcU(copt)
-        self.ExpandPurSpU(sopt)
+        self.ExpandPurSpU()
 
 
 
@@ -1122,7 +1127,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.sopt = sopt
 
         self.ExpandPurConcU(copt)
-        self.ExpandPurSpU(sopt)
+        self.ExpandPurSpU()
 
 
 

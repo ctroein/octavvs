@@ -853,7 +853,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         # plt.close('Spectra')
         fig = plt.figure('Spectra', tight_layout={'pad':.5})
         fig.clear()
-        ax = fig.subplots()
+        ax = fig.gca()
         if self.comboBoxVisualize.currentIndex() == 0:
             ax.plot(self.wavenumber,self.yvis)
             if self.comboBoxMethod.currentIndex() == 2:
