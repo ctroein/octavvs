@@ -92,7 +92,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.default_dir =  os.path.dirname(__file__) + "\\"+'dat.initi'
+        self.default_dir =  os.path.dirname(__file__) + "\\mcr\\"+'dat.initi'
         self.lineEditSuffix.setText('_purest')
         self.pushButtonLocal.setEnabled(False)
         self.pushButtonLoad.clicked.connect(self.Load)

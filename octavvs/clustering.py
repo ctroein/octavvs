@@ -148,7 +148,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def __init__(self,parent=None):
         super().__init__(parent)
         
-        self.default_dir =  os.path.dirname(__file__) + "\\"+'dat.initi'
+        self.default_dir =  os.path.dirname(__file__) + "\\mcr\\"+'dat.initi'
         self.pushButtonLoadSpec.clicked.connect(self.Load_chose)
         self.lock_un(False)
         self.pushButtonExpandSpectra.clicked.connect(self.ExpandSpectra)
