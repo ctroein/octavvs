@@ -22,7 +22,7 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.preprocessing import StandardScaler
 from scipy.signal import savgol_filter
-
+import pickle
 import matplotlib
 matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
@@ -147,7 +147,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def __init__(self,parent=None):
         super().__init__(parent)
-
+        
+        self.default_dir =  os.path.dirname(__file__) + "\\"+'dat.initi'
         self.pushButtonLoadSpec.clicked.connect(self.Load_chose)
         self.lock_un(False)
         self.pushButtonExpandSpectra.clicked.connect(self.ExpandSpectra)
@@ -220,11 +221,24 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def Load_chose(self):
+        try:    
+            infile = open(self.default_dir,'rb')
+            dire = pickle.load(infile)
+            infile.close()
+        except:
+            dire = os.path.dirname(__file__)
+
+
         if self.comboBoxSingMul.currentIndex() == 1:
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            self.foldername = QFileDialog.getExistingDirectory(self,"Open the input data")
+            name, __ = QFileDialog.getOpenFileName(self,"Open Matrix File", dire,"Matrix File (*.mat)", options=options)
+            self.foldername = dirname(name)
             if self.foldername:
+                outfile = open(self.default_dir,'wb')
+                pickle.dump(self.foldername,outfile)
+                outfile.close()
+                
                 self.SearchUp.emit(self.foldername)
                 self.pushButtonNext.setEnabled(True)
                 self.pushButtonPrevious.setEnabled(True)
@@ -244,10 +258,21 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def LoadSpec(self):
+        try:    
+            infile = open(self.default_dir,'rb')
+            dire = pickle.load(infile)
+            infile.close()
+        except:
+            dire = os.path.dirname(__file__)
+            
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        self.fileName, __ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)")#, options=options)
+        self.fileName, __ = QFileDialog.getOpenFileName(self,"Open Matrix File", dire,"Matrix File (*.mat)")#, options=options)
         if self.fileName:
+            outfile = open(self.default_dir,'wb')
+            pickle.dump(dirname(self.fileName),outfile)
+            outfile.close()
+            
             self.foldername = dirname(self.fileName)
             self.lineEditFileNum.setText('1')
             self.lineEditTotal.setText('1')

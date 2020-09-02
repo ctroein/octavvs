@@ -27,6 +27,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error as msea
 import scipy as sc
 from skimage.draw import polygon
+import pickle
 
 # from .pymcr_new.regressors import OLS, NNLS
 # from .pymcr_new.constraints import ConstraintNonneg, ConstraintNorm
@@ -91,7 +92,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
+        self.default_dir =  os.path.dirname(__file__) + "\\"+'dat.initi'
         self.lineEditSuffix.setText('_purest')
         self.pushButtonLocal.setEnabled(False)
         self.pushButtonLoad.clicked.connect(self.Load)
@@ -142,6 +143,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.spinBoxWlength.valueChanged.connect(self.VisSpectra)
         self.spinBoxPoly.valueChanged.connect(self.VisSpectra)
 
+        
+
         self.spinBoxWlength.hide()
         self.spinBoxPoly.hide()
         self.labelJ.hide()
@@ -180,13 +183,23 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.roiDialog.show()
 
     def Load(self):
+        try:
+            infile = open(self.default_dir,'rb')
+            dire = pickle.load(infile)
+            infile.close()
+        except:
+            dire = os.path.dirname(__file__) 
+        
         if self.comboBoxSingMult.currentIndex() == 1:
             self.pushButtonLocal.setEnabled(False)
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            name,_ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
+            name,_ = QFileDialog.getOpenFileName(self,"Open Matrix File", dire,"Matrix File (*.mat)", options=options)
             self.foldername = dirname(name)
             if self.foldername:
+                outfile = open(self.default_dir,'wb')
+                pickle.dump(self.foldername,outfile)
+                outfile.close()
                 self.progressBar.show()
                 self.search_whole_folder(self.foldername)
             else:
@@ -203,8 +216,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.progressBar.hide()
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            filename, _ = QFileDialog.getOpenFileName(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
+            filename, _ = QFileDialog.getOpenFileName(self,"Open Matrix File", dire,"Matrix File (*.mat)", options=options)
             if filename:
+                outfile = open(self.default_dir,'wb')
+                pickle.dump(dirname(filename),outfile)
+                outfile.close()
+                
                 self.allnames = [filename]
                 self.coord = []
                 self.clear_prev()
@@ -215,9 +232,12 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         elif self.comboBoxSingMult.currentIndex() == 3:
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
-            fileNames, _ = QFileDialog.getOpenFileNames(self,"Open Matrix File", "","Matrix File (*.mat)", options=options)
+            fileNames, _ = QFileDialog.getOpenFileNames(self,"Open Matrix File", dire,"Matrix File (*.mat)", options=options)
             if fileNames:
-                print(fileNames)
+                outfile = open(self.default_dir,'wb')
+                pickle.dump(dirname(filename),outfile)
+                outfile.close()
+
                 count = 0
                 name =  {}
                 foldername = dirname(fileNames[0])
