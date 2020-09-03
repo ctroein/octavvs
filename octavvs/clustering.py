@@ -256,6 +256,44 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.pushButtonNext.setEnabled(False)
             self.pushButtonPrevious.setEnabled(False)
 
+        elif self.comboBoxSingMul.currentIndex() == 2:
+             options = QFileDialog.Options()
+             options |= QFileDialog.DontUseNativeDialog
+             fileNames, _ = QFileDialog.getOpenFileNames(self,"Open Matrix File", dire,"Matrix File (*.mat)", options=options)
+             if fileNames:
+                 outfile = open(self.default_dir,'wb')
+                 pickle.dump(dirname(fileNames[0]),outfile)
+                 outfile.close()
+                 self.foldername  = dirname(fileNames[0])
+
+                 count = 0
+                 name =  {}
+                 foldername = dirname(fileNames[0])
+                 for file in fileNames:
+                     name[count] = file
+                     count += 1
+                # count = 0
+
+                 w = csv.writer(open(foldername+"//Fileall.csv", "w"))
+                 for key, val in sorted(name.items(), key=lambda item: item[1]):
+#                    for key, val in sorted(name.items()):
+                     w.writerow([key, val])
+                     
+                 self.lineEditTotal.setText(str(count))
+                 self.lineEditFileNum.setText(str(1))   
+                 self.pushButtonNext.setEnabled(True)
+                 self.pushButtonPrevious.setEnabled(True)
+                 self.Onefile.emit(name[0])
+             else:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText('No file is loaded')
+                msg.setInformativeText("Please select a file")
+                msg.setWindowTitle("Warning")
+                msg.setStandardButtons(QMessageBox.Ok )
+                msg.exec_()
+
+
 
     def LoadSpec(self):
         try:    

@@ -229,13 +229,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.initialization(filename)
                 self.lineEditFileNumber.setText(str(1))
 
-        elif self.comboBoxSingMult.currentIndex() == 3:
+        elif self.comboBoxSingMult.currentIndex() == 2:
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
             fileNames, _ = QFileDialog.getOpenFileNames(self,"Open Matrix File", dire,"Matrix File (*.mat)", options=options)
             if fileNames:
                 outfile = open(self.default_dir,'wb')
-                pickle.dump(dirname(filename),outfile)
+                pickle.dump(dirname(fileNames[0]),outfile)
                 outfile.close()
 
                 count = 0

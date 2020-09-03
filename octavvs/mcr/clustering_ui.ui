@@ -43,7 +43,12 @@
             </item>
             <item>
              <property name="text">
-              <string>Multiple files</string>
+              <string>Whole Directory</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Selected Files</string>
              </property>
             </item>
            </widget>
@@ -397,6 +402,16 @@
               </item>
               <item>
                <property name="text">
+                <string>rainbow</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>gist_rainbow</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
                 <string>hsv</string>
                </property>
               </item>
@@ -433,11 +448,6 @@
               <item>
                <property name="text">
                 <string>gnuplot</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>rainbow</string>
                </property>
               </item>
               <item>
