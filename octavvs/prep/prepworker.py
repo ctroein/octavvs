@@ -301,7 +301,8 @@ class PrepWorker(QObject):
                     filename = os.path.join(folder, os.path.basename(filename))
                 # Add the extension
                 filename = os.path.splitext(filename)
-                filename = filename[0] + params.saveExt + filename[1]
+#                filename = filename[0] + params.saveExt + filename[1]
+                filename = filename[0] + params.saveExt + '.mat'
 
                 y = np.hstack((wn[:,None], y.T))
                 scipy.io.savemat(filename, {'AB': y, 'wh': data.wh } )
