@@ -37,14 +37,14 @@ build:
 requirements:
   host:
     - pip
-    - python=3.7
+    - python>=3.7
   run:
     - matplotlib
-    - numpy=1.17
+    - numpy>=1.17
     - pyqt
     - pandas
     - pillow
-    - python=3.7
+    - python>=3.7
     - scipy
     - scikit-learn
     - scikit-image

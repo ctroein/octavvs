@@ -3,7 +3,6 @@ import os.path
 #import fnmatch
 #import traceback
 from pkg_resources import resource_filename
-from io import BytesIO
 
 #import numpy as np
 
@@ -12,6 +11,7 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5 import uic
 
 from . import constants, uitools
+# from ..io import Image
 
 ImageVisualizerUi = uic.loadUiType(resource_filename(__name__, "imagevisualizer.ui"))[0]
 
@@ -51,6 +51,9 @@ class ImageVisualizer():
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.pushButtonWhitelight.clicked.connect(self.loadWhite)
+        self.horizontalSliderImage.valueChanged.connect(self.reloadWhiteLight)
 
         iv = self.imageVisualizer
         iv.comboBoxMethod.currentIndexChanged.connect(self.imageProjection)
@@ -105,6 +108,16 @@ class ImageVisualizer():
         iv.horizontalSliderWavenumber.setEnabled(iswn)
         self.plot_visual.setProjection(meth, -1 - iv.horizontalSliderWavenumber.value())
 
+        if self.data.images and len(self.data.images) > 1:
+            self.horizontalSliderImage.setMaximum(len(self.data.images)-1)
+            self.horizontalSliderImage.show()
+            self.lineEditImageInfo.show()
+        else:
+            self.horizontalSliderImage.hide()
+            self.lineEditImageInfo.hide()
+            self.horizontalSliderImage.setValue(0)
+        self.reloadWhiteLight(self.horizontalSliderImage.value())
+
     # White light image stuff
     def loadWhite(self):
         filename = self.getImageFileName(title="Load white light image",
@@ -112,10 +125,14 @@ class ImageVisualizer():
         if filename:
             self.plot_whitelight.load(filename)
 
-    def reloadWhiteLight(self):
-        if self.data.image is not None:
-            self.plot_whitelight.load(BytesIO(self.data.image[0]), self.data.image[1])
+    def reloadWhiteLight(self, num=0):
+        if self.data.images:
+            self.plot_whitelight.load(image=self.data.images[num])
+            self.lineEditImageInfo.setText(self.data.images[num].name)
+            self.plot_whitelight.draw_rectangles(self.data.pixelxy)
         else:
-            self.plot_whitelight.load(os.path.splitext(self.data.curFile)[0]+'.jpg')
+            self.plot_whitelight.load(filename=os.path.splitext(self.data.curFile)[0]+'.jpg')
+            self.lineEditImageInfo.setText('')
+
 
 

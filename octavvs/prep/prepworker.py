@@ -27,6 +27,7 @@ class PrepParameters:
     def __init__(self):
         self.fileFilter = '*.mat'
         self.saveExt = '_prep'
+        self.saveFormat = 'AB.mat'
         self.plotMethod = 0
         self.plotColors = ''
         self.plotWavenum = 0
@@ -264,6 +265,23 @@ class PrepWorker(QObject):
             self.failed.emit(repr(e), traceback.format_exc())
 
 
+    def saveCorrected(self, outfile, fmt, data, y):
+        if fmt == 'Quasar.mat':
+            out = {'y': y, 'wavenumber': data.wavenumber}
+            if data.pixelxy is not None:
+                map_x = np.array([x for (x,y) in data.pixelxy])
+                map_y = np.array([y for (x,y) in data.pixelxy])
+            else:
+                map_x = np.tile(data.wh[0], data.wh[1])
+                map_y = np.repeat(range(data.wh[0]), data.wh[1])
+            out['map_x'] = map_x[:, None]
+            out['map_y'] = map_y[:, None]
+            scipy.io.savemat(outfile, out)
+        else:
+            print('shapes', data.wavenumber.shape, y.shape)
+            ab = np.hstack((data.wavenumber[:, None], y.T))
+            scipy.io.savemat(outfile, {'AB': ab, 'wh': data.wh } )
+
     @pyqtSlot(SpectralData, PrepParameters, str, bool)
     def bigBatch(self, data, params, folder, preservepath):
         """
@@ -304,8 +322,7 @@ class PrepWorker(QObject):
 #                filename = filename[0] + params.saveExt + filename[1]
                 filename = filename[0] + params.saveExt + '.mat'
 
-                y = np.hstack((wn[:,None], y.T))
-                scipy.io.savemat(filename, {'AB': y, 'wh': data.wh } )
+                self.saveCorrected(filename, params.saveFormat, data, y)
             self.batchDone.emit(True)
             return
 
@@ -315,6 +332,7 @@ class PrepWorker(QObject):
             traceback.print_exc()
             self.failed.emit(repr(e), traceback.format_exc())
         self.batchDone.emit(False)
+
 
     @pyqtSlot(SpectralData, PrepParameters, str)
     def createReference(self, data, params, outfile):

@@ -81,7 +81,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.plot_visual.changedSelected.connect(self.spinBoxSpectra.setValue)
         self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
         self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
-        self.pushButtonWhitelight.clicked.connect(self.loadWhite)
 
         self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
         self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
@@ -287,8 +286,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def updateFile(self, num):
         super().updateFile(num)
 
-        self.updateWavenumberRange()
         self.plot_visual.setData(self.data.wavenumber, self.data.raw, self.data.wh)
+        self.updateWavenumberRange()
 
         if self.bcNext:
             self.abcWorker.haltBC = True
@@ -300,7 +299,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.clearSC()
         self.imageProjection()
         self.selectSpectra()
-        self.reloadWhiteLight()
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
@@ -955,8 +953,10 @@ def main():
                         help='initial hyperspectral images to load')
     parser.add_argument('-p', '--params', metavar='file.pjs', dest='paramFile',
                         help='parameter file to load')
-    parser.add_argument('-r', '--run', metavar='output_dir', nargs='?', dest='savePath', const='./',
-                        help='runs and saves to the output directory (params argument must also be passed)')
+    parser.add_argument('-r', '--run', metavar='output_dir', nargs='?',
+                        dest='savePath', const='./',
+                        help='runs and saves to the output directory (params '+
+                        'argument must also be passed)')
     MyMainWindow.run_octavvs_application(parser=parser,
                                          parameters=['files', 'paramFile', 'savePath'])
 

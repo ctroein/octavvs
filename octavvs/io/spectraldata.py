@@ -12,6 +12,7 @@ import scipy.signal, scipy.io
 from pymatreader import read_mat
 
 from .opusreader import OpusReader
+from .ptirreader import PtirReader
 
 class SpectralData:
     """
@@ -27,7 +28,8 @@ class SpectralData:
         self.wmax = 4000
         self.raw = np.empty((0,0)) # data in order (pixel, wavenumber)
         self.wh = (0, 0)  # Width and height in pixels
-        self.image = None # Image loaded from raw data file; tuple (bytes, format_str)
+        self.pixelxy = None # Positions of pixels in image
+        self.images = None # list of Image loaded from raw data file
 
     def set_width(self, w):
         try:
@@ -54,7 +56,8 @@ class SpectralData:
         only if the file is successfully loaded.
         """
         wh = None
-        image = None
+        xy = None
+        images = None
         fext = os.path.splitext(filename)[1].lower()
 #        opusformat = False
         if fext in ['.txt', '.csv', '.mat']:
@@ -78,11 +81,15 @@ class SpectralData:
             raw = ss[::d,1:].T
             wn = ss[::d,0]
         else:
-            reader = OpusReader(filename)
+            if fext == '.ptir' or fext == '.hdf':
+                reader = PtirReader(filename)
+                xy = reader.xy
+            else:
+                reader = OpusReader(filename)
             raw = reader.AB
             wn = reader.wavenum
             wh = reader.wh
-            image = reader.image
+            images = reader.images
 
         if (np.diff(wn) >= 0).any():
             raise RuntimeError('wavenumbers must be sorted')
@@ -104,6 +111,7 @@ class SpectralData:
         self.wavenumber = wn
         self.wmin = self.wavenumber.min()
         self.wmax = self.wavenumber.max()
-        self.image = image
+        self.images = images
+        self.pixelxy = xy
         self.curFile = filename
 

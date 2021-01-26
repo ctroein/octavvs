@@ -9,6 +9,7 @@ Created on Thu Jan  9 16:16:44 2020
 # from struct import unpack
 import h5py
 import numpy as np
+from .image import Image
 
 class PtirReader:
     """
@@ -23,15 +24,17 @@ class PtirReader:
         image: tuple (img_data_bytes, img_type_str)
     """
 
+
+
     def __init__(self, filename=None):
         """
         filename:  HDF5 file to load data from
         """
-        self.wh = (0, 0)
-        self.xy = []
+        self.wh = None
+        self.xy = None
         self.wavenum = None
         self.AB = None
-        self.image = None
+        self.images = []
         if filename is not None:
             self.load(filename)
 
@@ -51,11 +54,13 @@ class PtirReader:
                     except (AttributeError, ValueError):
                         continue
                     d = r.value[0,:]
-                    assert d.shape == wn.shape
+                    if d.shape != wn.shape:
+                        print('incompatible shapes', d.shape, wn.shape)
+                        continue
                     raw.append(d)
                     try:
-                        xy.append([v.attrs['LocationX'].value[0,0],
-                                  v.attrs['LocationY'].value[0,0]])
+                        xy.append([v.attrs['LocationX'][0],
+                                  v.attrs['LocationY'][0]])
                     except AttributeError:
                         xy.append([0, 0])
         if not wns:
@@ -70,12 +75,25 @@ class PtirReader:
         self.wavenum = np.median(wns, axis=0)[::-1]
         self.AB = np.array(raw)[:, ::-1]
         self.xy = np.array(xy)
-        self.wh = (len(wns), 1)
+        self.wh = (len(self.AB), 1)
 
-        try:
-            im = f['Images']['Image_000']
-        except (AttributeError, ValueError):
-            self.image = None
-        else:
-            self.image = im.value
+        self.images = []
+        for imtype in ['Image', 'Heightmap']:
+            for imnum in range(1000):
+                try:
+                    im = f['%ss' % (imtype)]['%s_%03d' % (imtype, imnum)]
+                except (KeyError):
+                    break
+                else:
+                    if imtype == 'Image':
+                        imname = im.name
+                    else:
+                        imwnum = im.attrs['IRWavenumber'].decode()
+                        imname=imwnum + " " + im.attrs['Label'].decode()
+                    img = Image(data=im.value[::-1,:], name=imname)
+                    img.xy = ([im.attrs['PositionX'][0],
+                              im.attrs['PositionY'][0]])
+                    img.wh = ([im.attrs['SizeWidth'][0],
+                              im.attrs['SizeHeight'][0]])
+                    self.images.append(img)
 

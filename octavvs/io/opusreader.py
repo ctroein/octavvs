@@ -8,6 +8,7 @@ Created on Thu Jan  9 16:16:44 2020
 
 from struct import unpack
 import numpy as np
+from .image import Image
 
 class OpusReader:
     """
@@ -28,7 +29,7 @@ class OpusReader:
         self.wh = (0, 0)
         self.wavenum = None
         self.AB = None
-        self.image = None
+        self.images = []
         if filename is not None:
             self.load(filename)
 
@@ -69,6 +70,7 @@ class OpusReader:
 
     def load(self, filename):
         f = open(filename, 'rb')
+        self.images = []
         HLEN = 504
         header = f.read(HLEN)
         abparams = abmatrix = None
@@ -86,7 +88,8 @@ class OpusReader:
             elif dt == 15:
                 abmatrix = self.read_chunk(f, dcsize, dcoffs)
             elif dt == 0 and db == 0 and dtt == 160:
-                self.image = self.parse_image(self.read_chunk(f, dcsize, dcoffs))
+                im = self.parse_image(self.read_chunk(f, dcsize, dcoffs))
+                self.images.append(Image(data=im[0], fmt=im[1]))
         # Assume the data were read ok
         start, pad = 16006, 38
         wns, w, h, wn1, wn2 = [abparams[k] for k in ['NPT', 'NPX', 'NPY', 'FXV', 'LXV']]

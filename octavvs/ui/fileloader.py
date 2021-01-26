@@ -39,6 +39,8 @@ class FileLoaderWidget(QWidget, FileLoaderUi):
         self.spinBoxFileNumber.setEnabled(onoff)
         self.pushButtonShowFiles.setEnabled(onoff)
         self.lineEditSaveExt.setEnabled(onoff)
+        self.comboBoxSaveFormat.setEnabled(onoff)
+
 
     def setSuffix(self, suffix):
         self.lineEditSaveExt.setText(suffix)
@@ -47,11 +49,13 @@ class FileLoaderWidget(QWidget, FileLoaderUi):
         "Copy from UI to some kind of parameters object"
         p.fileFilter = self.lineEditLoadFilter.text()
         p.saveExt = self.lineEditSaveExt.text()
+        p.saveFormat = self.comboBoxSaveFormat.currentText()
 
     def loadParameters(self, p):
         "Copy to UI from some kind of parameters object"
         self.lineEditLoadFilter.setText(p.fileFilter)
         self.lineEditSaveExt.setText(p.saveExt)
+        self.comboBoxSaveFormat.setCurrentText(p.saveFormat)
 
 
 
@@ -116,7 +120,7 @@ class FileLoader():
             filenames.sort()
         else:
             filenames = self.getLoadFileNames("Open hyperspectral image",
-                        filter="Matrix files (*.mat *.txt *.csv *.0 *.1 *.2 *.3);;All files (*)",
+                        filter="Matrix files (*.mat *.txt *.csv *.ptir *.0 *.1 *.2);;All files (*)",
                         settingname='spectraDir')
             if not filenames:
                 return
