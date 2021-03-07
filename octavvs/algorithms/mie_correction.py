@@ -88,7 +88,7 @@ def hilbert_n(wn, ref, zeropad=500):
     return PchipInterpolator(hilbert_n.lin, nreal)(wn)
 
 def compute_model(wn, ref, model='konevskikh', n_components=7,
-                  a=np.linspace(1.1, 1.5, 10), d=None,
+                  a=np.linspace(1.1, 1.5, 10), d=np.linspace(2, 7.1, 10),
                   bvals=10, constantcomponent=True,
                   linearcomponent=False, variancelimit=None):
     """
@@ -373,39 +373,71 @@ def rmiesc(wn, app, ref, iterations=10, clusters=None, modelparams={},
            targetrelresiduals=0.95, verbose=False,
            progressCallback=None, progressPlotCallback=None):
     """
+
     Correct scattered spectra using Bassan's algorithm. This implementation does no orthogonalization
     of the extinction matrix or PCA components relative to the reference, nor is the reference smoothed
     or filtered through a sum of gaussians as in the original Matlab implementation.
-    Parameters:
-    wn: sorted array of wavenumbers (high-to-low or low-to-high)
-    app: apparent spectrum, shape (pixels, wavenumbers)
-    ref: reference spectrum; array (wavenumbers)
-    iterations: number of iterations of the algorithm
-    clusters: if not None, cluster pixels into this many clusters in each iteration and use
-        a common reference spectrum for each cluster. May be given as a list with one value per
-        iteration, in which case 0 means to reuse clusters from the previous iteration and mix
-        new/old references for stable convergence.
-        If clusters is negative, use stable_rmiesc_clusters to generate the list.
-    modelparams: parameters used in compute_model:
-        n_components: number of principal components to be calculated for the extinction matrix
-        a: indexes of refraction to use in model
-        d: sphere sizes to use in model, in micrometers
-        bvals: number of values for the model parameter b
-        model: model to use for the extinction matrix; see compute_model
-        linearcomponent: if True, include a linear term in the model (used in Bassan's paper only).
-        variancelimit: if a number (around 0.9996), use as many PCA components as needed to
-            explain this fraction of the variance of the extinction matrix
-    weighted: downweight the 1800 to 2800 cm-1 region when fitting
-    zeroregionpenalty: penalize regions where the reference is near-zero
-    prefit_reference: vastly improve stability by fitting reference before scattering
-    autoiterations; if True, iterate until residuals stop improving
-    targetrelresiduals: if autoiterations, stop when this relative change in residuals is seen
-    verbose: print progress information
-    progressCallback(int a, int b): callback function called to indicate that
-        the processing is complete to a fraction a/b.
-    progressPlotCallback(array ref, (a, b)): like the above with a (cluster) reference spectrum
-    Return: corrected apparent spectra (the best encountered if autoiterations, else the final ones)
+
+    Parameters
+    ----------
+    wn : array
+        sorted array of wavenumbers (high-to-low or low-to-high)
+    app : array
+        apparent spectrum, shape (pixels, wavenumbers)
+    ref : array
+        reference spectrum; array (wavenumbers)
+    iterations : int
+        number of iterations of the algorithm
+    clusters : int or list
+        If not None, cluster pixels into this many clusters in each iteration
+        and use a common reference spectrum for each cluster. May be given as
+        a list with one value per iteration, in which case 0 means to reuse
+        clusters from the previous iteration and mix new/old references for
+        stable convergence. If clusters is negative, use stable_rmiesc_clusters
+        to generate the list.
+    modelparams : dict
+        Parameters used in compute_model.
+
+        n_components :
+            number of principal components to be calculated for
+            the extinction matrix.
+        a :
+            indexes of refraction to use in model.
+        d :
+            sphere sizes to use in model, in micrometers.
+        bvals :
+            number of values for the model parameter b.
+        model :
+            model to use for the extinction matrix; see compute_model.
+        linearcomponent :
+            if True, include a linear term in the model(used in Bassan's paper only).
+        variancelimit :
+           if a number (around 0.9996), use as many PCA components
+           as needed to explain this fraction of the variance of the extinction matrix.
+    weighted : bool
+        downweight the 1800 to 2800 cm-1 region when fitting
+    zeroregionpenalty : bool
+        penalize regions where the reference is near-zero
+    prefit_reference : bool
+        vastly improve stability by fitting reference before scattering
+    autoiterations : bool
+        if True, iterate until residuals stop improving
+    targetrelresiduals : float
+        if autoiterations, stop when this relative change in residuals is seen
+    verbose : bool
+        print progress information
+    progressCallback : func(int a, int b)
+        callback function called to indicate that the processing is complete
+        to a fraction a/b.
+    progressPlotCallback : func(array ref, (a, b))
+        like the above with a (cluster) reference spectrum
+
+    Returns
+    -------
+    corrected apparent spectra (the best encountered if autoiterations, else the final ones)
+
     """
+
 
     # The input can be a single spectrum or a matrix of spectra. If the former, squeeze at the end.
     squeeze = False
@@ -619,8 +651,8 @@ def rmiesc(wn, app, ref, iterations=10, clusters=None, modelparams={},
                         wn, app[s], ref=ref,
                         modelparams=modelparams, solvingparams=solvingparams,
                         plot=(iteration, iterations))
-                    print("pixel %5d: iter %3d  residual %7.3g" %
-                          (s, iteration, residual))
+                    # print("pixel %5d: iter %3d  residual %7.3g" %
+                    #       (s, iteration, residual))
                     if autoiterations:
                         if residual < residuals[s]:
                             corrected[s, :] = corr
