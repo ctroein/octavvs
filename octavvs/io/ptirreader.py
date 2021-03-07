@@ -39,23 +39,23 @@ class PtirReader:
             self.load(filename)
 
     def load(self, filename):
-        f = h5py.File(filename)
+        f = h5py.File(filename, mode='r')
 
         wns = []
         raw = []
         xy = []
         for k, v in f.items():
             if 'MirageDC' in v.attrs:
-                wn = v['Spectroscopic_Values'].value[0,:]
+                wn = v['Spectroscopic_Values'][0,:]
                 wns.append(wn)
                 for kk, vv in v.items():
                     try:
                         r = vv['Raw_Data']
                     except (AttributeError, ValueError):
                         continue
-                    d = r.value[0,:]
+                    d = r[0,:]
                     if d.shape != wn.shape:
-                        print('incompatible shapes', d.shape, wn.shape)
+                        # print('incompatible shapes', d.shape, wn.shape)
                         continue
                     raw.append(d)
                     try:
@@ -90,7 +90,7 @@ class PtirReader:
                     else:
                         imwnum = im.attrs['IRWavenumber'].decode()
                         imname=imwnum + " " + im.attrs['Label'].decode()
-                    img = Image(data=im.value[::-1,:], name=imname)
+                    img = Image(data=im[()][::-1,:], name=imname)
                     img.xy = ([im.attrs['PositionX'][0],
                               im.attrs['PositionY'][0]])
                     img.wh = ([im.attrs['SizeWidth'][0],
