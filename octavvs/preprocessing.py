@@ -760,7 +760,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 "Save preprocessing settings",
                 filter="Setting files (*.pjs);;All files (*)",
                 settingname='settingsDir',
-                savesuffix='pjs')
+                suffix='pjs')
         if filename:
             try:
                 self.getParameters().save(filename)
