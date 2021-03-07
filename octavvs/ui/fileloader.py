@@ -120,7 +120,7 @@ class FileLoader():
             filenames.sort()
         else:
             filenames = self.getLoadFileNames("Open hyperspectral image",
-                        filter="Matrix files (*.mat *.txt *.csv *.ptir *.0 *.1 *.2);;All files (*)",
+                        filter="Spectral data files (*.mat *.txt *.csv *.ptir *.0 *.1 *.2);;Matlab files (*.mat);;Text files (*.txt *.csv);;OPUS files (*.0 *.1 *.2 *.3 *.4 *.5 *.6 *.7 *.8 *.9);;mIRage files (*.ptir);;All files (*)",
                         settingname='spectraDir')
             if not filenames:
                 return
