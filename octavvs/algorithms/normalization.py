@@ -11,7 +11,30 @@ import numpy as np
 def normalize_spectra(method, y, wn=None, **kwargs):
     """
     Normalize the spectra in the matrix y (pixel,wavenum) with the given method
+
+
+    Parameters
+    ----------
+    method : str
+        Normalization method; one of: 'mean', 'area', 'wn', 'max', 'n2'
+    y : array
+        spectra in order (spectrum, wavenum)
+    wn : array, optional
+        wavenumber array; needed for the 'area' and 'wn' methods. The default is None.
+    wavenum : float
+        wavenumber to normalize at; used by 'wn'
+
+    Raises
+    ------
+    ValueError
+        if give an undefined method.
+
+    Returns
+    -------
+    array
+        Array of normalized spectra in the same format as y.
     """
+
     if method == 'mean':
         return (y.T / y.mean(axis=1)).T
     elif method == 'area':
