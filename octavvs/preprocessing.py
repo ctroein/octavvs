@@ -1,27 +1,25 @@
 import os
 import traceback
-from os.path import basename, dirname
+# from os.path import basename, dirname
 from pkg_resources import resource_filename
 import argparse
 
-from PyQt5.QtWidgets import QFileDialog, QErrorMessage, QInputDialog, QDialog
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
-from PyQt5.Qt import qApp
+from PyQt5.QtWidgets import QDialog, QMessageBox, QSizePolicy
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from PyQt5 import uic
 
 import numpy as np
 import scipy.signal, scipy.io
-import matplotlib
+import matplotlib, cycler
 matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
 import octavvs.io
-from octavvs.algorithms import normalization
+from octavvs.algorithms import normalization, ptir
 from octavvs.io import SpectralData
-from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle,
-                        uitools)
+from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
+                        NoRepeatStyle, uitools)
 
 
 
@@ -65,6 +63,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.data = SpectralData()
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch, 3 for reference
+        self.ptirMode = False
 
         # Avoid repeating spinboxes
         self.spinBoxItersBC.setStyle(NoRepeatStyle())
@@ -81,12 +80,20 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.plot_visual.changedSelected.connect(self.spinBoxSpectra.setValue)
         self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
         self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
+        self.checkBoxSpatial.toggled.connect(self.plot_visual.setSpatialMode)
 
         self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
         self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
         self.checkBoxAutopick.toggled.connect(self.selectSpectra)
+        self.comboBoxPlotCmap.currentTextChanged.connect(self.setPlotColors)
 
-        self.plot_spectra.updated.connect(self.updateAC)
+        self.plot_spectra.updated.connect(self.updateMC)
+        self.plot_MC.clicked.connect(self.plot_MC.popOut)
+        self.checkBoxMC.toggled.connect(self.updateMC)
+        self.spinBoxMCEndpoints.valueChanged.connect(self.updateMC)
+        self.lineEditMCSlopefactor.editingFinished.connect(self.updateMC)
+
+        self.plot_MC.updated.connect(self.updateAC)
         self.plot_AC.clicked.connect(self.plot_AC.popOut)
         self.checkBoxAC.toggled.connect(self.updateAC)
         self.checkBoxSpline.toggled.connect(self.updateAC)
@@ -219,6 +226,9 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.lineEditMaxwn.setFormat("%.2f")
         self.lineEditBCThresh.setRange(1e-6, 1e6)
 
+        self.lineEditMCSlopefactor.setFormat("%g")
+        self.lineEditMCSlopefactor.setRange(-1, 2)
+
         self.lineEditSCRefPercentile.setFormat("%g")
         self.lineEditSCRefPercentile.setRange(0., 100.)
         self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
@@ -297,8 +307,21 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             self.acNext = True
 
         self.clearSC()
-        self.imageProjection()
+        self.updateSpectralImage()
+        self.updateWhiteLightImages()
         self.selectSpectra()
+        self.switchFiletype()
+
+    def switchFiletype(self):
+        self.ptirMode = self.data.filetype == 'ptir'
+        isptir = int(self.ptirMode)
+        self.widgetSC.setHidden(isptir)
+        self.widgetSCOptions.setHidden(isptir)
+        self.plot_SC.setHidden(isptir)
+        self.widgetMC.setHidden(not isptir)
+        self.plot_MC.setHidden(not isptir)
+        self.checkBoxSpatial.setEnabled(self.data.pixelxy is not None)
+
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
@@ -323,6 +346,34 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.plot_visual.setSelectedCount(self.spinBoxSpectra.value(),
                                           self.checkBoxAutopick.isChecked())
 
+    def setPlotColors(self, cmap):
+        if cmap == 'all blue':
+            cols = [[0, 0, 1]]
+        else:
+            cm = plt.get_cmap(cmap)
+            if hasattr(cm, 'colors'):
+                cols = cm.colors
+            elif cmap == 'gray':
+                cols = [cm(x) for x in np.linspace(.1, .9, 10)]
+            else:
+                n = 12
+                cols = [cm(i/n) for i in range(n)]
+        plt.rcParams['axes.prop_cycle'] = cycler.cycler(
+            'color', cols)
+        self.plot_visual.updatePlotColors()
+        self.selectedSpectraUpdated() # Trigger redraw
+
+    # MC, mIRage correction
+    def updateMC(self):
+        wn = self.plot_spectra.getWavenumbers()
+        indata = self.plot_spectra.getSpectra()
+        corr = None
+        if self.ptirMode and self.checkBoxMC.isChecked() and indata is not None:
+            corr = ptir.normalize_mirage(
+                wn, indata,
+                endpoints=self.spinBoxMCEndpoints.value(),
+                slopefactor=self.lineEditMCSlopefactor.value())[0]
+        self.plot_MC.setData(wn, indata, corr)
 
     # AC, Atmospheric correction
     def loadACReference(self):
@@ -337,10 +388,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.updateAC()
 
     def updateAC(self):
-        wn = self.plot_spectra.getWavenumbers()
+        wn = self.plot_MC.getWavenumbers()
         if wn is None:
             return
-        indata = self.plot_spectra.getSpectra()
+        indata = self.plot_MC.getSpectra()
         if not self.checkBoxAC.isChecked() or len(indata) == 0:
             self.plot_AC.setData(wn, indata, None)
             self.labelACInfo.setText('')
@@ -420,8 +471,11 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             p.update({ k: v for k, v in vars(params).items() if k.startswith('ac')})
         else:
             p['acDo'] = False
+        # Assume that SC precludes MC
+        p['mcDo'] = False
         # Selection of pixels to correct, or all if using clustering.
-        p['selected'] = self.plot_visual.getSelected() if not p['scClustering'] else None
+        p['selected'] = self.plot_visual.getSelected() if \
+            not p['scClustering'] else None
         return p
 
     def scSettingsChanged(self, settings=None):
@@ -478,7 +532,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def clearSC(self):
         if self.rmiescRunning == 1:
             return
-        self.plot_SC.setData(self.plot_visual.getWavenumbers(), None, None, None, None)
+        self.plot_SC.setData(self.plot_visual.getWavenumbers(),
+                             None, None, None, None)
         self.scSettings = None
 
     def scStop(self):
@@ -498,25 +553,28 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     @pyqtSlot(str, str)
     def scFailed(self, err, trace):
-        self.errorMsg.showMessage('RMieSC failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
+        self.errorMsg.showMessage(
+            'RMieSC failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
         self.scStopped()
 
     @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
     def scDone(self, wavenumber, indata, corr):
         self.scSettings = self.scNewSettings
-        self.plot_SC.setData(wavenumber, indata, corr, self.scSettings['selected'],
+        self.plot_SC.setData(wavenumber, indata, corr,
+                             self.scSettings['selected'],
                              self.plot_visual.getSelected())
         self.scStopped()
 
     @pyqtSlot(int, int)
     def scProgress(self, a, b):
         if a < 0:
-            self.progressBarSC.setFormat(['', 'Atm %p%', 'RMieSC %p%', 'SGF %p%', 'Baseline'][-a])
+            self.progressBarSC.setFormat(
+                ['', 'Atm %p%', 'RMieSC %p%', 'SGF %p%', 'Baseline',
+                 'mIRage %p%'][-a])
         if a == -2:
             self.plot_SC.prepareProgress(self.plot_visual.getWavenumbers())
         self.progressBarSC.setValue(max(a, 0))
         self.progressBarSC.setMaximum(b)
-
 
     # SGF, Denoising with Savtisky-Golay filter
     def updateSGF(self):
@@ -736,6 +794,9 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         p.scPCAVariance = self.dialogSCAdvanced.lineEditSCPCAVariance.value()
         p.scAutoIters = self.dialogSCAdvanced.checkBoxSCAutoIters.isChecked()
         p.scMinImprov = self.dialogSCAdvanced.lineEditSCMinImprov.value()
+        p.mcDo = self.checkBoxMC.isChecked()
+        p.mcEndpoints = self.spinBoxMCEndpoints.value()
+        p.mcSlopefactor = self.lineEditMCSlopefactor.value()
         p.sgfDo = self.checkBoxSGF.isChecked()
         p.sgfWindow = self.spinBoxWindowLength.value()
         p.sgfOrder = self.spinBoxPolyOrder.value()
@@ -810,6 +871,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.dialogSCAdvanced.lineEditSCPCAVariance.setValue(p.scPCAVariance)
         self.dialogSCAdvanced.checkBoxSCAutoIters.setChecked(p.scAutoIters)
         self.dialogSCAdvanced.lineEditSCMinImprov.setValue(p.scMinImprov)
+        self.checkBoxMC.setChecked(p.mcDo)
+        self.spinBoxMCEndpoints.setValue(p.mcEndpoints)
+        self.lineEditMCSlopefactor.setValue(p.mcSlopefactor)
+
         self.checkBoxSGF.setChecked(p.sgfDo)
         self.spinBoxWindowLength.setValue(p.sgfWindow)
         self.spinBoxPolyOrder.setValue(p.sgfOrder)
@@ -869,6 +934,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             self.errorMsg.showMessage('Load some data first')
             return
         params = self.getParameters()
+        if self.ptirMode:
+            params.scDo = False
+        else:
+            params.mcDo = False
 
         if foldername is None:
             foldername = self.getDirectoryName("Select save directory",

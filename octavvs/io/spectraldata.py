@@ -30,6 +30,7 @@ class SpectralData:
         self.wh = (0, 0)  # Width and height in pixels
         self.pixelxy = None # Positions of pixels in image
         self.images = None # list of Image loaded from raw data file
+        self.filetype = None # str from [txt, mat, opus, ptir]
 
     def set_width(self, w):
         try:
@@ -59,32 +60,36 @@ class SpectralData:
         xy = None
         images = None
         fext = os.path.splitext(filename)[1].lower()
-#        opusformat = False
         if fext in ['.txt', '.csv', '.mat']:
             if fext == '.mat':
-#                s = scipy.io.loadmat(filename)
+                filetype = 'mat'
                 try:
                     s = read_mat(filename)
                 except TypeError:
-                    # Workaround for uint16_codec bug (pymatreader assumes mio5, not mio4)
+                    # Workaround for uint16_codec bug (pymatreader
+                    # assumes mio5, not mio4)
                     s = scipy.io.loadmat(filename)
                 # Assume data are in the biggest matrix in the file
                 ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
                 if 'wh' in s:
                     wh = s['wh'].flatten()
             else:
+                filetype = 'txt'
                 ss = np.loadtxt(filename)
 
             if ss.ndim != 2 or ss.shape[0] < 10 or ss.shape[1] < 2:
-                raise RuntimeError('file does not appear to describe an FTIR image matrix')
+                raise RuntimeError(
+                    'file does not appear to describe an FTIR image matrix')
             d = -1 if ss[0,0] < ss[-1,0] else 1
             raw = ss[::d,1:].T
             wn = ss[::d,0]
         else:
             if fext == '.ptir' or fext == '.hdf':
+                filetype = 'ptir'
                 reader = PtirReader(filename)
                 xy = reader.xy
             else:
+                filetype = 'opus'
                 reader = OpusReader(filename)
             raw = reader.AB
             wn = reader.wavenum
@@ -114,4 +119,4 @@ class SpectralData:
         self.images = images
         self.pixelxy = xy
         self.curFile = filename
-
+        self.filetype = filetype

@@ -16,7 +16,7 @@ from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import SpectralData
-from octavvs.algorithms import baseline, correction, normalization
+from octavvs.algorithms import baseline, correction, normalization, ptir
 
 class PrepParameters:
     """
@@ -62,6 +62,9 @@ class PrepParameters:
         self.scPCAVariance = 99.96
         self.scAutoIters = True
         self.scMinImprov = 5
+        self.mcDo = False
+        self.mcEndpoints = 6
+        self.mcSlopefactor = .5
         self.sgfDo = False
         self.sgfWindow = 9
         self.sgfOrder = 3
@@ -156,14 +159,21 @@ class PrepWorker(QObject):
         elif ref == 'Other':
             if otherref == '':
                 raise RuntimeError('Specify a reference spectrum file')
-            return correction.load_reference(data.wavenumber, matfilename=otherref)
+            return correction.load_reference(data.wavenumber,
+                                             matfilename=otherref)
         else:
             return correction.load_reference(data.wavenumber, what=ref.lower())
 
     def callACandSC(self, data, params, wn, y):
         """
-        Run atmospheric correction and/or CRMieSC
+        Run atmospheric correction and/or CRMieSC and/or mIRage correction
         """
+        if params.mcDo:
+            self.emitProgress(-5, 100)
+            y = ptir.normalize_mirage(wn, y,
+                                      endpoints=params.mcEndpoints,
+                                      slopefactor=params.mcSlopefactor)[0]
+
         if params.acDo:
             self.emitProgress(-1, 100)
             y = correction.atmospheric(wn, y, cut_co2=params.acSpline,
@@ -178,11 +188,14 @@ class PrepWorker(QObject):
                                      otherref=params.scOtherRef,
                                      percentile=params.scRefPercentile)
             yold = y
-            clust = params.scClusters * (-1 if params.scStable else 1) if params.scClustering else 0
+            clust = params.scClusters * (-1 if params.scStable else 1) if \
+                params.scClustering else 0
 #            print(params.scAmin, params.scAmax, params.scResolution)
             modelparams=dict(
-                n_components=params.scPCAMax if params.scPCADynamic else params.scPCA,
-                variancelimit=params.scPCAVariance*.01 if params.scPCADynamic else 0,
+                n_components=params.scPCAMax if \
+                    params.scPCADynamic else params.scPCA,
+                variancelimit=params.scPCAVariance*.01 if \
+                    params.scPCADynamic else 0,
                 a=np.linspace(params.scAmin, params.scAmax, params.scResolution),
                 d=np.linspace(params.scDmin, params.scDmax, params.scResolution),
                 bvals=params.scResolution,
@@ -197,12 +210,14 @@ class PrepWorker(QObject):
                     weighted=False,
                     autoiterations=params.scAutoIters,
                     targetrelresiduals=1-params.scMinImprov*.01,
-                    zeroregionpenalty=params.scPenalizeLambda if params.scPenalize else None,
+                    zeroregionpenalty=params.scPenalizeLambda if
+                    params.scPenalize else None,
                     prefit_reference=params.scPrefitReference,
                     verbose=True,
                     progressCallback=self.emitProgress,
                     progressPlotCallback=self.progressPlot.emit)
             self.done.emit(wn, yold, y)
+
         return y
 
     def callSGFandSRandBC(self, params, wn, y):

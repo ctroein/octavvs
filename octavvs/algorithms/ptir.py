@@ -46,6 +46,12 @@ def normalize_mirage(wn, data, breaks=[(922,926), (1202,1206), (1448,1452)],
 
     """
     data = data.copy()
+    if not len(data):
+        return data, None
+    flipwn = wn[0] > wn[-1]
+    if flipwn:
+        data = data[:, ::-1]
+        wn = wn[::-1]
     breaks = find_wn_ranges(wn, np.array(breaks))
     cuts = np.concatenate(([0], breaks.flatten(), [len(wn)])).reshape((-1, 2))
 
@@ -104,4 +110,6 @@ def normalize_mirage(wn, data, breaks=[(922,926), (1202,1206), (1448,1452)],
             data[:, pce:cb] = np.linspace(data[:, pce-1], data[:, cb], cb-pce+1,
                                           endpoint=False, axis=-1)[:,1:]
     scale = scale.reshape((-1, len(data))).T
+    if flipwn:
+        data = data[:,::-1]
     return data, scale

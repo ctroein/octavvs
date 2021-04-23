@@ -118,6 +118,11 @@
          <string>gnuplot</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>gray</string>
+        </property>
+       </item>
       </widget>
      </item>
     </layout>

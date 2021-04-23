@@ -41,14 +41,17 @@ class WhiteLightWidget(FigureCanvas):
             return
         scx = self.ax.get_xlim()[1]
         scy = self.ax.get_ylim()[0]
+        i = 0
         for xy in pixelxy:
             x = (xy[0] - ixy[0]) / iwh[0] + .5
             y = (xy[1] - ixy[1]) / iwh[1] + .5
             if x < 0 or x > 1 or y < 0 or y > 1:
                 continue
-            p = patches.Rectangle((x*scx, y*scy), 5, 5, fill=False, color='b')
+            p = patches.Rectangle((x*scx, y*scy), 5, 5, fill=False,
+                                  color='b')
             self.ax.add_patch(p)
             self.points.append(p)
+            i = i + 1
         self.draw_idle()
 
     def load(self, filename=None, image=None):

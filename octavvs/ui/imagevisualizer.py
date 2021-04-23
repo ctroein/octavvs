@@ -9,6 +9,7 @@ from pkg_resources import resource_filename
 from PyQt5.QtWidgets import QWidget
 #from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt5 import uic
+# import matplotlib.pyplot as plt
 
 from . import constants, uitools
 # from ..io import Image
@@ -56,11 +57,11 @@ class ImageVisualizer():
         self.horizontalSliderImage.valueChanged.connect(self.reloadWhiteLight)
 
         iv = self.imageVisualizer
-        iv.comboBoxMethod.currentIndexChanged.connect(self.imageProjection)
+        iv.comboBoxMethod.currentIndexChanged.connect(self.updateSpectralImage)
         iv.horizontalSliderWavenumber.valueChanged.connect(self.wavenumberSlide)
         iv.lineEditWavenumber.editingFinished.connect(self.wavenumberEdit)
         iv.comboBoxCmaps.currentTextChanged.connect(self.plot_visual.setCmap)
-
+        self.whiteLightNames = {}
 
     def updateWavenumberRange(self):
         super().updateWavenumberRange()
@@ -91,39 +92,47 @@ class ImageVisualizer():
                 iv.horizontalSliderWavenumber, iv.lineEditWavenumber,
                 self.plot_visual.getWavenumbers(),
                 uitools.ixfinder_nearest)
-        self.imageProjection()
+        self.updateSpectralImage()
 
     def updateDimensions(self, wh):
         try:
             self.plot_visual.setDimensions(wh)
         except ValueError:
             pass
-        self.imageProjection()
+        self.updateSpectralImage()
 
-    def imageProjection(self):
+    def updateSpectralImage(self):
         iv = self.imageVisualizer
         meth = iv.comboBoxMethod.currentIndex()
         iswn = meth == 2
         iv.lineEditWavenumber.setEnabled(iswn)
         iv.horizontalSliderWavenumber.setEnabled(iswn)
-        self.plot_visual.setProjection(meth, -1 - iv.horizontalSliderWavenumber.value())
+        wn = self.data.wavenumber
+        wix = len(wn)-1 - iv.horizontalSliderWavenumber.value() if (
+            wn[0] > wn[-1]) else iv.horizontalSliderWavenumber.value()
+        # print('wavenumix', wix, wn[wix])
+        self.plot_visual.setProjection(meth, wix)
 
+    def updateWhiteLightImages(self):
         if self.data.images and len(self.data.images) > 1:
             self.horizontalSliderImage.setMaximum(len(self.data.images)-1)
             self.horizontalSliderImage.show()
             self.lineEditImageInfo.show()
+            self.reloadWhiteLight(self.horizontalSliderImage.value())
         else:
             self.horizontalSliderImage.hide()
             self.lineEditImageInfo.hide()
             self.horizontalSliderImage.setValue(0)
-        self.reloadWhiteLight(self.horizontalSliderImage.value())
+            self.reloadWhiteLight()
 
     # White light image stuff
     def loadWhite(self):
         filename = self.getImageFileName(title="Load white light image",
                                          settingname='whitelightDir')
-        if filename:
-            self.plot_whitelight.load(filename)
+        if not filename:
+            return
+        self.plot_whitelight.load(filename=filename)
+        self.whiteLightNames[self.data.curFile] = filename
 
     def reloadWhiteLight(self, num=0):
         if self.data.images:
@@ -131,7 +140,10 @@ class ImageVisualizer():
             self.lineEditImageInfo.setText(self.data.images[num].name)
             self.plot_whitelight.draw_rectangles(self.data.pixelxy)
         else:
-            self.plot_whitelight.load(filename=os.path.splitext(self.data.curFile)[0]+'.jpg')
+            fname = self.whiteLightNames[self.data.curFile] if \
+                self.data.curFile in self.whiteLightNames else \
+                    os.path.splitext(self.data.curFile)[0]+'.jpg'
+            self.plot_whitelight.load(filename=fname)
             self.lineEditImageInfo.setText('')
 
 

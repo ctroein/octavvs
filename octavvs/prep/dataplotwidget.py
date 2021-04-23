@@ -25,6 +25,7 @@ class DataPlotWidget(FigureCanvas):
         self.inspectra = None
         self.spectra = None
         self.popax = None
+        self.window_title = self.__class__.__name__
 
     def mousePressEvent(self, event):
         self.clicked.emit()
@@ -34,11 +35,15 @@ class DataPlotWidget(FigureCanvas):
             self.inspectra is inspectra and
             self.spectra is spectra):
             return
+        # print('update',self.__class__.__name__,
+        #       self.inspectra.shape if self.inspectra is not None else None,
+        #       self.spectra.shape if self.spectra is not None else None)
+        # Skip redraw if there is and was no outdata
+        if self.spectra is not None or spectra is not None:
+            self.draw_idle()
         self.wavenumber = wavenumber
         self.inspectra = inspectra
         self.spectra = spectra
-#        self.draw()
-        self.draw_idle()
         self.updated.emit()
 
     def getSpectra(self):
@@ -60,6 +65,7 @@ class DataPlotWidget(FigureCanvas):
 
     def popOut(self):
         fig = plt.figure(self.objectName(), tight_layout=dict(pad=.6))
+        fig.canvas.set_window_title(self.window_title)
         ax = fig.gca()
         ax.clear()
         if self.spectra is not None and len(self.spectra) > 0:
@@ -72,30 +78,37 @@ class DataPlotWidget(FigureCanvas):
 
 class RawPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
-        DataPlotWidget.__init__(self, parent=None)
+        DataPlotWidget.__init__(self, parent)
+        self.window_title = 'Raw spectra'
 
     def draw_ax(self, ax):
         for i in self.spectra:
             ax.plot(self.wavenumber, i, linewidth=1)
 
 class NormPlotWidget(RawPlotWidget):
-    pass
+    def __init__(self, parent=None):
+        RawPlotWidget.__init__(self, parent)
+        self.window_title = 'Normalized spectra'
 
 class ACPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
         DataPlotWidget.__init__(self, parent=None)
+        self.window_title = 'Atmospheric correction'
 
     def draw_ax(self, ax):
         for s in range(len(self.spectra)):
-            ax.plot(self.wavenumber, self.inspectra[s], linewidth=1, label='Raw' if not s else None)
+            ax.plot(self.wavenumber, self.inspectra[s], linewidth=1,
+                    label='Raw' if not s else None)
             ax.plot(self.wavenumber, self.spectra[s],
-                    color='r', linewidth=1, linestyle='--', label='Atm corr.' if not s else None)
+                    color='r', linewidth=1, linestyle='--',
+                    label='Atm corr.' if not s else None)
         ax.legend()
 
 
 class SCPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
         DataPlotWidget.__init__(self, parent=None)
+        self.window_title = 'Scattering correction'
         self.progressMode = False
         self.runSelected = None
         self.showSelected = None
@@ -166,6 +179,7 @@ class SCPlotWidget(DataPlotWidget):
 class SGFPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
         DataPlotWidget.__init__(self, parent=None)
+        self.window_title = 'Savitzky-Golay filter'
 
     def draw_ax(self, ax):
         for s in range(len(self.spectra)):
@@ -180,6 +194,7 @@ class SGFPlotWidget(DataPlotWidget):
 class SRPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
         DataPlotWidget.__init__(self, parent=None)
+        self.window_title = 'Spectral region selection'
         self.mincut=0
         self.maxcut=10000
         self.cutwn=np.zeros(0)
@@ -211,6 +226,7 @@ class SRPlotWidget(DataPlotWidget):
 class BCPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
         DataPlotWidget.__init__(self, parent=None)
+        self.window_title = 'Baseline correction'
 
     def getSpectra(self):
         if self.spectra is not None:
@@ -227,3 +243,16 @@ class BCPlotWidget(DataPlotWidget):
 #                    color='gray', linewidth=1, label='Corrected' if not s else None)
             ax.legend()
 
+class MCPlotWidget(DataPlotWidget):
+    def __init__(self, parent=None):
+        DataPlotWidget.__init__(self, parent=None)
+        self.window_title = 'mIRage correction'
+
+    def draw_ax(self, ax):
+        for s in range(len(self.spectra)):
+            ax.plot(self.wavenumber, self.inspectra[s],
+                    color='black', linewidth=1, label='Input' if not s else None)
+            ax.plot(self.wavenumber, self.spectra[s],
+                    linewidth=1, label='Corrected' if not s else None)
+        if len(self.spectra):
+            ax.legend()

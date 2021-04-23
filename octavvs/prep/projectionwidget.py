@@ -37,7 +37,8 @@ class ProjectionWidget(FigureCanvas):
         self.popax = None
         # (x,y) -> Rectangle for pop-out, iff popax is not None
         self.popsel = {}
-        self.mainimg = self.ax.imshow(self.projection, self.cmap, zorder=0, aspect='equal')
+        self.mainimg = self.ax.imshow(self.projection, self.cmap,
+                                      zorder=0, aspect='equal')
         self.popimg = None
         self.popcb = None
         self.popfig = None
@@ -117,18 +118,22 @@ class ProjectionWidget(FigureCanvas):
         if self.popax:
             self.popsel.pop(xy).remove()
 
-    def newRect(self, xy):
-        return patches.Rectangle((xy[0], xy[1]), 1, 1, fill=False, color='b')
+    def newRect(self, xy, colorix=0):
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        # plt.get_cmap('top10').colors
+        return patches.Rectangle((xy[0], xy[1]), .999, .999, fill=False,
+                                 color=colors[colorix % len(colors)])
 
     def addPoint(self, xy):
         px = xy[1] * self.projection.shape[1] + xy[0]
         if px >= len(self.raw) or px < 0:
             return False
-        p = self.newRect(xy)
+        pnum = len(self.selected)
+        p = self.newRect(xy, pnum)
         self.ax.add_patch(p)
         self.selected[xy] = p
         if self.popax:
-            p = self.newRect(xy)
+            p = self.newRect(xy, pnum)
             self.popax.add_patch(p)
             self.popsel[xy] = p
         return True
@@ -167,6 +172,11 @@ class ProjectionWidget(FigureCanvas):
         self.draw_idle()
         self.changedSelected.emit(len(self.selected))
 
+    @pyqtSlot('bool')
+    def setSpatialMode(self, sp):
+        print('spatial', sp)
+        pass
+
     @pyqtSlot('QString')
     def setCmap(self, s):
         self.cmap = s
@@ -174,6 +184,18 @@ class ProjectionWidget(FigureCanvas):
             self.mainimg.set_cmap(s)
         if self.popimg:
             self.popimg.set_cmap(s)
+        self.draw_idle()
+
+    def updatePlotColors(self):
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        i = 0
+        for p in self.selected.values():
+            p.set_color(colors[i % len(colors)])
+            i = i + 1
+        i = 0
+        for p in self.popsel.values():
+            p.set_color(colors[i % len(colors)])
+            i = i + 1
         self.draw_idle()
 
     def onclick(self, event):
@@ -195,7 +217,8 @@ class ProjectionWidget(FigureCanvas):
     def draw(self):
         if self.refreshplots:
             self.mainimg.set_data(self.projection)
-            self.mainimg.set_extent((0, self.projection.shape[1], self.projection.shape[0], 0))
+            self.mainimg.set_extent((0, self.projection.shape[1],
+                                     self.projection.shape[0], 0))
             self.mainimg.autoscale()
 
         FigureCanvas.draw(self)
@@ -224,11 +247,13 @@ class ProjectionWidget(FigureCanvas):
 
         elif self.refreshplots:
             self.popimg.set_data(self.projection)
-            self.popcb.mappable.set_clim(vmin=self.projection.min(), vmax=self.projection.max())
+            self.popcb.mappable.set_clim(vmin=self.projection.min(),
+                                         vmax=self.projection.max())
             setext = True
 
         if setext:
-            self.popimg.set_extent((0, self.projection.shape[1], self.projection.shape[0], 0))
+            self.popimg.set_extent((0, self.projection.shape[1],
+                                    self.projection.shape[0], 0))
             self.popimg.autoscale()
         fig.canvas.draw_idle()
 
