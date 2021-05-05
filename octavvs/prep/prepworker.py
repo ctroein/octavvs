@@ -254,7 +254,7 @@ class PrepWorker(QObject):
             else:
                 raise ValueError('unknown baseline correction method '+str(params.bcMethod))
 
-        return y
+        return wn, y
 
     @pyqtSlot(SpectralData, dict)
     def rmiesc(self, data, params):
@@ -280,9 +280,9 @@ class PrepWorker(QObject):
             self.failed.emit(repr(e), traceback.format_exc())
 
 
-    def saveCorrected(self, outfile, fmt, data, y):
+    def saveCorrected(self, outfile, fmt, data, wn, y):
         if fmt == 'Quasar.mat':
-            out = {'y': y, 'wavenumber': data.wavenumber}
+            out = {'y': y, 'wavenumber': wn}
             if data.pixelxy is not None:
                 map_x = np.array([x for (x,y) in data.pixelxy])
                 map_y = np.array([y for (x,y) in data.pixelxy])
@@ -293,8 +293,7 @@ class PrepWorker(QObject):
             out['map_y'] = map_y[:, None]
             scipy.io.savemat(outfile, out)
         else:
-            print('shapes', data.wavenumber.shape, y.shape)
-            ab = np.hstack((data.wavenumber[:, None], y.T))
+            ab = np.hstack((wn[:, None], y.T))
             scipy.io.savemat(outfile, {'AB': ab, 'wh': data.wh } )
 
     @pyqtSlot(SpectralData, PrepParameters, str, bool)
@@ -318,7 +317,7 @@ class PrepWorker(QObject):
                 y = data.raw
 
                 y = self.callACandSC(data, params, wn, y)
-                y = self.callSGFandSRandBC(params, wn, y)
+                wn, y = self.callSGFandSRandBC(params, wn, y)
 
                 if params.normDo:
                     y = normalization.normalize_spectra(
@@ -337,7 +336,7 @@ class PrepWorker(QObject):
 #                filename = filename[0] + params.saveExt + filename[1]
                 filename = filename[0] + params.saveExt + '.mat'
 
-                self.saveCorrected(filename, params.saveFormat, data, y)
+                self.saveCorrected(filename, params.saveFormat, data, wn, y)
             self.batchDone.emit(True)
             return
 
@@ -378,7 +377,7 @@ class PrepWorker(QObject):
                     y = y.mean(0)[None, :]
 
                 y = self.callACandSC(data, params, wn, y)
-                y = self.callSGFandSRandBC(params, wn, y)
+                wn, y = self.callSGFandSRandBC(params, wn, y)
                 if params.normDo:
                     y = normalization.normalize_spectra(
                         params.normMethod, y, wn,

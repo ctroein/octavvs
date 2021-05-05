@@ -554,7 +554,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     @pyqtSlot(str, str)
     def scFailed(self, err, trace):
         self.errorMsg.showMessage(
-            'RMieSC failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
+            'Processing failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
         self.scStopped()
 
     @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
