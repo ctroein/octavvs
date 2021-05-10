@@ -6,9 +6,13 @@ Created on Thu Feb 28 01:07:18 2019
 @author: carl
 """
 
+from io import BytesIO
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+from collections import OrderedDict
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
@@ -45,13 +49,12 @@ class ProjectionWidget(FigureCanvas):
         self.refreshplots = True
 
     def setData(self, wn, raw, wh):
-#        if self.projection.shape != data.shape:
-        if self.raw is None or self.raw.shape != raw.shape:
+        if self.raw is None or raw is None or self.raw.shape != raw.shape:
             self.clearSelected()
-#            self.mainimg = None
-#            self.popax = None
         self.wavenumber = wn
         self.raw = raw
+        if wn is None:
+            return
         self.setDimensions(wh)
 
     def setDimensions(self, wh):
@@ -111,7 +114,8 @@ class ProjectionWidget(FigureCanvas):
         self.popsel = {}
 
     def getSelected(self):
-        return [xy[1] * self.projection.shape[1] + xy[0] for xy in self.selected.keys()]
+        return [xy[1] * self.projection.shape[1] + xy[0]
+                for xy in self.selected.keys()]
 
     def removePoint(self, xy):
         self.selected.pop(xy).remove()
@@ -120,7 +124,6 @@ class ProjectionWidget(FigureCanvas):
 
     def newRect(self, xy, colorix=0):
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        # plt.get_cmap('top10').colors
         return patches.Rectangle((xy[0], xy[1]), .999, .999, fill=False,
                                  color=colors[colorix % len(colors)])
 
@@ -149,14 +152,18 @@ class ProjectionWidget(FigureCanvas):
     def setSelectedCount(self, n, clustered):
         if self.raw is None:
             return
-        if (n == len(self.selected) and clustered == self.clustered) and not self.refreshplots:
+        if n > len(self.raw):
+            n = len(self.raw)
+        if (n == len(self.selected) and clustered == self.clustered
+            ) and not self.refreshplots:
             return
         self.clustered = clustered
-        if clustered and n > 0 and self.raw is not None:
+        if clustered and n > 0:
             # (not wasc or n != len(self.selected)) and
             km = KMeans(n_clusters=min(n, len(self.raw)), n_init=1)
             km.fit(self.raw)
-            closest, _ = pairwise_distances_argmin_min(km.cluster_centers_, self.raw)
+            closest, _ = pairwise_distances_argmin_min(
+                km.cluster_centers_, self.raw)
             w = self.projection.shape[0]
             self.clearSelected()
             for xy in { (s % w, s // w) for s in closest }:
@@ -164,18 +171,13 @@ class ProjectionWidget(FigureCanvas):
         if n < len(self.selected):
             for xy in list(self.selected.keys())[n:]:
                 self.removePoint(xy)
-        while len(self.selected) < n and len(self.selected) < len(self.raw):
+        while len(self.selected) < n:
             x = random.randrange(self.projection.shape[1])
             y = random.randrange(self.projection.shape[0])
             if (x, y) not in self.selected:
                 self.addPoint((x, y))
         self.draw_idle()
         self.changedSelected.emit(len(self.selected))
-
-    @pyqtSlot('bool')
-    def setSpatialMode(self, sp):
-        print('spatial', sp)
-        pass
 
     @pyqtSlot('QString')
     def setCmap(self, s):
@@ -257,3 +259,194 @@ class ProjectionWidget(FigureCanvas):
             self.popimg.autoscale()
         fig.canvas.draw_idle()
 
+
+
+
+class SpatialProjectionWidget(FigureCanvas):
+    changedSelected = pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        self.wavenumber = None
+        self.raw = None
+        self.pixelxy = None
+        self.pixel_levels = None
+        self.rects = []
+        self.fig = Figure()
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_axis_off()
+        self.ax.set_position([0,0,1,1])
+        FigureCanvas.__init__(self, self.fig)
+        self.rect_size = 4
+        self.rect_color = 'b'
+        self.cmap = 'hot'
+        self.mpl_connect('button_press_event', self.onclick)
+        self.selected = OrderedDict() # using keys as ordered set
+        self.clustered = False
+        self.image = None  # Image object
+        img = np.random.rand(16, 16, 3)
+        self.bgimg = self.ax.imshow(img, zorder=0, aspect='equal')
+
+    def setData(self, wn, raw, pixelxy):
+        self.clearSelected()
+        self.wavenumber = wn
+        self.raw = raw
+        self.pixelxy = pixelxy
+        if wn is None:
+            return
+
+        for p in self.rects:
+            p.remove()
+        self.rects = []
+        rs = self.rect_size
+        for xy in self.pixelxy:
+            rect = patches.Rectangle(
+                (xy[0] - rs/2, xy[1] - rs/2), rs, rs,
+                fill=False, color=self.rect_color)
+            self.rects.append(rect)
+            self.ax.add_patch(rect)
+        self.rect_visible = [True] * len(self.rects)
+
+    def setImage(self, image):
+        if image.fmt is not None:
+            imgdata = plt.imread(BytesIO(image.data), format=image.fmt)
+        elif image.data is not None:
+            imgdata = image.data
+        self.bgimg.set_data(imgdata)
+        hwh = np.array(image.wh) / 2
+        self.bgimg.set_extent((image.xy[0] - hwh[0], image.xy[0] + hwh[0],
+                                image.xy[1] + hwh[1], image.xy[1] - hwh[1]))
+        self.bgimg.autoscale()
+        self.rect_visible = [
+            (np.abs(image.xy - xy) < (hwh + self.rect_size / 2)).all()
+            for xy in self.pixelxy ]
+        self.updateRectFill()
+        self.draw_idle()
+
+    def getWavenumbers(self):
+        return self.wavenumber
+
+    def getSelected(self):
+        return list(self.selected.keys())
+
+    def getSelectedData(self):
+        if self.raw is None:
+            return None
+        return self.raw[self.getSelected(), :]
+
+    def setProjection(self, method, wavenumix):
+        if self.wavenumber is None:
+            return
+        if method == 0:
+            data = np.trapz(self.raw, self.wavenumber, axis=1)
+            if self.wavenumber[0] > self.wavenumber[-1]:
+                data = -data
+        elif method == 1:
+            data = self.raw.max(axis=1)
+        elif method == 2:
+            data = self.raw[:, wavenumix]
+        self.pixel_levels = data
+        self.updateRectFill()
+        self.draw_idle()
+
+    def updateRectFill(self):
+        vislevels = self.pixel_levels[self.rect_visible]
+        colors = ScalarMappable(
+            norm=Normalize(vmin=vislevels.min(), vmax=vislevels.max(),
+                           clip=True),
+            cmap=self.cmap).to_rgba(self.pixel_levels)
+        for i in range(len(self.rects)):
+            self.rects[i].set_facecolor(colors[i])
+
+    def updateRectBorders(self):
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        i = 0
+        for s in self.selected:
+            self.rects[s].set_edgecolor(colors[i % len(colors)])
+            i = i + 1
+
+    def updateRectSize(self):
+        for r in self.rects:
+            r.set_width(self.rect_size)
+            r.set_height(self.rect_size)
+
+    @pyqtSlot('QString')
+    def setCmap(self, s):
+        self.cmap = s
+        self.updateRectFill()
+        self.bgimg.set_cmap(s)
+        self.draw_idle()
+
+    def setFill(self, fill):
+        for r in self.rects:
+            r.set_fill(fill)
+        self.draw_idle()
+
+    def updatePlotColors(self):
+        self.updateRectBorders()
+        self.draw_idle()
+
+    def clearSelected(self):
+        for s in self.selected:
+            self.rects[s].set_edgecolor(self.rect_color)
+        self.selected = OrderedDict()
+
+    def selectPoint(self, p):
+        if p not in self.selected:
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            self.rects[p].set_edgecolor(
+                colors[len(self.selected) % len(colors)])
+            self.selected[p] = True
+
+    def deselectPoint(self, p):
+        del self.selected[p]
+        self.rects[p].set_edgecolor(self.rect_color)
+
+    def setSelectedCount(self, n, clustered):
+        if self.raw is None:
+            return
+        if n > len(self.raw):
+            n = len(self.raw)
+        if n == len(self.selected) and clustered == self.clustered:
+            return
+        self.clustered = clustered
+        if n == len(self.raw):
+            for p in range(len(self.raw)):
+                if p not in self.selected:
+                    self.selectPoint(p)
+        elif clustered and n > 0:
+            km = KMeans(n_clusters=min(n, len(self.raw)), n_init=1)
+            km.fit(self.raw)
+            closest, _ = pairwise_distances_argmin_min(
+                km.cluster_centers_, self.raw)
+            self.clearSelected()
+            for p in closest:
+                self.selectPoint(p)
+        if len(self.selected) > n:
+            for p in self.getSelected()[n:]:
+                self.deselectPoint(p)
+        while len(self.selected) < n:
+            p = random.randrange(len(self.raw))
+            if p not in self.selected:
+                self.selectPoint(p)
+        self.draw_idle()
+        self.changedSelected.emit(len(self.selected))
+
+    def onclick(self, event):
+        if event.inaxes != self.ax:
+            return
+        if event.xdata is None or self.pixelxy is None:
+            return
+        changed = False
+        for p in range(len(self.rects)):
+            if self.rects[p].contains(event)[0]:
+                changed = True
+                if p in self.selected:
+                    self.deselectPoint(p)
+                else:
+                    self.selectPoint(p)
+        if changed:
+            FigureCanvas.draw_idle(self)
+            self.changedSelected.emit(len(self.selected))
+
+    def draw(self):
+        FigureCanvas.draw(self)

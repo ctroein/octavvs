@@ -59,7 +59,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def __init__(self, parent=None, files=None, paramFile=None, savePath=None):
         super().__init__(parent)
 
-        self.splitter.setSizes([1e5]*3)
+        # self.splitter.setSizes([1e5]*3)
 
         self.data = SpectralData()
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch, 3 for reference
@@ -75,12 +75,11 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.fileLoader.setSuffix('_prep')
 
-#        self.plot_visual.changedSelected.connect(self.updateSelectedSpectra)
-
+        self.plot_raw = None
+        self.plot_spatial.changedSelected.connect(self.spinBoxSpectra.setValue)
+        self.plot_spatial.changedSelected.connect(self.selectedSpectraUpdated)
         self.plot_visual.changedSelected.connect(self.spinBoxSpectra.setValue)
         self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
-        self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
-        self.checkBoxSpatial.toggled.connect(self.plot_visual.setSpatialMode)
 
         self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
         self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
@@ -105,6 +104,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.plot_AC.updated.connect(self.updateSC)
         self.plot_SC.clicked.connect(self.plot_SC.popOut)
         self.plot_visual.changedSelected.connect(self.updateSCplot)
+        self.plot_spatial.changedSelected.connect(self.updateSCplot)
         self.pushButtonSCRefresh.clicked.connect(self.refreshSC)
         self.comboBoxReference.currentIndexChanged.connect(self.updateSC)
         self.pushButtonLoadOther.clicked.connect(self.loadOtherReference)
@@ -296,7 +296,27 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def updateFile(self, num):
         super().updateFile(num)
 
-        self.plot_visual.setData(self.data.wavenumber, self.data.raw, self.data.wh)
+        self.ptirMode = self.data.filetype == 'ptir'
+        self.widgetSC.setHidden(self.ptirMode)
+        self.widgetSCOptions.setHidden(self.ptirMode)
+        self.plot_SC.setHidden(self.ptirMode)
+        self.widgetMC.setHidden(not self.ptirMode)
+        self.plot_MC.setHidden(not self.ptirMode)
+        self.checkBoxPixelFill.setHidden(not self.ptirMode)
+        self.stackedVisualizer.setCurrentIndex(int(self.ptirMode))
+
+        if self.ptirMode:
+            self.plot_visual.setData(None, None, None)
+            self.plot_spatial.setData(self.data.wavenumber, self.data.raw,
+                                      self.data.pixelxy)
+            self.plot_raw = self.plot_spatial
+
+        else:
+            self.plot_spatial.setData(None, None, None)
+            self.plot_visual.setData(self.data.wavenumber, self.data.raw,
+                                     self.data.wh)
+            self.plot_raw = self.plot_visual
+
         self.updateWavenumberRange()
 
         if self.bcNext:
@@ -310,17 +330,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.updateSpectralImage()
         self.updateWhiteLightImages()
         self.selectSpectra()
-        self.switchFiletype()
-
-    def switchFiletype(self):
-        self.ptirMode = self.data.filetype == 'ptir'
-        isptir = int(self.ptirMode)
-        self.widgetSC.setHidden(isptir)
-        self.widgetSCOptions.setHidden(isptir)
-        self.plot_SC.setHidden(isptir)
-        self.widgetMC.setHidden(not isptir)
-        self.plot_MC.setHidden(not isptir)
-        self.checkBoxSpatial.setEnabled(self.data.pixelxy is not None)
 
 
     @pyqtSlot(str, str, str)
@@ -339,16 +348,17 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.selectSpectra()
 
     def selectedSpectraUpdated(self):
-        self.plot_spectra.setData(self.plot_visual.getWavenumbers(), None,
-                                  self.plot_visual.getSelectedData())
+        self.plot_spectra.setData(self.plot_raw.getWavenumbers(), None,
+                                  self.plot_raw.getSelectedData())
 
     def selectSpectra(self):
-        self.plot_visual.setSelectedCount(self.spinBoxSpectra.value(),
-                                          self.checkBoxAutopick.isChecked())
+        self.plot_raw.setSelectedCount(
+                self.spinBoxSpectra.value(),
+                self.checkBoxAutopick.isChecked())
 
     def setPlotColors(self, cmap):
-        if cmap == 'all blue':
-            cols = [[0, 0, 1]]
+        if cmap == 'all red':
+            cols = [[1, 0, 0]]
         else:
             cm = plt.get_cmap(cmap)
             if hasattr(cm, 'colors'):
@@ -360,7 +370,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 cols = [cm(i/n) for i in range(n)]
         plt.rcParams['axes.prop_cycle'] = cycler.cycler(
             'color', cols)
-        self.plot_visual.updatePlotColors()
+        self.plot_raw.updatePlotColors()
         self.selectedSpectraUpdated() # Trigger redraw
 
     # MC, mIRage correction
@@ -583,7 +593,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             window += 1
             self.spinBoxWindowLength.setValue(window)
         order = self.spinBoxPolyOrder.value()
-        if self.checkBoxSC.isChecked():
+        if not self.ptirMode and self.checkBoxSC.isChecked():
             wn = self.plot_SC.getWavenumbers()
             indata = self.plot_SC.getSpectra()
         else:
@@ -758,9 +768,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     # Loading and saving parameters
     def getParameters(self):
+        "Copy from UI to some kind of parameters object"
         p = PrepParameters()
         self.fileLoader.saveParameters(p)
-        self.imageVisualizer.saveParameters(p)
+        ImageVisualizer.getParameters(self, p)
 
         p.spectraCount = self.spinBoxSpectra.value()
         p.spectraAuto = self.checkBoxAutopick.isChecked()
@@ -831,9 +842,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                         traceback.format_exc())
 
     def setParameters(self, p):
+        "Copy from some kind of parameters object to UI"
         self.spinBoxSpectra.setValue(0)
         self.fileLoader.loadParameters(p)
-        self.imageVisualizer.loadParameters(p)
+        ImageVisualizer.setParameters(self, p)
 
         self.checkBoxAutopick.setChecked(p.spectraAuto)
         self.checkBoxAC.setChecked(p.acDo)

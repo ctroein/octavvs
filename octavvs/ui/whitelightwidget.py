@@ -71,5 +71,5 @@ class WhiteLightWidget(FigureCanvas):
             except FileNotFoundError:
                 pass
         if self.img is not None:
-            self.ax.imshow(self.img)
+            self.ax.imshow(self.img, cmap='terrain')
         self.draw_idle()
