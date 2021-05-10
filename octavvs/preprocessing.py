@@ -10,7 +10,7 @@ from PyQt5 import uic
 
 import numpy as np
 import scipy.signal, scipy.io
-import matplotlib, cycler
+import matplotlib
 matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
 
@@ -357,20 +357,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 self.checkBoxAutopick.isChecked())
 
     def setPlotColors(self, cmap):
-        if cmap == 'all red':
-            cols = [[1, 0, 0]]
-        else:
-            cm = plt.get_cmap(cmap)
-            if hasattr(cm, 'colors'):
-                cols = cm.colors
-            elif cmap == 'gray':
-                cols = [cm(x) for x in np.linspace(.1, .9, 10)]
-            else:
-                n = 12
-                cols = [cm(i/n) for i in range(n)]
-        plt.rcParams['axes.prop_cycle'] = cycler.cycler(
-            'color', cols)
-        self.plot_raw.updatePlotColors()
+        self.plot_raw.updatePlotColors(cmap)
         self.selectedSpectraUpdated() # Trigger redraw
 
     # MC, mIRage correction

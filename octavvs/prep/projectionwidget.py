@@ -10,37 +10,87 @@ from io import BytesIO
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-from collections import OrderedDict
+import matplotlib, cycler
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from collections import OrderedDict
 import numpy as np
 import random
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin_min
 
-class ProjectionWidget(FigureCanvas):
+class ProjectionWidgetBase(FigureCanvas):
     changedSelected = pyqtSignal(int)
 
     def __init__(self, parent=None):
-        self.wavenumber = None
-        self.raw = None
-        self.wh = None
-        self.projection = np.random.rand(16,16)
         self.fig = Figure()
         self.ax = self.fig.add_subplot(111)
         self.ax.set_axis_off()
         self.ax.set_position([0,0,1,1])
         FigureCanvas.__init__(self, self.fig)
-        self.cmap = 'hot'
-        self.mpl_connect('button_press_event', self.onclick)
-        # (x,y) -> Rectangle for the main plot
-        self.selected = {}
+        self.wavenumber = None
+        self.raw = None
+        self.cmap = 'hot' # For img/fill
         self.clustered = False
+        self.selected = OrderedDict() # contents vary by subclass
+        self.plotCmap = None # Name of cmap for borders, if any
+        self.mpl_connect('button_press_event', self.onclick)
+
+    def getWavenumbers(self):
+        return self.wavenumber
+
+    def getSelectedData(self):
+        if self.raw is None:
+            return None
+        return self.raw[self.getSelected(), :]
+
+    def setGlobalColorCycle(self, name):
+        """
+
+
+        Parameters
+        ----------
+        name : str
+            Name of cmap or "all colorname" or None to leave it unchanged.
+
+        Returns
+        -------
+        cols : list
+            List of colors to cycle through, or None if unchanged
+
+        """
+        if name is None:
+            if self.plotCmap is None:
+                return plt.rcParams['axes.prop_cycle'].by_key()['color']
+            name = self.plotCmap
+        self.plotCmap = None
+        if name[:4] == 'all ':
+            cols = [matplotlib.colors.to_rgb(name[4:])]
+        else:
+            cm = plt.get_cmap(name)
+            if hasattr(cm, 'colors'):
+                cols = cm.colors
+            else:
+                n = max(len(self.selected), 1)
+                d = .1 if name == 'gray' else 0
+                cols = [cm(x) for x in np.linspace(d, 1-d, n)]
+                self.plotCmap = name
+        plt.rcParams['axes.prop_cycle'] = cycler.cycler(
+            'color', cols)
+        return cols
+
+
+class ProjectionWidget(ProjectionWidgetBase):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.wh = None
+        self.projection = np.random.rand(16,16)
+
+        # self.selected is (x,y) -> Rectangle for the main plot
         self.popax = None
         # (x,y) -> Rectangle for pop-out, iff popax is not None
-        self.popsel = {}
+        self.popsel = OrderedDict()
         self.mainimg = self.ax.imshow(self.projection, self.cmap,
                                       zorder=0, aspect='equal')
         self.popimg = None
@@ -68,14 +118,6 @@ class ProjectionWidget(FigureCanvas):
             self.wh = wh
         self.refreshplots = True
         self.draw_idle()
-
-    def getWavenumbers(self):
-        return self.wavenumber
-
-    def getSelectedData(self):
-        if self.raw is None:
-            return None
-        return self.raw[self.getSelected(), :]
 
     def setProjection(self, method, wavenumix):
         if self.wavenumber is None:
@@ -110,8 +152,8 @@ class ProjectionWidget(FigureCanvas):
             p.remove()
         for p in self.popsel.values():
             p.remove()
-        self.selected = {}
-        self.popsel = {}
+        self.selected = OrderedDict()
+        self.popsel = OrderedDict()
 
     def getSelected(self):
         return [xy[1] * self.projection.shape[1] + xy[0]
@@ -176,6 +218,7 @@ class ProjectionWidget(FigureCanvas):
             y = random.randrange(self.projection.shape[0])
             if (x, y) not in self.selected:
                 self.addPoint((x, y))
+        self.updatePlotColors()
         self.draw_idle()
         self.changedSelected.emit(len(self.selected))
 
@@ -188,8 +231,10 @@ class ProjectionWidget(FigureCanvas):
             self.popimg.set_cmap(s)
         self.draw_idle()
 
-    def updatePlotColors(self):
-        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    def updatePlotColors(self, name=None):
+        colors = self.setGlobalColorCycle(name)
+        if colors is None:
+            return
         i = 0
         for p in self.selected.values():
             p.set_color(colors[i % len(colors)])
@@ -213,6 +258,7 @@ class ProjectionWidget(FigureCanvas):
             self.removePoint((x, y))
         elif not self.addPoint((x, y)):
             return
+        self.updatePlotColors()
         FigureCanvas.draw_idle(self)
         self.changedSelected.emit(len(self.selected))
 
@@ -240,7 +286,7 @@ class ProjectionWidget(FigureCanvas):
             self.popcb = fig.colorbar(self.popimg, ax=self.popax)
             setext = True
 
-            self.popsel = {}
+            self.popsel = OrderedDict()
             for k in self.selected:
                 p = self.newRect(k)
                 self.popsel[k] = p
@@ -261,27 +307,15 @@ class ProjectionWidget(FigureCanvas):
 
 
 
-
-class SpatialProjectionWidget(FigureCanvas):
-    changedSelected = pyqtSignal(int)
+class SpatialProjectionWidget(ProjectionWidgetBase):
 
     def __init__(self, parent=None):
-        self.wavenumber = None
-        self.raw = None
+        super().__init__(parent)
         self.pixelxy = None
         self.pixel_levels = None
         self.rects = []
-        self.fig = Figure()
-        self.ax = self.fig.add_subplot(111)
-        self.ax.set_axis_off()
-        self.ax.set_position([0,0,1,1])
-        FigureCanvas.__init__(self, self.fig)
         self.rect_size = 4
         self.rect_color = 'b'
-        self.cmap = 'hot'
-        self.mpl_connect('button_press_event', self.onclick)
-        self.selected = OrderedDict() # using keys as ordered set
-        self.clustered = False
         self.image = None  # Image object
         img = np.random.rand(16, 16, 3)
         self.bgimg = self.ax.imshow(img, zorder=0, aspect='equal')
@@ -293,7 +327,6 @@ class SpatialProjectionWidget(FigureCanvas):
         self.pixelxy = pixelxy
         if wn is None:
             return
-
         for p in self.rects:
             p.remove()
         self.rects = []
@@ -322,16 +355,8 @@ class SpatialProjectionWidget(FigureCanvas):
         self.updateRectFill()
         self.draw_idle()
 
-    def getWavenumbers(self):
-        return self.wavenumber
-
     def getSelected(self):
         return list(self.selected.keys())
-
-    def getSelectedData(self):
-        if self.raw is None:
-            return None
-        return self.raw[self.getSelected(), :]
 
     def setProjection(self, method, wavenumix):
         if self.wavenumber is None:
@@ -350,19 +375,12 @@ class SpatialProjectionWidget(FigureCanvas):
 
     def updateRectFill(self):
         vislevels = self.pixel_levels[self.rect_visible]
-        colors = ScalarMappable(
-            norm=Normalize(vmin=vislevels.min(), vmax=vislevels.max(),
-                           clip=True),
+        colors = matplotlib.cm.ScalarMappable(
+            norm=matplotlib.colors.Normalize(
+                vmin=vislevels.min(), vmax=vislevels.max(), clip=True),
             cmap=self.cmap).to_rgba(self.pixel_levels)
         for i in range(len(self.rects)):
             self.rects[i].set_facecolor(colors[i])
-
-    def updateRectBorders(self):
-        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        i = 0
-        for s in self.selected:
-            self.rects[s].set_edgecolor(colors[i % len(colors)])
-            i = i + 1
 
     def updateRectSize(self):
         for r in self.rects:
@@ -381,8 +399,14 @@ class SpatialProjectionWidget(FigureCanvas):
             r.set_fill(fill)
         self.draw_idle()
 
-    def updatePlotColors(self):
-        self.updateRectBorders()
+    def updatePlotColors(self, name=None):
+        colors = self.setGlobalColorCycle(name)
+        if colors is None:
+            return
+        i = 0
+        for s in self.selected:
+            self.rects[s].set_edgecolor(colors[i % len(colors)])
+            i = i + 1
         self.draw_idle()
 
     def clearSelected(self):
@@ -428,6 +452,7 @@ class SpatialProjectionWidget(FigureCanvas):
             p = random.randrange(len(self.raw))
             if p not in self.selected:
                 self.selectPoint(p)
+        self.updatePlotColors()
         self.draw_idle()
         self.changedSelected.emit(len(self.selected))
 
@@ -445,8 +470,9 @@ class SpatialProjectionWidget(FigureCanvas):
                 else:
                     self.selectPoint(p)
         if changed:
+            self.updatePlotColors()
             FigureCanvas.draw_idle(self)
             self.changedSelected.emit(len(self.selected))
 
-    def draw(self):
-        FigureCanvas.draw(self)
+    # def draw(self):
+    #     FigureCanvas.draw(self)
