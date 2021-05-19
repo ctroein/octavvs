@@ -79,8 +79,10 @@ class FileLoader():
         self.fileLoader.spinBoxFileNumber.valueChanged.connect(self.selectFile)
         self.fileLoader.pushButtonShowFiles.clicked.connect(self.showFileList)
 
-        self.fileLoader.lineEditWidth.editingFinished.connect(lambda: self._updateDimension(0))
-        self.fileLoader.lineEditHeight.editingFinished.connect(lambda: self._updateDimension(1))
+        self.fileLoader.lineEditWidth.editingFinished.connect(
+            lambda: self._updateDimension(0))
+        self.fileLoader.lineEditHeight.editingFinished.connect(
+            lambda: self._updateDimension(1))
 
 
     def addFolder(self):

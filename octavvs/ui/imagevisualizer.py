@@ -12,6 +12,7 @@ import os.path
 # import matplotlib.pyplot as plt
 
 from . import constants, uitools
+from octavvs.ui import NoRepeatStyle
 # from ..io import Image
 
 
@@ -29,6 +30,9 @@ class ImageVisualizer():
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.ptirMode = False
+        self.spinBoxSpectra.setStyle(NoRepeatStyle())
+
         self.pushButtonWhitelight.clicked.connect(self.loadWhite)
         self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
         self.horizontalSliderImage.valueChanged.connect(self.selectWhiteLight)
@@ -42,17 +46,51 @@ class ImageVisualizer():
         self.checkBoxPixelFill.toggled.connect(self.plot_spatial.setFill)
         self.whiteLightNames = {}
 
+        self.plot_raw = None
+        self.plot_spatial.changedSelected.connect(self.selectedSpectraUpdated)
+        self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
+        self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
+        self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
+        self.checkBoxAutopick.toggled.connect(self.selectSpectra)
+        self.comboBoxPlotCmap.currentTextChanged.connect(self.setPlotColors)
+
+
     def getParameters(self, p):
         "Copy from UI to some kind of parameters object"
         p.plotMethod = self.comboBoxMethod.currentIndex()
         p.plotColors = self.comboBoxCmaps.currentText()
         p.plotWavenum = self.lineEditWavenumber.value()
+        p.spectraCount = self.spinBoxSpectra.value()
+        p.spectraAuto = self.checkBoxAutopick.isChecked()
 
     def setParameters(self, p):
         "Copy from some kind of parameters object to UI"
         self.comboBoxMethod.setCurrentIndex(p.plotMethod)
         self.comboBoxCmaps.setCurrentText(p.plotColors)
         self.lineEditWavenumber.setValue(p.plotWavenum)
+        self.checkBoxAutopick.setChecked(p.spectraAuto)
+        self.spinBoxSpectra.setValue(p.spectraCount)
+
+    def updatedFile(self):
+        self.ptirMode = self.data.filetype == 'ptir'
+        # self.checkBoxPixelFill.setHidden(not self.ptirMode)
+        self.stackedVisualizer.setCurrentIndex(int(self.ptirMode))
+
+        if self.ptirMode:
+            self.plot_visual.setData(None, None, None)
+            self.plot_spatial.setData(self.data.wavenumber, self.data.raw,
+                                      self.data.pixelxy)
+            self.plot_raw = self.plot_spatial
+
+        else:
+            self.plot_spatial.setData(None, None, None)
+            self.plot_visual.setData(self.data.wavenumber, self.data.raw,
+                                     self.data.wh)
+            self.plot_raw = self.plot_visual
+
+        self.updateSpectralImage()
+        self.updateWhiteLightImages()
+        self.selectSpectra()
 
     def updateWavenumberRange(self):
         super().updateWavenumberRange()
@@ -88,6 +126,22 @@ class ImageVisualizer():
         except ValueError:
             pass
         self.updateSpectralImage()
+
+
+    def selectedSpectraUpdated(self, n):
+        self.spinBoxSpectra.setValue(n)
+        self.plot_spectra.setData(self.plot_raw.getWavenumbers(), None,
+                                  self.plot_raw.getSelectedData())
+
+    def selectSpectra(self):
+        self.plot_raw.setSelectedCount(
+                self.spinBoxSpectra.value(),
+                self.checkBoxAutopick.isChecked())
+
+    def setPlotColors(self, cmap):
+        self.plot_raw.updatePlotColors(cmap)
+        self.selectedSpectraUpdated() # Trigger redraw
+
 
     def updateSpectralImage(self):
         meth = self.comboBoxMethod.currentIndex()

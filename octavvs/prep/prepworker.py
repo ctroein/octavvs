@@ -6,7 +6,6 @@ Created on Wed Feb 27 22:55:02 2019
 @author: carl
 """
 
-import json
 import traceback
 import os.path
 from collections import namedtuple
@@ -15,73 +14,71 @@ import scipy.signal, scipy.io
 from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from octavvs.io import SpectralData
+from octavvs.io import SpectralData, Parameters
 from octavvs.algorithms import baseline, correction, normalization, ptir
 
-class PrepParameters:
+class PrepParameters(Parameters):
     """
-    A class representing all the settings that can be made in the preprocessing UI,
-    saved/loaded and used to start a batch job. The default values are only used if
-    loading a file where some values are missing.
+    A class representing all the settings that can be made in the
+    preprocessing UI and used to start a batch job.
     """
-    def __init__(self):
-        self.fileFilter = '*.mat'
-        self.saveExt = '_prep'
-        self.saveFormat = 'AB.mat'
-        self.plotMethod = 0
-        self.plotColors = ''
-        self.plotWavenum = 0
-        self.spectraCount = 0
-        self.spectraAuto = False
-        self.acDo = False
-        self.acSpline = True
-        self.acLocal = True
-        self.acSmooth = True
-        self.acReference = ''
-        self.scDo = False
-        self.scRef = 'Casein'
-        self.scOtherRef = ''
-        self.scRefPercentile = 50
-        self.scIters = 50
-        self.scClusters = 30
-        self.scStable = True
-        self.scAlgorithm = 'bassan'
-        self.scResolution = 10
-        self.scAmin = 1.1
-        self.scAmax = 1.4
-        self.scDmin = 2
-        self.scDmax = 8
-        self.scConstant = True
-        self.scLinear = False
-        self.scPrefitReference = True
-        self.scPenalize = False
-        self.scPenalizeLambda = 10.
-        self.scPCADynamic = False
-        self.scPCA = 7
-        self.scPCAMax = 12
-        self.scPCAVariance = 99.96
-        self.scAutoIters = True
-        self.scMinImprov = 5
-        self.mcDo = False
-        self.mcEndpoints = 6
-        self.mcSlopefactor = .5
-        self.sgfDo = False
-        self.sgfWindow = 9
-        self.sgfOrder = 3
-        self.srDo = False
-        self.srMin = 800
-        self.srMax = 4000
-        self.bcDo = False
-        self.bcMethod = 'none'
-        self.bcIters = 10
-        self.bcLambda = 10000
-        self.bcP = 0.01
-        self.bcLambdaArpls = 10000
-        self.bcThreshold = 0.01
-        self.bcPoly = 3
-        self.normDo = False
-        self.normMethod = 'none'
-        self.normWavenum = 1655
+        # self.fileFilter = '*.mat'
+        # self.saveExt = '_prep'
+        # self.saveFormat = 'AB.mat'
+        # self.plotMethod = 0
+        # self.plotColors = ''
+        # self.plotWavenum = 0
+        # self.spectraCount = 0
+        # self.spectraAuto = False
+        # self.acDo = False
+        # self.acSpline = True
+        # self.acLocal = True
+        # self.acSmooth = True
+        # self.acReference = ''
+        # self.scDo = False
+        # self.scRef = 'Casein'
+        # self.scOtherRef = ''
+        # self.scRefPercentile = 50
+        # self.scIters = 50
+        # self.scClusters = 30
+        # self.scStable = True
+        # self.scAlgorithm = 'bassan'
+        # self.scResolution = 10
+        # self.scAmin = 1.1
+        # self.scAmax = 1.4
+        # self.scDmin = 2
+        # self.scDmax = 8
+        # self.scConstant = True
+        # self.scLinear = False
+        # self.scPrefitReference = True
+        # self.scPenalize = False
+        # self.scPenalizeLambda = 10.
+        # self.scPCADynamic = False
+        # self.scPCA = 7
+        # self.scPCAMax = 12
+        # self.scPCAVariance = 99.96
+        # self.scAutoIters = True
+        # self.scMinImprov = 5
+        # self.mcDo = False
+        # self.mcEndpoints = 6
+        # self.mcSlopefactor = .5
+        # self.sgfDo = False
+        # self.sgfWindow = 9
+        # self.sgfOrder = 3
+        # self.srDo = False
+        # self.srMin = 800
+        # self.srMax = 4000
+        # self.bcDo = False
+        # self.bcMethod = 'none'
+        # self.bcIters = 10
+        # self.bcLambda = 10000
+        # self.bcP = 0.01
+        # self.bcLambdaArpls = 10000
+        # self.bcThreshold = 0.01
+        # self.bcPoly = 3
+        # self.normDo = False
+        # self.normMethod = 'none'
+        # self.normWavenum = 1655
 
     def setAlgorithm(self, algo: str):
         algs = ['bassan', 'konevskikh', 'rasskazov']
@@ -90,22 +87,16 @@ class PrepParameters:
             raise ValueError('Algorithm must be one of '+str(algs))
         self.scAlgorithm = alg
 
-    def save(self, filename):
-        with open(filename, 'w') as fp:
-            json.dump(vars(self), fp, indent=4)
-
     def load(self, filename):
-        with open(filename, 'r') as fp:
-            data = json.load(fp)
-            self.__dict__.update(data)
+        super().load(filename)
         self.setAlgorithm(self.scAlgorithm)
 
 
 
 class PrepWorker(QObject):
     """
-    Worker thread class for the heavy parts of the preprocessing: Scattering correction
-    and the multiple-file batch processing.
+    Worker thread class for the heavy parts of the preprocessing: Scattering
+    correction and the multiple-file batch processing.
     """
     # Signals for when processing is finished or failed, and for progress indication
     done = pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
@@ -149,8 +140,8 @@ class PrepWorker(QObject):
 
     def loadReference(self, data, ref, otherref='', percentile=50):
         """
-        Load an RMieSC reference spectrum, at wavenumbers that match the currently
-        loaded file.
+        Load an RMieSC reference spectrum, at wavenumbers that match the
+        currently loaded file.
         """
         if ref == 'Mean':
             return data.raw.mean(0)
@@ -226,7 +217,8 @@ class PrepWorker(QObject):
         """
         if params.sgfDo:
             self.emitProgress(-3, 100)
-            y = scipy.signal.savgol_filter(y, params.sgfWindow, params.sgfOrder, axis=1)
+            y = scipy.signal.savgol_filter(
+                y, params.sgfWindow, params.sgfOrder, axis=1)
 
         if params.srDo:
             a = len(wn) - wn[::-1].searchsorted(params.srMax, 'right')
@@ -258,8 +250,8 @@ class PrepWorker(QObject):
 
     @pyqtSlot(SpectralData, dict)
     def rmiesc(self, data, params):
-        """ Run RMieSC, possibly preceded by atmospheric correction, on all or a subset of
-        the raw data.
+        """ Run RMieSC, possibly preceded by atmospheric correction, on
+        all or a subset of the raw data.
         Parameters:
             data: SpectralData object with raw data
             params: dictionary, mostly with things from PrepParameters (see code)
@@ -304,8 +296,9 @@ class PrepWorker(QObject):
             data: SpectralData object with one or more files
             params: PrepParameters object from the user
             folder: output directory
-            preservepath: if True, all processed files whose paths are under data.foldername
-            will be placed in the corresponding subdirectory of the output directory.
+            preservepath: if True, all processed files whose paths are under
+            data.foldername will be placed in the corresponding subdirectory
+            of the output directory.
         """
         try:
             for fi in range(len(data.filenames)):
@@ -428,10 +421,11 @@ class ABCWorker(QObject):
         Run baseline correction, emitting the processed data
         """
         try:
-            corr, factors = correction.atmospheric(wn, y, cut_co2=params['cut_co2'],
-                                          extra_iters=5 if params['extra'] else 0,
-                                          smooth_win=9 if params['smooth'] else 0,
-                                          atm=params['ref'])
+            corr, factors = correction.atmospheric(
+                wn, y, cut_co2=params['cut_co2'],
+                extra_iters=5 if params['extra'] else 0,
+                smooth_win=9 if params['smooth'] else 0,
+                atm=params['ref'])
             self.acDone.emit(wn, y, corr, factors)
         except Exception:
             self.acFailed.emit(traceback.format_exc())

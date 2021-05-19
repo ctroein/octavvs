@@ -52,7 +52,7 @@ margin: 5px;
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="1,2,1,1,0,1,0">
+       <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="1,2,1,1,0,1">
         <item>
          <widget class="QLabel" name="label_11">
           <property name="text">
@@ -107,6 +107,11 @@ margin: 5px;
           </property>
           <item>
            <property name="text">
+            <string>viridis</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
             <string>hot</string>
            </property>
           </item>
@@ -145,16 +150,6 @@ margin: 5px;
             <string>gray</string>
            </property>
           </item>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="checkBoxPixelFill">
-          <property name="text">
-           <string>Fill</string>
-          </property>
-          <property name="tristate">
-           <bool>false</bool>
-          </property>
          </widget>
         </item>
        </layout>
@@ -256,7 +251,7 @@ margin: 5px;
          </layout>
         </widget>
         <widget class="QWidget" name="page_7">
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0">
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1">
           <property name="leftMargin">
            <number>0</number>
           </property>
@@ -270,17 +265,7 @@ margin: 5px;
            <number>0</number>
           </property>
           <item>
-           <widget class="SpatialProjectionWidget" name="plot_spatial" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>50</width>
-              <height>50</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="0,2,3">
+           <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="0,2,3,0">
             <item>
              <widget class="QLabel" name="label_9">
               <property name="text">
@@ -308,7 +293,30 @@ margin: 5px;
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxPixelFill">
+              <property name="text">
+               <string>Fill</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+              <property name="tristate">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
+          </item>
+          <item>
+           <widget class="SpatialProjectionWidget" name="plot_spatial" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>50</height>
+             </size>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -399,7 +407,7 @@ margin: 5px;
           </item>
           <item>
            <property name="text">
-            <string>all red</string>
+            <string>all blue</string>
            </property>
           </item>
          </widget>
