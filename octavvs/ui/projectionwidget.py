@@ -30,10 +30,10 @@ class ProjectionWidgetBase(FigureCanvas):
         FigureCanvas.__init__(self, self.fig)
         self.wavenumber = None
         self.raw = None
-        self.cmap = 'hot' # For img/fill
+        self.cmap = plt.get_cmap().name # For img/fill
         self.clustered = False
-        self.selected = OrderedDict() # contents vary by subclass
-        self.plotCmap = None # Name of cmap for borders, if any
+        # self.selected = OrderedDict() # contents vary by subclass
+        self.plot_cmap = None # Name of cmap for borders, if any
         self.mpl_connect('button_press_event', self.onclick)
 
     def getWavenumbers(self):
@@ -46,12 +46,12 @@ class ProjectionWidgetBase(FigureCanvas):
 
     def setGlobalColorCycle(self, name):
         """
-
+        Set the color used for line plots globally
 
         Parameters
         ----------
         name : str
-            Name of cmap or "all colorname" or None to leave it unchanged.
+            Name of cmap or "all [color]" or None to leave it unchanged.
 
         Returns
         -------
@@ -60,10 +60,10 @@ class ProjectionWidgetBase(FigureCanvas):
 
         """
         if name is None:
-            if self.plotCmap is None:
+            if self.plot_cmap is None:
                 return plt.rcParams['axes.prop_cycle'].by_key()['color']
-            name = self.plotCmap
-        self.plotCmap = None
+            name = self.plot_cmap
+        self.plot_cmap = None
         if name[:4] == 'all ':
             cols = [matplotlib.colors.to_rgb(name[4:])]
         else:
@@ -74,13 +74,13 @@ class ProjectionWidgetBase(FigureCanvas):
                 n = max(len(self.selected), 1)
                 d = .1 if name == 'gray' else 0
                 cols = [cm(x) for x in np.linspace(d, 1-d, n)]
-                self.plotCmap = name
+                self.plot_cmap = name
         plt.rcParams['axes.prop_cycle'] = cycler.cycler(
             'color', cols)
         return cols
 
 
-class ProjectionWidget(ProjectionWidgetBase):
+class OldProjectionWidget(ProjectionWidgetBase):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -307,39 +307,84 @@ class ProjectionWidget(ProjectionWidgetBase):
 
 
 
-class SpatialProjectionWidget(ProjectionWidgetBase):
+class ProjectionWidget(ProjectionWidgetBase):
+    changedSelected = pyqtSignal(int)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.pixelxy = None
-        self.pixel_levels = None
-        self.rects = []
-        self.rect_size = 4
-        self.rect_color = 'b'
-        self.image = None  # Image object
-        img = np.random.rand(16, 16, 3)
-        self.bgimg = self.ax.imshow(img, zorder=0, aspect='equal')
 
-    def setData(self, wn, raw, pixelxy):
-        self.clearSelected()
+        self.fig = Figure()
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_axis_off()
+        self.ax.set_position([0,0,1,1])
+        FigureCanvas.__init__(self, self.fig)
+
+        self.wavenumber = None
+        self.raw = None
+        self.wavenumber = None  # Wavenumbers, used for area-under-curve
+        self.wh = None          # Image shape for non-pixelxy
+        self.pixelxy = None     # (x,y) for all pixels or None
+
+        self.clustered = False
+        self.selected = OrderedDict() # keys indicate selected pixels
+        self.pixel_levels = []  # Current intensity of each pixel
+        self.cmap = plt.get_cmap().name # For img/fill
+        self.plot_cmap = None # Name of cmap for borders, if any
+        self.patches = {}       # Patch objects indexed by pixel number
+        self.pop_patches = {}   # Ditto in pop-out plot
+        # self.white_patches = {} # Ditto in white light subplot
+        self.rect_size = 4      # Size of rectancles in µm
+        self.rect_color = 'b'   # Default patch edge color
+        self.pixel_visible = None # None, or True for pixels within image
+        self.image = None       # ..io.Image object
+        # Main/background image with placeholder data
+        self.bgimg = self.ax.imshow(
+            np.random.rand(16, 16), cmap=self.cmap, zorder=0, aspect='equal')
+        self.pop_bgimg = None   # Ditto in pop-out plot
+        self.pop_fig = None     # The pop-out Figure
+        self.pop_ax = None      # ...and its Axes
+        self.pop_cb = None      # ...and its Colorbar
+        self.mpl_connect('button_press_event', self.onclick)
+        # self.selected is (x,y) -> Rectangle for the main plot
+        # self.popax = None
+        # (x,y) -> Rectangle for pop-out, iff popax is not None
+        # self.popsel = OrderedDict()
+        # self.mainimg = self.ax.imshow(self.projection, self.cmap,
+                                      # zorder=0, aspect='equal')
+        # self.refreshplots = True
+
+    def setData(self, wn, raw, pixelxy=None):
+        "Set spectral data and positions and clear selection"
+        self.clear_selected() # New data implies cleared selection of pixels
         self.wavenumber = wn
         self.raw = raw
         self.pixelxy = pixelxy
-        if wn is None:
-            return
-        for p in self.rects:
+        for p in self.patches.values():
             p.remove()
-        self.rects = []
+        self.patches = {}
         rs = self.rect_size
-        for xy in self.pixelxy:
-            rect = patches.Rectangle(
-                (xy[0] - rs/2, xy[1] - rs/2), rs, rs,
-                fill=False, color=self.rect_color)
-            self.rects.append(rect)
-            self.ax.add_patch(rect)
-        self.rect_visible = [True] * len(self.rects)
+        if self.pixelxy is not None:
+            for xy in self.pixelxy:
+                rect = patches.Rectangle(
+                    (xy[0] - rs/2, xy[1] - rs/2), rs, rs,
+                    fill=False, color=self.rect_color)
+                self.ax.add_patch(rect)
+                self.patches[len(self.patches)] = rect
+        self.pixels_visible = None
+
+    def setDimensions(self, wh):
+        "Set the shape of the image, with override if too unsquare"
+        p = wh[0] * wh[1]
+        if p <= 0:
+            return
+        if wh[0] > 8 * wh[1] or wh[1] > 8 * wh[0]:
+            h = int(np.sqrt(p))
+            self.wh = ((p + h - 1) // h, h)
+        else:
+            self.wh = wh
+        self.draw_idle()
 
     def setImage(self, image):
+        "Set the background or white light image"
         if image.fmt is not None:
             imgdata = plt.imread(BytesIO(image.data), format=image.fmt)
         elif image.data is not None:
@@ -349,19 +394,19 @@ class SpatialProjectionWidget(ProjectionWidgetBase):
         self.bgimg.set_extent((image.xy[0] - hwh[0], image.xy[0] + hwh[0],
                                 image.xy[1] + hwh[1], image.xy[1] - hwh[1]))
         self.bgimg.autoscale()
-        self.rect_visible = [
-            (np.abs(image.xy - xy) < (hwh + self.rect_size / 2)).all()
-            for xy in self.pixelxy ]
-        self.updateRectFill()
+        if self.pixelxy is not None:
+            self.pixel_visible = [
+                (np.abs(image.xy - xy) < (hwh + self.rect_size / 2)).all()
+                for xy in self.pixelxy ]
+            self.update_patch_fill()
         self.draw_idle()
 
-    def getSelected(self):
-        return list(self.selected.keys())
-
     def setProjection(self, method, wavenumix):
-        if self.wavenumber is None:
-            return
+        "Update pixel colors. Methods 0=area, 1=max, 2=wavenum"
+        # if self.wavenumber is None:
+        #     return
         if method == 0:
+            assert self.wavenumber is not None
             data = np.trapz(self.raw, self.wavenumber, axis=1)
             if self.wavenumber[0] > self.wavenumber[-1]:
                 data = -data
@@ -370,60 +415,169 @@ class SpatialProjectionWidget(ProjectionWidgetBase):
         elif method == 2:
             data = self.raw[:, wavenumix]
         self.pixel_levels = data
-        self.updateRectFill()
+
+        if self.pixelxy is None:
+            px = self.wh[0] * self.wh[1]
+            if px != len(data):
+                d2 = np.empty((px))
+                d2[:len(data)] = data
+                d2[len(data):] = data.min()
+                data = d2
+
+            data = data.reshape(self.wh[::-1])
+            self.bgimg.set_data(data)
+            self.bgimg.set_extent((0, self.wh[0], self.wh[1], 0))
+            self.bgimg.autoscale()
+        else:
+            self.update_patch_fill()
         self.draw_idle()
 
-    def updateRectFill(self):
-        vislevels = self.pixel_levels[self.rect_visible]
+    def getWavenumbers(self):
+        return self.wavenumber
+
+    def update_patch_fill(self):
+        "Update fill color of pixelxy patches, normalized to visible range"
+        if self.pixel_visible is None:
+            return
+        vislevels = self.pixel_levels[self.pixel_visible]
         colors = matplotlib.cm.ScalarMappable(
             norm=matplotlib.colors.Normalize(
                 vmin=vislevels.min(), vmax=vislevels.max(), clip=True),
             cmap=self.cmap).to_rgba(self.pixel_levels)
-        for i in range(len(self.rects)):
-            self.rects[i].set_facecolor(colors[i])
+        for n, p in self.patches.items():
+            p.set_facecolor(colors[n])
+        for n, p in self.pop_patches.items():
+            p.set_facecolor(colors[n])
 
-    def updateRectSize(self):
-        for r in self.rects:
-            r.set_width(self.rect_size)
-            r.set_height(self.rect_size)
+    def setGlobalColorCycle(self, name):
+        """
+        Set the color used for line plots globally
+
+        Parameters
+        ----------
+        name : str
+            Name of cmap or "all [color]" or None to leave it unchanged.
+
+        Returns
+        -------
+        cols : list
+            List of colors to cycle through, or None if unchanged
+        """
+        if name is None:
+            if self.plot_cmap is None:
+                return plt.rcParams['axes.prop_cycle'].by_key()['color']
+            name = self.plot_cmap
+        self.plot_cmap = None
+        if name[:4] == 'all ':
+            cols = [matplotlib.colors.to_rgb(name[4:])]
+        else:
+            cm = plt.get_cmap(name)
+            if hasattr(cm, 'colors'):
+                cols = cm.colors
+            else:
+                n = max(len(self.selected), 1)
+                d = .1 if name == 'gray' else 0
+                cols = [cm(x) for x in np.linspace(d, 1-d, n)]
+                self.plot_cmap = name
+        plt.rcParams['axes.prop_cycle'] = cycler.cycler(
+            'color', cols)
+        return cols
 
     @pyqtSlot('QString')
     def setCmap(self, s):
+        "Update colors of background image"
         self.cmap = s
-        self.updateRectFill()
+        self.update_patch_fill()
         self.bgimg.set_cmap(s)
         self.draw_idle()
 
     def setFill(self, fill):
-        for r in self.rects:
-            r.set_fill(fill)
+        "Fill/unfill pixelxy patches" # Todo: save/reset this state
+        for p in self.patches.items():
+            p.set_fill(fill)
+        for p in self.pop_patches.items():
+            p.set_fill(fill)
         self.draw_idle()
 
     def updatePlotColors(self, name=None):
         colors = self.setGlobalColorCycle(name)
-        if colors is None:
-            return
+        # if colors is None:
+        #     return
         i = 0
-        for s in self.selected:
-            self.rects[s].set_edgecolor(colors[i % len(colors)])
+        for s in self.selected.keys():
+            c = colors[i % len(colors)]
+            self.patches[s].set_edgecolor(c)
+            if s in self.pop_patches:
+                self.pop_patches[s].set_edgecolor(c)
             i = i + 1
         self.draw_idle()
 
-    def clearSelected(self):
-        for s in self.selected:
-            self.rects[s].set_edgecolor(self.rect_color)
+    def getSelected(self):
+        return list(self.selected.keys())
+
+    def getSelectedData(self):
+        if self.raw is None:
+            return None
+        return self.raw[self.getSelected(), :]
+
+
+    def clear_selected(self):
+        if self.pixelxy is None:
+            for p in self.patches.values():
+                p.remove()
+            self.patches = {}
+            for p in self.pop_patches.values():
+                p.remove()
+            self.pop_patches = {}
+        else:
+            for s in self.selected:
+                self.patches[s].set_edgecolor(self.rect_color)
+                if s in self.pop_patches:
+                    self.pop_patches[s].set_edgecolor(self.rect_color)
         self.selected = OrderedDict()
 
-    def selectPoint(self, p):
-        if p not in self.selected:
-            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-            self.rects[p].set_edgecolor(
-                colors[len(self.selected) % len(colors)])
-            self.selected[p] = True
+    def new_patch(self, p, colorix):
+        "Construct Patch for pixel p in non-pixelxy mode"
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        return patches.Rectangle(
+            (p % self.wh[0], p // self.wh[0]), .999, .999, fill=False,
+            color=colors[colorix % len(colors)])
 
-    def deselectPoint(self, p):
+    def color_patch(self, p, color):
+        "Set edge color of patch(es) for pixel p"
+        self.patches[p].set_edgecolor(color)
+        if p in self.pop_patches:
+            self.pop_patches[p].set_edgecolor(color)
+
+    def select_point(self, p):
+        assert p not in self.selected
+        if self.pixelxy is None:
+            if p < 0 or p >= len(self.raw):
+                return False
+            pnum = len(self.selected)
+            pat = self.new_patch(p, pnum)
+            self.patches[p] = pat
+            self.ax.add_patch(pat)
+            self.selected[p] = True
+            if self.pop_ax is not None:
+                pat = self.new_patch(p, pnum)
+                self.pop_patches[p] = pat
+                self.pop_ax.add_patch(pat)
+        else:
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            c = colors[len(self.selected) % len(colors)]
+            self.color_patch(p, c)
+            self.selected[p] = True
+        return True
+
+    def deselect_point(self, p):
         del self.selected[p]
-        self.rects[p].set_edgecolor(self.rect_color)
+        if self.pixelxy is None:
+            self.patches.pop(p).remove()
+            if p in self.pop_patches:
+                self.pop_patches.pop(p).remove()
+        else:
+            self.color_patch(p, self.rect_color)
 
     def setSelectedCount(self, n, clustered):
         if self.raw is None:
@@ -436,43 +590,90 @@ class SpatialProjectionWidget(ProjectionWidgetBase):
         if n == len(self.raw):
             for p in range(len(self.raw)):
                 if p not in self.selected:
-                    self.selectPoint(p)
+                    self.select_point(p)
         elif clustered and n > 0:
+            # (not wasc or n != len(self.selected)) and
             km = KMeans(n_clusters=min(n, len(self.raw)), n_init=1)
             km.fit(self.raw)
-            closest, _ = pairwise_distances_argmin_min(
-                km.cluster_centers_, self.raw)
-            self.clearSelected()
+            closest = pairwise_distances_argmin_min(
+                km.cluster_centers_, self.raw)[0]
+            self.clear_selected()
             for p in closest:
-                self.selectPoint(p)
-        if len(self.selected) > n:
-            for p in self.getSelected()[n:]:
-                self.deselectPoint(p)
+                self.select_point(p)
+        if n < len(self.selected):
+            for p in list(self.selected.keys())[n:]:
+                self.deselect_point(p)
         while len(self.selected) < n:
             p = random.randrange(len(self.raw))
             if p not in self.selected:
-                self.selectPoint(p)
+                self.select_point(p)
         self.updatePlotColors()
         self.draw_idle()
         self.changedSelected.emit(len(self.selected))
 
     def onclick(self, event):
-        if event.inaxes != self.ax:
+        if not (event.inaxes == self.ax or event.inaxes == self.pop_ax):
             return
-        if event.xdata is None or self.pixelxy is None:
+        if event.xdata is None or self.raw is None:
             return
         changed = False
-        for p in range(len(self.rects)):
-            if self.rects[p].contains(event)[0]:
+        if self.pixelxy is None:
+            x, y = (int(event.xdata), int(event.ydata))
+            if not (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
+                return
+            p = x + y * self.wh[0]
+            if p in self.selected:
+                self.deselect_point(p)
                 changed = True
-                if p in self.selected:
-                    self.deselectPoint(p)
-                else:
-                    self.selectPoint(p)
+            else:
+                changed = self.select_point(p)
+        else:
+            for p, pat in self.patches.items():
+                if pat.contains(event)[0]:
+                    changed = True
+                    if p in self.selected:
+                        self.deselect_point(p)
+                    else:
+                        self.select_point(p)
         if changed:
             self.updatePlotColors()
             FigureCanvas.draw_idle(self)
             self.changedSelected.emit(len(self.selected))
 
-    # def draw(self):
-    #     FigureCanvas.draw(self)
+
+    def draw(self):
+        FigureCanvas.draw(self)
+        if plt.fignum_exists(self.objectName()):
+            self.popOut()
+
+
+    def popOut(self):
+        pass
+    #     setext = True
+    #     fig = plt.figure(self.objectName(), tight_layout=dict(pad=.6))
+    #     if self.pop_fig != fig:
+    #         self.pop_fig = fig
+    #         fig.canvas.mpl_connect('button_press_event', self.onclick)
+    #         self.pop_ax = fig.gca()
+    #         self.pop_img = self.pop_ax.imshow(self.projection, self.cmap)
+    #         self.popcb = fig.colorbar(self.popimg, ax=self.popax)
+    #         setext = True
+
+    #         self.popsel = OrderedDict()
+    #         for k in self.selected:
+    #             p = self.newRect(k)
+    #             self.popsel[k] = p
+    #             self.popax.add_patch(p)
+    #         fig.show()
+
+    #     elif self.refreshplots:
+    #         self.popimg.set_data(self.projection)
+    #         self.popcb.mappable.set_clim(vmin=self.projection.min(),
+    #                                      vmax=self.projection.max())
+    #         setext = True
+
+    #     if setext:
+    #         self.popimg.set_extent((0, self.projection.shape[1],
+    #                                 self.projection.shape[0], 0))
+    #         self.popimg.autoscale()
+    #     fig.canvas.draw_idle()

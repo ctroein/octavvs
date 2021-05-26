@@ -110,11 +110,8 @@ class FileLoader():
                 else:
                     files = fnmatch.filter(files, pattern)
                     filenames += [ os.path.join(root, f) for f in files ]
-#                self.lineEditTotal.setText(str(len(filenames)))
                 if not recurse:
                     break;
-#            self.lineEditTotal.setText('' if self.data.filenames is None else
-#                                       str(len(self.data.filenames)))
             if not filenames:
                 self.errorMsg.showMessage('No matching files found in directory "' +
                                           foldername + '"')
@@ -145,7 +142,7 @@ class FileLoader():
     def updateFileListInfo(self, filenames):
         "Helper function for updateFileList"
         self.data.filenames = filenames
-        self.fileLoader.lineEditTotal.setText(str(len(filenames)))
+        self.fileLoader.labelFileCount.setText('of %d' % (len(filenames)))
         self.fileLoader.spinBoxFileNumber.setMaximum(len(filenames))
         self.fileLoader.spinBoxFileNumber.setEnabled(True)
 

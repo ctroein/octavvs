@@ -15,19 +15,28 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import SpectralData, Parameters
 from octavvs.algorithms import decomposition
+import pymcr
+import time
 
-
+import sys
+import logging
+logger = logging.getLogger('pymcr')
+logger.setLevel(logging.DEBUG)
+stdout_handler = logging.StreamHandler(stream=sys.stdout)
+stdout_format = logging.Formatter('%(message)s')
+stdout_handler.setFormatter(stdout_format)
+logger.addHandler(stdout_handler)
 
 class DecompWorker(QObject):
     """
     Worker thread class for the heavy parts of the decomposition
     """
-    # Signals for when processing is finished or failed, and for progress indication
-    done = pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
+    # Signals for when finished or failed, and for progress indication
+    done = pyqtSignal(np.ndarray, np.ndarray) # conc, spectra
     stopped = pyqtSignal()
     failed = pyqtSignal(str, str)
     progress = pyqtSignal(int, float)
-    # progressPlot = pyqtSignal(np.ndarray, tuple)
+    progressPlot = pyqtSignal(int, np.ndarray, np.ndarray)
 
     fileLoaded = pyqtSignal(int)
     loadFailed = pyqtSignal(str, str, str)
@@ -67,17 +76,30 @@ class DecompWorker(QObject):
         """
         Run decomposition stuff
         """
-        yold = y
-        if params.dcDo:
-            q = decomposition.simplisma(
-                y, params.dcComponents, params.dcSimplismaNoise)
-            self.emitProgress(0, -1.)
 
-            # progressCallback=self.emitProgress)[0]
+        conc, pureix = decomposition.simplisma(
+            y.T, params.dcComponents, params.dcSimplismaNoise)
+        self.emitProgress(0, -1.)
+        initst = y[pureix,:]
+        self.progressPlot.emit(0, conc, initst)
 
-            self.done.emit(wn, yold, y)
-            print('simplisma done')
-        return y
+        mcr = pymcr.mcr.McrAR(max_iter=params.dcIterations,
+                              tol_err_change=params.dcTolerance,
+                              tol_increase=1., tol_n_increase=10,
+                              tol_n_above_min=30)
+        update_interval = 1
+        def half_iter(C, ST, D, Dcalc):
+            self.emitProgress(mcr.n_iter, mcr.err[-1])
+            t = time.monotonic()
+            if t - half_iter.iter_time > update_interval:
+                half_iter.iter_time = t
+                self.progressPlot.emit(mcr.n_iter, C.T, ST)
+        half_iter.iter_time = time.monotonic()
+        mcr.fit(y, ST=initst, post_iter_fcn=half_iter)
+
+        # self.emitProgress(0, -1)
+        self.done.emit(mcr.C_opt_.T, mcr.ST_opt_)
+        return mcr.C_opt_.T, mcr.ST_opt_
 
 
     @pyqtSlot(SpectralData, Parameters)
@@ -89,12 +111,12 @@ class DecompWorker(QObject):
         """
         try:
             self.callDecomp(data, params, data.wavenumber, data.raw)
-
         except InterruptedError:
             self.stopped.emit()
         except Exception as e:
             traceback.print_exc()
             self.failed.emit(repr(e), traceback.format_exc())
+        self.stopped.emit()
 
 
     def saveCorrected(self, outfile, fmt, data, wn, y):
@@ -132,9 +154,8 @@ class DecompWorker(QObject):
                     continue
 
                 wn = data.wavenumber
-                y = data.raw
 
-                y = self.callDecomp(data, params, wn, y)
+                CT, ST = self.callDecomp(data, params, wn, data.raw)
 
                 # Figure out where to save the file
                 filename = data.curFile
@@ -148,7 +169,7 @@ class DecompWorker(QObject):
                 filename = os.path.splitext(filename)
                 filename = filename[0] + params.saveExt + '.mat'
 
-                self.saveCorrected(filename, params.saveFormat, data, wn, y)
+                # self.saveCorrected(filename, params.saveFormat, data, wn, y)
             self.batchDone.emit(True)
             return
 

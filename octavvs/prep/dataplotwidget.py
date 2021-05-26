@@ -76,23 +76,23 @@ class DataPlotWidget(FigureCanvas):
             self.popax = ax
 
 
-class RawPlotWidget(DataPlotWidget):
+class SpectraPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
-        DataPlotWidget.__init__(self, parent)
+        super().__init__(parent)
         self.window_title = 'Raw spectra'
 
     def draw_ax(self, ax):
         for i in self.spectra:
             ax.plot(self.wavenumber, i, linewidth=1)
 
-class NormPlotWidget(RawPlotWidget):
+class NormPlotWidget(SpectraPlotWidget):
     def __init__(self, parent=None):
-        RawPlotWidget.__init__(self, parent)
+        super().__init__(parent)
         self.window_title = 'Normalized spectra'
 
 class ACPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
-        DataPlotWidget.__init__(self, parent=None)
+        super().__init__(parent)
         self.window_title = 'Atmospheric correction'
 
     def draw_ax(self, ax):
@@ -107,7 +107,7 @@ class ACPlotWidget(DataPlotWidget):
 
 class SCPlotWidget(DataPlotWidget):
     def __init__(self, parent=None):
-        DataPlotWidget.__init__(self, parent=None)
+        super().__init__(parent)
         self.window_title = 'Scattering correction'
         self.progressMode = False
         self.runSelected = None

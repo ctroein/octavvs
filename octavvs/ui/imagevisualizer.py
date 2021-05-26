@@ -22,7 +22,7 @@ class ImageVisualizer():
 
     Things assumed to exist in self:
         imageProjection
-        plot_visual
+        plot_raw
         data
 
     """
@@ -34,21 +34,18 @@ class ImageVisualizer():
         self.spinBoxSpectra.setStyle(NoRepeatStyle())
 
         self.pushButtonWhitelight.clicked.connect(self.loadWhite)
-        self.pushButtonExpandProjection.clicked.connect(self.plot_visual.popOut)
+        self.pushButtonExpandProjection.clicked.connect(self.plot_raw.popOut)
         self.horizontalSliderImage.valueChanged.connect(self.selectWhiteLight)
         self.lineEditWavenumber.setFormat("%.2f")
         self.horizontalSliderWavenumber.valueChanged.connect(self.wavenumberSlide)
         self.lineEditWavenumber.editingFinished.connect(self.wavenumberEdit)
-        self.comboBoxCmaps.currentTextChanged.connect(self.plot_visual.setCmap)
+        self.comboBoxCmaps.currentTextChanged.connect(self.plot_raw.setCmap)
 
         self.comboBoxMethod.currentIndexChanged.connect(self.updateSpectralImage)
-        self.comboBoxCmaps.currentTextChanged.connect(self.plot_spatial.setCmap)
-        self.checkBoxPixelFill.toggled.connect(self.plot_spatial.setFill)
+        self.checkBoxPixelFill.toggled.connect(self.plot_raw.setFill)
         self.whiteLightNames = {}
 
-        self.plot_raw = None
-        self.plot_spatial.changedSelected.connect(self.selectedSpectraUpdated)
-        self.plot_visual.changedSelected.connect(self.selectedSpectraUpdated)
+        self.plot_raw.changedSelected.connect(self.selectedSpectraUpdated)
         self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
         self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
         self.checkBoxAutopick.toggled.connect(self.selectSpectra)
@@ -74,19 +71,12 @@ class ImageVisualizer():
     def updatedFile(self):
         self.ptirMode = self.data.filetype == 'ptir'
         # self.checkBoxPixelFill.setHidden(not self.ptirMode)
-        self.stackedVisualizer.setCurrentIndex(int(self.ptirMode))
+        # self.stackedVisualizer.setCurrentIndex(int(self.ptirMode))
 
-        if self.ptirMode:
-            self.plot_visual.setData(None, None, None)
-            self.plot_spatial.setData(self.data.wavenumber, self.data.raw,
-                                      self.data.pixelxy)
-            self.plot_raw = self.plot_spatial
-
-        else:
-            self.plot_spatial.setData(None, None, None)
-            self.plot_visual.setData(self.data.wavenumber, self.data.raw,
-                                     self.data.wh)
-            self.plot_raw = self.plot_visual
+        self.plot_raw.setData(
+            self.data.wavenumber, self.data.raw,
+            self.data.pixelxy if self.ptirMode else None)
+        self.plot_raw.setDimensions(self.data.wh)
 
         self.updateSpectralImage()
         self.updateWhiteLightImages()
@@ -110,19 +100,19 @@ class ImageVisualizer():
     def wavenumberEdit(self):
         uitools.box_to_slider(
                 self.horizontalSliderWavenumber, self.lineEditWavenumber,
-                self.plot_visual.getWavenumbers(),
+                self.plot_raw.getWavenumbers(),
                 uitools.ixfinder_nearest)
 
     def wavenumberSlide(self):
         uitools.slider_to_box(
                 self.horizontalSliderWavenumber, self.lineEditWavenumber,
-                self.plot_visual.getWavenumbers(),
+                self.plot_raw.getWavenumbers(),
                 uitools.ixfinder_nearest)
         self.updateSpectralImage()
 
     def updateDimensions(self, wh):
         try:
-            self.plot_visual.setDimensions(wh)
+            self.plot_raw.setDimensions(wh)
         except ValueError:
             pass
         self.updateSpectralImage()
@@ -140,7 +130,9 @@ class ImageVisualizer():
 
     def setPlotColors(self, cmap):
         self.plot_raw.updatePlotColors(cmap)
-        self.selectedSpectraUpdated() # Trigger redraw
+        # Trigger redraw
+        self.plot_spectra.draw_idle()
+
 
 
     def updateSpectralImage(self):
@@ -163,13 +155,12 @@ class ImageVisualizer():
             else:
                 self.horizontalSliderImage.setEnabled(False)
                 self.horizontalSliderImage.setValue(0)
-                self.plot_spatial.load_white(None)
                 self.lineEditImageInfo.setText('')
         else:
             fname = self.whiteLightNames[self.data.curFile] if \
                 self.data.curFile in self.whiteLightNames else \
                     os.path.splitext(self.data.curFile)[0]+'.jpg'
-            self.plot_whitelight.load(filename=fname)
+            # self.plot_whitelight.load(filename=fname)
 
     # White light image stuff
     def loadWhite(self):
@@ -182,7 +173,7 @@ class ImageVisualizer():
 
     def selectWhiteLight(self, num):
         if self.data.images and len(self.data.images):
-            self.plot_spatial.setImage(self.data.images[num])
+            self.plot_raw.setImage(self.data.images[num])
             self.lineEditImageInfo.setText(self.data.images[num].name)
         # self.plot_whitelight.draw_rectangles(self.data.pixelxy)
 

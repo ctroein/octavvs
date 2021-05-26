@@ -7,7 +7,8 @@ Created on Tue May 18 14:45:53 2021
 """
 
 import numpy as np
-
+import scipy
+import sklearn
 
 def simplisma(d, nr, f):
     """
@@ -68,3 +69,80 @@ def simplisma(d, nr, f):
     ss = d[:,imp]
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
+
+
+
+
+# def mcr_als(sp, initial_components, maxiters=1000, reltol=1e-2,
+#             callback_a=None, callback_b=None):
+#     """
+#     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
+
+#     Parameters
+#     ----------
+#     sp : array(nrow, ncol)
+#         Spectra to be decomposed.
+#     initial_components : None or array(ncomponents, ncol)
+#         Initial concentrations.
+#     maxiters : int
+#         Maximum number of iterations.
+#     reltol : float
+#         Relative error target.
+#     callback_a : func(int iter, float err, A)
+#         Callback for when concentrations(?) are updated
+#     callback_concentrations : func(int iter, float err, B)
+#         Callback for when spectra(?) are updated
+
+#     Returns
+#     -------
+#     foo : array(...)
+#     Something.
+
+#     """
+
+#     u, s, v = np.linalg.svd(sp)
+#     nrow, ncol = np.shape(sp)
+#     nr = initial_components.shape[0]
+#     assert initial_components.shape[0] == ncol
+#     s = scipy.linalg.diagsvd(s, nrow, ncol)
+#     u = u[:, :nr]
+#     s = s[:nr, :nr]
+#     v = v[:nr, :]
+#     dn = u @ s @ v
+#     A = initial_components
+#     dauxt = sklearn.preprocessing.normalize(dn.T)
+
+
+#     for it in range(maxiters):
+
+#         Btemp = scipy.optimize.nnls(A.T, dauxt.T)
+#         # self.solve_lineq(ST_.T,dauxt.T)
+
+#         Dcal = np.dot(Btemp.T, A)
+#         error = sklearn.metrics.mean_squared_error(dauxt, Dcal)
+
+#         if iter == 0:
+#             error0 = error.copy()
+#             B = Btemp
+
+#         err = abs(error-error0)/error
+#         print(it,'err',err)
+#         if err == 0:
+#             Bf = B.copy()
+#             Af = A.copy()
+#             A_temp = A.copy()
+#             status = 'Iterating'
+
+#         elif  per < reltol:
+#             Cf = C_.copy()
+#             Sf = ST_.copy()
+#             status = 'converged'
+#             break
+#         else:
+#             error0 = error.copy()
+#             C_ = Ctemp.copy()
+#             Sf = ST_.copy()
+#             # status = 'Iterating'
+#             # self.purest.emit(iter,per,status, C_.T,Sf.T)
+
+

@@ -9,6 +9,7 @@ from PyQt5 import uic
 
 import numpy as np
 import scipy.signal, scipy.io
+import sklearn.cluster
 import matplotlib
 matplotlib.use('QT5Agg')
 import matplotlib.pyplot as plt
@@ -50,8 +51,16 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         self.fileLoader.setSuffix('_dec')
 
         self.plot_spectra.updated.connect(self.updateDC)
-        # self.plot_MC.clicked.connect(self.plot_MC.popOut)
-        # self.checkBoxMC.toggled.connect(self.updateMC)
+        self.pushButtonStart.clicked.connect(self.startDC)
+        self.pushButtonStop.clicked.connect(self.stopDC)
+
+        self.plot_decomp.clicked.connect(self.plot_decomp.popOut)
+        self.comboBoxPlotMode.currentIndexChanged.connect(
+            self.plot_decomp.set_display_mode)
+        self.plot_decomp.displayModesUpdated.connect(
+            self.updateDCPlotModes)
+
+        self.pushButtonCluster.clicked.connect(self.clusterDC)
         # self.spinBoxMCEndpoints.valueChanged.connect(self.updateMC)
         # self.lineEditMCSlopefactor.editingFinished.connect(self.updateMC)
 
@@ -72,8 +81,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         self.worker.stopped.connect(self.dcStopped)
         self.worker.failed.connect(self.dcFailed)
         self.worker.progress.connect(self.dcProgress)
+        self.worker.progressPlot.connect(self.plot_decomp.plot_progress)
         self.worker.batchProgress.connect(self.batchProgress)
-        # self.worker.progressPlot.connect(self.plot_SC.progressPlot)
         self.worker.fileLoaded.connect(self.updateFile)
         self.worker.loadFailed.connect(self.showLoadErrorMessage)
         self.startBatch.connect(self.worker.startBatch)
@@ -83,7 +92,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         self.lineEditSimplismaNoise.setFormat("%g")
         self.lineEditSimplismaNoise.setRange(1e-6, 1)
         self.lineEditTolerance.setFormat("%g")
-        self.lineEditTolerance.setRange(1e-6, 1)
+        self.lineEditTolerance.setRange(1e-10, 1)
+        self.lineEditRelError.setFormat("%.4g")
 
         self.updateWavenumberRange()
 
@@ -117,9 +127,11 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
     @pyqtSlot(int)
     def updateFile(self, num):
         super().updateFile(num)
-        self.updateWavenumberRange()
         super().updatedFile()
-
+        self.updateWavenumberRange()
+        self.plot_decomp.set_geometry(
+            wh=self.data.wh, pixelxy=self.data.pixelxy)
+        self.plot_decomp.set_wavenumbers(self.plot_raw.getWavenumbers())
 
     @pyqtSlot(str, str, str)
     def showLoadErrorMessage(self, file, err, details):
@@ -130,6 +142,18 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         if q.exec():
             self.dcStop()
 
+    def updateDimensions(self, wh):
+        super().updateDimensions(wh)
+        self.plot_decomp.set_geometry(
+            wh=self.data.wh, pixelxy=self.data.pixelxy)
+
+    def setHeatmapColors(self, cmap):
+        super().setHeatmapColors(cmap)
+        self.plot_decomp.set_cmap(cmap)
+
+    def setPlotColors(self, cmap):
+        super().setPlotColors(cmap)
+        self.plot_decomp.draw_idle()
 
     # DC, Decomposition
     def updateDC(self):
@@ -137,6 +161,18 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         if self.workerRunning:
             return
         self.pushButtonStart.setEnabled(True)
+
+    @pyqtSlot(list)
+    def updateDCPlotModes(self, modes):
+        "Refresh the list of plot modes"
+        # Quick and dirty
+        ct = self.comboBoxPlotMode.currentText()
+        self.comboBoxPlotMode.clear()
+        self.comboBoxPlotMode.insertItems(0, modes)
+        try:
+            self.comboBoxPlotMode.setCurrentText(ct)
+        except ValueError:
+            pass
 
     def toggleRunning(self, newstate):
         "Move between states: 0=idle, 1=run one, 2=run batch"
@@ -148,7 +184,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
             self.progressBarIteration.setValue(0)
         self.pushButtonStop.setEnabled(newstate == 1)
         self.pushButtonRunStop.setEnabled(newstate == 2)
-        self.rmiescRunning = newstate
+        self.workerRunning = newstate
 
     def getDCSettings(self):
         "Get relevant parameters for decomposition, as a dict"
@@ -166,12 +202,12 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         self.startDecomp.emit(self.data, Parameters(settings.items()))
 
     def clearDC(self):
-        if self.rmiescRunning == 1:
+        if self.workerRunning == 1:
             return
         self.progressBarIteration.setValue(0)
         self.progressBarIteration.setFormat('idle')
 
-    def dcStop(self):
+    def stopDC(self):
         self.worker.halt = True
         self.pushButtonStop.setEnabled(False)
         self.pushButtonRunStop.setEnabled(False)
@@ -179,7 +215,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
     @pyqtSlot()
     def dcStopped(self):
         self.worker.halt = False
-        if self.workterRunning == 1:
+        if self.workerRunning == 1:
             self.toggleRunning(0)
         self.updateDC()
 
@@ -189,21 +225,31 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
             'Processing failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
         self.dcStopped()
 
-    @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
-    def dcDone(self, wavenumber, indata, corr):
-        self.plot_SC.setData(wavenumber, indata, corr,
-                             self.scSettings['selected'],
-                             self.plot_visual.getSelected())
+    @pyqtSlot(np.ndarray, np.ndarray)
+    def dcDone(self, concentrations, spectra):
+        self.plot_decomp.set_concentrations(concentrations)
+        self.plot_decomp.set_spectra(spectra)
         self.dcStopped()
 
     @pyqtSlot(int, float)
     def dcProgress(self, it, err):
         if it == 0:
             self.progressBarIteration.setFormat('%v / %m')
-        self.progressBarIteration.setValue(it)
-        self.lineEditRelError.setValue(err)
+            self.plot_decomp.clear_errors()
+        else:
+            self.progressBarIteration.setValue(it)
+            self.lineEditRelError.setValue(err)
+            self.plot_decomp.add_error(err)
 
-
+    def clusterDC(self):
+        data = self.plot_decomp.get_concentrations().T
+        data = data / data.mean(axis=0)
+        kmeans = sklearn.cluster.MiniBatchKMeans(
+            self.spinBoxClusters.value())
+        labels = kmeans.fit_predict(data)
+        self.plot_decomp.add_clustering('K-means', labels)
+        self.comboBoxPlotMode.setCurrentText('K-means')
+        self.plot_decomp.draw_idle()
 
     # Loading and saving parameters
     def getParameters(self):
@@ -220,6 +266,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         p.dcSimplismaNoise = self.lineEditSimplismaNoise.value()
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
+        p.dcClusters = self.spinBoxClusters.value()
         return p
 
     def saveParameters(self):
@@ -249,6 +296,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         self.lineEditSimplismaNoise.setValue(p.dcSimplismaNoise)
         self.spinBoxIterations.setValue(p.dcIterations)
         self.lineEditTolerance.setValue(p.dcTolerance)
+        self.spinBoxClusters.setValue(p.dcClusters)
 
         ImageVisualizer.setParameters(self, p)
 

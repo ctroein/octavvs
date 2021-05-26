@@ -89,8 +89,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.plot_AC.updated.connect(self.updateSC)
         self.plot_SC.clicked.connect(self.plot_SC.popOut)
-        self.plot_visual.changedSelected.connect(self.updateSCplot)
-        self.plot_spatial.changedSelected.connect(self.updateSCplot)
+        self.plot_raw.changedSelected.connect(self.updateSCplot)
         self.pushButtonSCRefresh.clicked.connect(self.refreshSC)
         self.comboBoxReference.currentIndexChanged.connect(self.updateSC)
         self.pushButtonLoadOther.clicked.connect(self.loadOtherReference)
@@ -423,7 +422,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         # Assume that SC precludes MC
         p['mcDo'] = False
         # Selection of pixels to correct, or all if using clustering.
-        p['selected'] = self.plot_visual.getSelected() if \
+        p['selected'] = self.plot_raw.getSelected() if \
             not p['scClustering'] else None
         return p
 
@@ -455,7 +454,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.pushButtonSCRefresh.setEnabled(changed)
 
     def updateSCplot(self):
-        self.plot_SC.setSelected(self.plot_visual.getSelected())
+        self.plot_SC.setSelected(self.plot_raw.getSelected())
 
     def toggleRunning(self, newstate):
         onoff = not newstate
@@ -481,7 +480,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def clearSC(self):
         if self.rmiescRunning == 1:
             return
-        self.plot_SC.setData(self.plot_visual.getWavenumbers(),
+        self.plot_SC.setData(self.plot_raw.getWavenumbers(),
                              None, None, None, None)
         self.scSettings = None
 
@@ -511,7 +510,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.scSettings = self.scNewSettings
         self.plot_SC.setData(wavenumber, indata, corr,
                              self.scSettings['selected'],
-                             self.plot_visual.getSelected())
+                             self.plot_raw.getSelected())
         self.scStopped()
 
     @pyqtSlot(int, int)
@@ -521,7 +520,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 ['', 'Atm %p%', 'RMieSC %p%', 'SGF %p%', 'Baseline',
                  'mIRage %p%'][-a])
         if a == -2:
-            self.plot_SC.prepareProgress(self.plot_visual.getWavenumbers())
+            self.plot_SC.prepareProgress(self.plot_raw.getWavenumbers())
         self.progressBarSC.setValue(max(a, 0))
         self.progressBarSC.setMaximum(b)
 

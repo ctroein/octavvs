@@ -37,7 +37,7 @@ margin: 5px;
      <number>6</number>
     </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,2,0,2">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,1,0,0,1">
       <property name="sizeConstraint">
        <enum>QLayout::SetMinimumSize</enum>
       </property>
@@ -183,144 +183,79 @@ margin: 5px;
        </layout>
       </item>
       <item>
-       <widget class="QStackedWidget" name="stackedVisualizer">
-        <property name="currentIndex">
-         <number>1</number>
+       <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="0,2,3,0">
+        <item>
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>Image</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="horizontalSliderImage">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="pageStep">
+           <number>1</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEditImageInfo">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBoxPixelFill">
+          <property name="text">
+           <string>Fill</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <property name="tristate">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="ProjectionWidget" name="plot_raw" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>50</width>
+          <height>50</height>
+         </size>
         </property>
-        <widget class="QWidget" name="page_6">
-         <layout class="QGridLayout" name="gridLayout">
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item row="0" column="0">
-           <widget class="WhiteLightWidget" name="plot_whitelight" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>50</width>
-              <height>50</height>
-             </size>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_7">
-             <property name="spacing">
-              <number>9</number>
-             </property>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="ProjectionWidget" name="plot_visual" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>50</width>
-              <height>50</height>
-             </size>
-            </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
-             <property name="spacing">
-              <number>9</number>
-             </property>
-            </layout>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButtonExpandProjection">
-            <property name="text">
-             <string>Enlarge</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="pushButtonWhitelight">
-            <property name="toolTip">
-             <string>Automatically loaded if file.jpg is found in the same directory as file.mat.</string>
-            </property>
-            <property name="text">
-             <string>Load white light image</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="page_7">
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1">
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="0,2,3,0">
-            <item>
-             <widget class="QLabel" name="label_9">
-              <property name="text">
-               <string>Image</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSlider" name="horizontalSliderImage">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="pageStep">
-               <number>1</number>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="lineEditImageInfo">
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBoxPixelFill">
-              <property name="text">
-               <string>Fill</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-              <property name="tristate">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="SpatialProjectionWidget" name="plot_spatial" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>50</width>
-              <height>50</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
        </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_28">
+        <item>
+         <widget class="QPushButton" name="pushButtonWhitelight">
+          <property name="toolTip">
+           <string>Automatically loaded if file.jpg is found in the same directory as file.mat.</string>
+          </property>
+          <property name="text">
+           <string>Load white light image</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonExpandProjection">
+          <property name="text">
+           <string>Enlarge</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="10,1,0,0,1,0">
@@ -415,13 +350,7 @@ margin: 5px;
        </layout>
       </item>
       <item>
-       <widget class="RawPlotWidget" name="plot_spectra" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <property name="spacing">
-          <number>9</number>
-         </property>
-        </layout>
-       </widget>
+       <widget class="SpectraPlotWidget" name="plot_spectra" native="true"/>
       </item>
      </layout>
     </item>
@@ -616,13 +545,7 @@ margin: 5px;
        </layout>
       </item>
       <item>
-       <widget class="ACPlotWidget" name="plot_AC" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
-         <property name="spacing">
-          <number>9</number>
-         </property>
-        </layout>
-       </widget>
+       <widget class="ACPlotWidget" name="plot_AC" native="true"/>
       </item>
       <item>
        <widget class="QWidget" name="widgetSC" native="true">
@@ -931,13 +854,7 @@ margin: 5px;
        </widget>
       </item>
       <item>
-       <widget class="SCPlotWidget" name="plot_SC" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_8">
-         <property name="spacing">
-          <number>9</number>
-         </property>
-        </layout>
-       </widget>
+       <widget class="SCPlotWidget" name="plot_SC" native="true"/>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="0,2,1,1,1">
@@ -1018,13 +935,7 @@ margin: 5px;
        </layout>
       </item>
       <item>
-       <widget class="SGFPlotWidget" name="plot_SGF" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_10">
-         <property name="spacing">
-          <number>9</number>
-         </property>
-        </layout>
-       </widget>
+       <widget class="SGFPlotWidget" name="plot_SGF" native="true"/>
       </item>
      </layout>
     </item>
@@ -1089,11 +1000,6 @@ margin: 5px;
         <property name="mouseTracking">
          <bool>true</bool>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_11">
-         <property name="spacing">
-          <number>9</number>
-         </property>
-        </layout>
        </widget>
       </item>
       <item>
@@ -1413,13 +1319,7 @@ margin: 5px;
        </widget>
       </item>
       <item>
-       <widget class="BCPlotWidget" name="plot_BC" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_12">
-         <property name="spacing">
-          <number>9</number>
-         </property>
-        </layout>
-       </widget>
+       <widget class="BCPlotWidget" name="plot_BC" native="true"/>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="0,3,1,0">
@@ -1539,15 +1439,9 @@ margin: 5px;
    </slots>
   </customwidget>
   <customwidget>
-   <class>WhiteLightWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/ui/whitelightwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ProjectionWidget</class>
    <extends>QWidget</extends>
-   <header location="global">octavvs/prep/projectionwidget.h</header>
+   <header location="global">octavvs/ui/projectionwidget.h</header>
    <container>1</container>
    <slots>
     <slot>setCmap(QString)</slot>
@@ -1555,9 +1449,25 @@ margin: 5px;
    </slots>
   </customwidget>
   <customwidget>
-   <class>RawPlotWidget</class>
+   <class>SpectraPlotWidget</class>
    <extends>QWidget</extends>
    <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NormPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/prep/dataplotwidget.h</header>
+   <container>1</container>
+   <slots>
+    <signal>clicked()</signal>
+    <slot>popOut()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>FileLoaderWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/ui/fileloader.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -1591,31 +1501,9 @@ margin: 5px;
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>NormPlotWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/prep/dataplotwidget.h</header>
-   <container>1</container>
-   <slots>
-    <signal>clicked()</signal>
-    <slot>popOut()</slot>
-   </slots>
-  </customwidget>
-  <customwidget>
-   <class>FileLoaderWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/ui/fileloader.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>MCPlotWidget</class>
    <extends>QWidget</extends>
    <header location="global">octavvs/prep/dataplotwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SpatialProjectionWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/prep/projectionwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

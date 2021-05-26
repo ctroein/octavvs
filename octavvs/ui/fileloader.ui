@@ -145,7 +145,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="0,10,0,0,0,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="0,10,0,0,0">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -175,6 +175,12 @@
        <property name="enabled">
         <bool>false</bool>
        </property>
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="keyboardTracking">
         <bool>false</bool>
        </property>
@@ -187,25 +193,12 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_10">
+      <widget class="QLabel" name="labelFileCount">
        <property name="text">
-        <string>of</string>
+        <string>of 0</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="lineEditTotal">
-       <property name="minimumSize">
-        <size>
-         <width>30</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
        </property>
       </widget>
      </item>
