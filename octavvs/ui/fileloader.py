@@ -41,7 +41,6 @@ class FileLoaderWidget(QWidget, FileLoaderUi):
         self.lineEditSaveExt.setEnabled(onoff)
         self.comboBoxSaveFormat.setEnabled(onoff)
 
-
     def setSuffix(self, suffix):
         self.lineEditSaveExt.setText(suffix)
 

@@ -37,7 +37,7 @@ margin: 5px;
      <number>6</number>
     </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,1,0,0,1">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
       <property name="sizeConstraint">
        <enum>QLayout::SetMinimumSize</enum>
       </property>
@@ -52,261 +52,7 @@ margin: 5px;
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="1,2,1,1,0,1">
-        <item>
-         <widget class="QLabel" name="label_11">
-          <property name="text">
-           <string>Visualization</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxMethod">
-          <item>
-           <property name="text">
-            <string>Total intensity</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Maximum</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Wavenumber</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item>
-         <widget class="LineDouble" name="lineEditWavenumber">
-          <property name="text">
-           <string>1655</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_19">
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_12">
-          <property name="text">
-           <string>Colors</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxCmaps">
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <item>
-           <property name="text">
-            <string>viridis</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>hot</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>copper</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>cool</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>rainbow</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>jet</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>terrain</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>gnuplot</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>gray</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_23">
-        <item>
-         <widget class="QLabel" name="labelMinwn">
-          <property name="text">
-           <string>1000</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSlider" name="horizontalSliderWavenumber">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelMaxwn">
-          <property name="text">
-           <string>4000</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="ProjectionWidget" name="plot_raw" native="true">
-        <property name="minimumSize">
-         <size>
-          <width>50</width>
-          <height>50</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_28">
-        <item>
-         <widget class="QPushButton" name="pushButtonWhitelight">
-          <property name="toolTip">
-           <string>Automatically loaded if file.jpg is found in the same directory as file.mat.</string>
-          </property>
-          <property name="text">
-           <string>Load white light image</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButtonExpandProjection">
-          <property name="text">
-           <string>Enlarge</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="10,1,0,0,1,0">
-        <item>
-         <widget class="QLabel" name="label_14">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Raw spectra</string>
-          </property>
-         </widget>
-        </item>
-        <item alignment="Qt::AlignRight">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Spectra:</string>
-          </property>
-          <property name="buddy">
-           <cstring>spinBoxSpectra</cstring>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spinBoxSpectra">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of spectra to visualize.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="keyboardTracking">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <number>40</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="checkBoxAutopick">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select spectra from a K-means clustering.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Auto-pick</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Colors</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="buddy">
-           <cstring>comboBoxPlotCmap</cstring>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxPlotCmap">
-          <item>
-           <property name="text">
-            <string>tab10</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>tab20</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>gray</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>jet</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>all blue</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="SpectraPlotWidget" name="plot_spectra" native="true"/>
+       <widget class="ImageVisualizerWidget" name="imageVisualizer" native="true"/>
       </item>
      </layout>
     </item>
@@ -787,22 +533,6 @@ margin: 5px;
    </slots>
   </customwidget>
   <customwidget>
-   <class>ProjectionWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/ui/projectionwidget.h</header>
-   <container>1</container>
-   <slots>
-    <slot>setCmap(QString)</slot>
-    <slot>popOut()</slot>
-   </slots>
-  </customwidget>
-  <customwidget>
-   <class>SpectraPlotWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/prep/dataplotwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>FileLoaderWidget</class>
    <extends>QWidget</extends>
    <header location="global">octavvs/ui/fileloader.h</header>
@@ -814,10 +544,14 @@ margin: 5px;
    <header location="global">octavvs/decomp/plotwidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>ImageVisualizerWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/ui/imagevisualizer.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>spinBoxSpectra</tabstop>
-  <tabstop>checkBoxAutopick</tabstop>
   <tabstop>comboBoxNormMethod</tabstop>
   <tabstop>lineEditNormWavenum</tabstop>
   <tabstop>pushButtonSaveParameters</tabstop>

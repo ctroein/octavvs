@@ -4,7 +4,7 @@ import traceback
 from pkg_resources import resource_filename
 import argparse
 
-from PyQt5.QtWidgets import QDialog, QMessageBox, QSizePolicy
+from PyQt5.QtWidgets import QDialog, QMessageBox
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from PyQt5 import uic
 
@@ -61,6 +61,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         # self.splitter.setSizes([1e5]*3)
 
         self.data = SpectralData()
+        self.ptirMode = False
         self.rmiescRunning = 0   # 1 for rmiesc, 2 for batch, 3 for reference
 
         # Avoid repeating spinboxes
@@ -72,7 +73,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.fileLoader.setSuffix('_prep')
 
-        self.plot_spectra.updated.connect(self.updateMC)
+        self.imageVisualizer.plot_spectra.updated.connect(self.updateMC)
         self.plot_MC.clicked.connect(self.plot_MC.popOut)
         self.checkBoxMC.toggled.connect(self.updateMC)
         self.spinBoxMCEndpoints.valueChanged.connect(self.updateMC)
@@ -89,7 +90,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
         self.plot_AC.updated.connect(self.updateSC)
         self.plot_SC.clicked.connect(self.plot_SC.popOut)
-        self.plot_raw.changedSelected.connect(self.updateSCplot)
+        self.imageVisualizer.plot_raw.changedSelected.connect(self.updateSCplot)
         self.pushButtonSCRefresh.clicked.connect(self.refreshSC)
         self.comboBoxReference.currentIndexChanged.connect(self.updateSC)
         self.pushButtonLoadOther.clicked.connect(self.loadOtherReference)
@@ -280,8 +281,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     @pyqtSlot(int)
     def updateFile(self, num):
         super().updateFile(num)
-        # FileLoader.updateFile(self, num)
 
+        self.ptirMode = self.data.filetype == 'ptir'
         self.widgetSC.setHidden(self.ptirMode)
         self.widgetSCOptions.setHidden(self.ptirMode)
         self.plot_SC.setHidden(self.ptirMode)
@@ -313,8 +314,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     # MC, mIRage correction
     def updateMC(self):
-        wn = self.plot_spectra.getWavenumbers()
-        indata = self.plot_spectra.getSpectra()
+        wn = self.imageVisualizer.plot_spectra.getWavenumbers()
+        indata = self.imageVisualizer.plot_spectra.getSpectra()
         corr = None
         if self.ptirMode and self.checkBoxMC.isChecked() and indata is not None:
             corr = ptir.normalize_mirage(
@@ -422,7 +423,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         # Assume that SC precludes MC
         p['mcDo'] = False
         # Selection of pixels to correct, or all if using clustering.
-        p['selected'] = self.plot_raw.getSelected() if \
+        p['selected'] = self.imageVisualizer.plot_raw.getSelected() if \
             not p['scClustering'] else None
         return p
 
@@ -454,7 +455,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.pushButtonSCRefresh.setEnabled(changed)
 
     def updateSCplot(self):
-        self.plot_SC.setSelected(self.plot_raw.getSelected())
+        self.plot_SC.setSelected(self.imageVisualizer.plot_raw.getSelected())
 
     def toggleRunning(self, newstate):
         onoff = not newstate
@@ -480,7 +481,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def clearSC(self):
         if self.rmiescRunning == 1:
             return
-        self.plot_SC.setData(self.plot_raw.getWavenumbers(),
+        self.plot_SC.setData(self.plot_AC.getWavenumbers(),
                              None, None, None, None)
         self.scSettings = None
 
@@ -510,7 +511,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.scSettings = self.scNewSettings
         self.plot_SC.setData(wavenumber, indata, corr,
                              self.scSettings['selected'],
-                             self.plot_raw.getSelected())
+                             self.imageVisualizer.plot_raw.getSelected())
         self.scStopped()
 
     @pyqtSlot(int, int)
@@ -520,7 +521,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
                 ['', 'Atm %p%', 'RMieSC %p%', 'SGF %p%', 'Baseline',
                  'mIRage %p%'][-a])
         if a == -2:
-            self.plot_SC.prepareProgress(self.plot_raw.getWavenumbers())
+            self.plot_SC.prepareProgress(self.plot_AC.getWavenumbers())
         self.progressBarSC.setValue(max(a, 0))
         self.progressBarSC.setMaximum(b)
 
