@@ -59,9 +59,10 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
         self.lineEditWavenumber.setEnabled(iswn)
         self.horizontalSliderWavenumber.setEnabled(iswn)
         wn = self.plot_raw.getWavenumbers()
-        wix = len(wn)-1 - self.horizontalSliderWavenumber.value() if (
-            wn[0] > wn[-1]) else self.horizontalSliderWavenumber.value()
-        self.plot_raw.setProjection(meth, wix)
+        if wn is not None:
+            wix = len(wn)-1 - self.horizontalSliderWavenumber.value() if (
+                wn[0] > wn[-1]) else self.horizontalSliderWavenumber.value()
+            self.plot_raw.setProjection(meth, wix)
 
     def selectedSpectraUpdated(self, n):
         self.spinBoxSpectra.setValue(n)
@@ -121,8 +122,9 @@ class ImageVisualizer():
             self.selectImage)
         self.whiteLightNames = {}
 
+    def updateFile(self, num):
+        super().updateFile(num)
 
-    def updatedFile(self):
         self.spatialMode = self.data.pixelxy is not None
         self.imageVisualizer.layoutSpatial.setHidden(not self.spatialMode)
         self.imageVisualizer.pushButtonWhitelight.setHidden(self.spatialMode)
@@ -132,16 +134,8 @@ class ImageVisualizer():
             self.data.pixelxy)
         self.imageVisualizer.plot_raw.setDimensions(self.data.wh)
 
-        self.imageVisualizer.updateSpectralImage()
-        self.updateWhiteLightImages()
-        self.imageVisualizer.selectSpectra()
-
     def updateWavenumberRange(self):
         super().updateWavenumberRange()
-        # Update sliders before boxes to avoid errors from triggered updates
-        if self.data.wavenumber is not None:
-            self.imageVisualizer.horizontalSliderWavenumber.setMaximum(
-                len(self.data.wavenumber)-1)
 
         self.imageVisualizer.labelMinwn.setText("%.2f" % self.data.wmin)
         self.imageVisualizer.labelMaxwn.setText("%.2f" % self.data.wmax)
@@ -151,6 +145,12 @@ class ImageVisualizer():
             wmin, wmax, default=.5*(wmin+wmax))
         # Make sure the sliders are in sync with the boxes
         self.imageVisualizer.wavenumberEdit()
+
+    def updatedFile(self):
+        self.imageVisualizer.updateSpectralImage()
+        self.updateWhiteLightImages()
+        self.imageVisualizer.selectSpectra()
+
 
     def updateDimensions(self, wh):
         try:

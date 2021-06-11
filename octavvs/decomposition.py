@@ -3,12 +3,12 @@ import traceback
 from pkg_resources import resource_filename
 import argparse
 
-from PyQt5.QtWidgets import QDialog, QMessageBox
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QDialog, QMessageBox, QStyle
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt5 import uic
 
 import numpy as np
-import scipy.signal, scipy.io
+import scipy.signal
 import sklearn.cluster
 import matplotlib
 matplotlib.use('QT5Agg')
@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 
 from .decomp.decompworker import DecompWorker
 # import octavvs.io
-from octavvs.algorithms import normalization
-from octavvs.io import SpectralData, Parameters
+# from octavvs.algorithms import normalization
+from octavvs.io import DecompositionData, Parameters
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
                         NoRepeatStyle, uitools)
 
@@ -26,12 +26,12 @@ from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
 DecompositionMainWindow = uic.loadUiType(resource_filename(
     __name__, "decomp/decomposition.ui"))[0]
 
-class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
+class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                    DecompositionMainWindow):
 
     closing = pyqtSignal()
-    startDecomp = pyqtSignal(SpectralData, Parameters)
-    startBatch = pyqtSignal(SpectralData, Parameters, str, bool)
+    startDecomp = pyqtSignal(DecompositionData, Parameters)
+    startBatch = pyqtSignal(DecompositionData, Parameters, str, bool)
 
     @classmethod
     def program_name(cls):
@@ -41,33 +41,54 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
     def __init__(self, parent=None, files=None, paramFile=None, savePath=None):
         super().__init__(parent)
 
-        self.data = SpectralData()
+        self.data = DecompositionData()
         self.workerRunning = False
 
         # Avoid repeating spinboxes
         self.spinBoxComponents.setStyle(NoRepeatStyle())
         self.spinBoxIterations.setStyle(NoRepeatStyle())
 
-        self.fileLoader.setSuffix('_dec')
+        self.comboBoxDirectory.currentIndexChanged.connect(
+            self.dirModeCheck)
+        self.pushButtonDirectory.clicked.connect(self.dirSelect)
 
-        self.plot_spectra.updated.connect(self.updateDC)
+        self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
+            self.plot_roi.set_cmap)
+        self.imageVisualizer.plot_raw.updatedProjection.connect(
+            self.plot_roi.set_data)
+        self.pushButtonRoiClear.clicked.connect(self.roiClear)
+        self.pushButtonRoiAdd.clicked.connect(self.roiAddArea)
+        self.pushButtonRoiRemove.clicked.connect(self.roiRemoveArea)
+        self.pushButtonRoiErase.clicked.connect(
+            self.plot_roi.erase_last_point)
+        self.pushButtonRoiInvert.clicked.connect(self.plot_roi.invert_roi)
+        self.plot_roi.updated.connect(self.roiUpdateSelected)
+        self.pushButtonRoiLoad.clicked.connect(self.roiLoad)
+        self.pushButtonRoiSave.clicked.connect(self.roiSave)
+
+        self.imageVisualizer.plot_spectra.updated.connect(self.updateDC)
         self.pushButtonStart.clicked.connect(self.startDC)
         self.pushButtonStop.clicked.connect(self.stopDC)
 
-        self.plot_decomp.clicked.connect(self.plot_decomp.popOut)
+        self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
+            self.plot_decomp.set_cmap)
         self.comboBoxPlotMode.currentIndexChanged.connect(
             self.plot_decomp.set_display_mode)
         self.plot_decomp.displayModesUpdated.connect(
             self.updateDCPlotModes)
 
         self.pushButtonCluster.clicked.connect(self.clusterDC)
-        # self.spinBoxMCEndpoints.valueChanged.connect(self.updateMC)
-        # self.lineEditMCSlopefactor.editingFinished.connect(self.updateMC)
 
-        # self.pushButtonSaveParameters.clicked.connect(self.saveParameters)
-        # self.pushButtonLoadParameters.clicked.connect(self.loadParameters)
-
-        # self.pushButtonRun.clicked.connect(self.runBatch)
+        # self.toolButtonAnnotationPlus.setIcon(
+        #     self.style().standardIcon(QStyle.SP_DialogYesButton))
+        self.toolButtonAnnotationMinus.setIcon(
+            self.style().standardIcon(QStyle.SP_TrashIcon))
+        def dragMove(event):
+            if event.target == self.listWidgetClusterAnnotations:
+                event.accept()
+            else:
+                event.ignore()
+        self.listWidgetClusterAnnotations.dragMoveEvent = dragMove
 
         # Defaults when no data loaded
         self.scSettings = {}
@@ -113,6 +134,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
             self.runBatch(foldername=savePath)
 
     def closeEvent(self, event):
+        self.roiAutosaveCheck()
         self.worker.halt = True
         self.closing.emit()
         plt.close('all')
@@ -124,36 +146,155 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         assert self.workerRunning == 0
         super().loadFolder(*argv, **kwargs)
 
+    def updateFileList(self, *argv, **kwargs):
+        ret = super().updateFileList(*argv, **kwargs)
+        if ret:
+            self.roiDirModeCheck()
+        return ret
+
+    def loadFile(self, file):
+        "Save ROI before proceeding"
+        self.roiAutosaveCheck()
+        return super().loadFile(file)
+
     @pyqtSlot(int)
     def updateFile(self, num):
         super().updateFile(num)
-        super().updatedFile()
         self.updateWavenumberRange()
+        self.plot_roi.set_geometry(
+            wh=self.data.wh, pixelxy=self.data.pixelxy)
+        self.roiLoad(auto=True)
         self.plot_decomp.set_geometry(
             wh=self.data.wh, pixelxy=self.data.pixelxy)
-        self.plot_decomp.set_wavenumbers(self.plot_raw.getWavenumbers())
+        self.plot_decomp.set_wavenumbers(
+            self.imageVisualizer.plot_raw.getWavenumbers())
+        self.updatedFile()
 
-    @pyqtSlot(str, str, str)
-    def showLoadErrorMessage(self, file, err, details):
-        "Error message from loading a file in the worker thread, with abort option"
-        q = self.loadErrorBox(file, (err, details if details else None))
-        q.addButton('Skip file', QMessageBox.AcceptRole)
-        q.addButton('Abort', QMessageBox.AcceptRole)
-        if q.exec():
+    @pyqtSlot(str, str, str, bool)
+    def showLoadErrorMessage(self, file, err, details, warning):
+        """
+        Error message from loading a file in the worker thread,
+        with abort option
+        """
+        q = self.loadErrorBox(file, (err, details if details else None),
+                              warning)
+        q.addButton('Ignore' if warning else 'Skip file',
+                    QMessageBox.AcceptRole)
+        abort = q.addButton('Abort', QMessageBox.AcceptRole)
+        q.exec()
+        if q.clickedButton() == abort:
             self.dcStop()
 
     def updateDimensions(self, wh):
         super().updateDimensions(wh)
+        self.plot_roi.set_geometry(
+            wh=self.data.wh, pixelxy=self.data.pixelxy)
         self.plot_decomp.set_geometry(
             wh=self.data.wh, pixelxy=self.data.pixelxy)
-
-    def setHeatmapColors(self, cmap):
-        super().setHeatmapColors(cmap)
-        self.plot_decomp.set_cmap(cmap)
 
     def setPlotColors(self, cmap):
         super().setPlotColors(cmap)
         self.plot_decomp.draw_idle()
+
+    # Common output directory handling
+    def dirCurrent(self):
+        if self.comboBoxDirectory.currentIndex():
+            return self.lineEditDirectory.text()
+        return None
+
+    def dirModeCheck(self):
+        other = self.comboBoxDirectory.currentIndex()
+        self.lineEditDirectory.setEnabled(other)
+        if other:
+            dups = self.data.get_duplicate_filenames()
+            if dups:
+                q = QMessageBox(self)
+                q.setIcon(QMessageBox.Warning)
+                q.setWindowTitle('Warning: identical filenames')
+                q.setText('Some input files have identical names so their '
+                          'regions of interest will attempt to use '
+                          'the same files.')
+                q.setTextFormat(Qt.PlainText)
+                q.setDetailedText('Examples:\n' + '\n'.join(list(dups)[:10]))
+                q.exec()
+            if not self.lineEditDirectory.text():
+                self.dirSelect()
+
+    def dirSelect(self):
+        rdir = self.getDirectoryName(
+            "Select ROI directory", settingname='roiDir')
+        if rdir is not None:
+            self.lineEditDirectory.setText(rdir)
+            self.comboBoxDirectory.setCurrentIndex(1)
+
+
+    # Roi, Region of interest
+    def roiClear(self):
+        self.pushButtonRoiAdd.setChecked(False)
+        self.pushButtonRoiRemove.setChecked(False)
+        self.plot_roi.set_draw_mode('click')
+        self.plot_roi.clear()
+
+    def roiAddArea(self, checked):
+        self.pushButtonRoiRemove.setChecked(False)
+        self.plot_roi.set_draw_mode('add' if checked else 'click')
+
+    def roiRemoveArea(self, checked):
+        self.pushButtonRoiAdd.setChecked(False)
+        self.plot_roi.set_draw_mode('remove' if checked else 'click')
+
+    def roiUpdateSelected(self, n, m, from_draw):
+        self.labelRoiSelected.setText('Selected: %d / %d' % (n, m))
+        if from_draw:
+            self.labelRoiChanged.setText('*')
+
+
+    def roiLoad(self, auto=False):
+        if not self.data.curFile:
+            return
+        filename = self.data.roi_filename(filedir=self.dirCurrent())
+        if auto:
+            self.data.roi = None
+            try:
+                self.data.load_roi(filename)
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                print('Warning:', e)
+        else:
+            path = os.path.split(filename)
+            filename = self.getLoadFileName(
+                "Load ROI from file",
+                filter="Decomposition HDF5 files (*.odd);;All files (*)",
+                settingname='roiDir',
+                directory=path[0], defaultfilename=path[1])
+            if not filename:
+                return
+            self.data.load_roi(filename)
+        self.plot_roi.set_roi(self.data.roi)
+
+    def roiSave(self, auto=False):
+        if not self.data.curFile:
+            return
+        changed = self.data.set_roi(self.plot_roi.get_roi())
+        if auto and not changed:
+            return
+        filename = self.data.roi_filename(filedir=self.dirCurrent())
+        if not auto:
+            path = os.path.split(filename)
+            filename = self.getSaveFileName(
+                "Save ROI to file",
+                filter="Decomposition HDF5 files (*.odd);;All files (*)",
+                settingname='roiDir',
+                directory=path[0], defaultfilename=path[1])
+            if not filename:
+                return
+        self.data.save_roi(filename)
+
+    def roiAutosaveCheck(self):
+        if self.checkBoxRoiAutosave.isChecked() and self.data.curFile:
+            self.roiSave(auto=True)
+
 
     # DC, Decomposition
     def updateDC(self):
@@ -196,6 +337,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         if self.workerRunning:
             return
         settings = self.getDCSettings()
+        self.data.set_roi(self.plot_roi.get_roi())
+        self.plot_decomp.set_roi(self.data.roi)
         self.progressBarIteration.setMaximum(settings['dcIterations'])
         self.progressBarIteration.setFormat('initializing')
         self.toggleRunning(1)
@@ -227,8 +370,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
 
     @pyqtSlot(np.ndarray, np.ndarray)
     def dcDone(self, concentrations, spectra):
-        self.plot_decomp.set_concentrations(concentrations)
         self.plot_decomp.set_spectra(spectra)
+        self.plot_decomp.set_concentrations(concentrations)
         self.dcStopped()
 
     @pyqtSlot(int, float)
@@ -256,12 +399,17 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         "Copy from UI to some kind of parameters object"
         p = Parameters()
         self.fileLoader.saveParameters(p)
-        ImageVisualizer.getParameters(self, p)
+        self.imageVisualizer.saveParameters(p)
 
-        p.dcDo = self.checkBoxDecomp.isChecked()
+        p.dirMode = self.comboBoxDirectory.currentIndex()
+        p.directory = self.lineEditDirectory.text()
+
+        p.roiAutosave = self.checkBoxRoiAutosave.isChecked()
+
         p.dcAlgorithm = self.comboBoxAlgorithm.currentText()
         p.dcComponents = self.spinBoxComponents.value()
         p.dcStartingPoint = self.comboBoxStartingPoint.currentText()
+        p.dcRoi = self.comboBoxUseRoi.currentIndex()
         p.dcInitialValues = self.comboBoxInitialValues.currentText()
         p.dcSimplismaNoise = self.lineEditSimplismaNoise.value()
         p.dcIterations = self.spinBoxIterations.value()
@@ -287,18 +435,23 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow,
         "Copy from some kind of parameters object to UI"
         self.spinBoxSpectra.setValue(0)
         self.fileLoader.loadParameters(p)
+        self.imageVisualizer.loadParameters(p)
 
-        self.checkBoxDecomp.setChecked(p.dcDo)
+        self.comboBoxDirectory.setCurrentIndex(p.dirMode)
+        self.lineEditDirectory.setText(p.directory)
+
+        self.checkBoxRoiAutosave.setChecked(p.roiAutosave)
+
         self.comboBoxAlgorithm.setCurrentText(p.dcAlgorithm)
         self.spinBoxComponents.setValue(p.dcComponents)
         self.comboBoxStartingPoint.setCurrentText(p.dcStartingPoint)
+        self.comboBoxUseRoi.setCurrentIndex(p.dcRoi)
         self.comboBoxInitialValues.setCurrentText(p.dcInitialValues)
         self.lineEditSimplismaNoise.setValue(p.dcSimplismaNoise)
         self.spinBoxIterations.setValue(p.dcIterations)
         self.lineEditTolerance.setValue(p.dcTolerance)
         self.spinBoxClusters.setValue(p.dcClusters)
 
-        ImageVisualizer.setParameters(self, p)
 
     def loadParameters(self, checked=False, filename=None):
         """

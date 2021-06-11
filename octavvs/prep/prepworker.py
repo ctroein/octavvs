@@ -22,63 +22,6 @@ class PrepParameters(Parameters):
     A class representing all the settings that can be made in the
     preprocessing UI and used to start a batch job.
     """
-        # self.fileFilter = '*.mat'
-        # self.saveExt = '_prep'
-        # self.saveFormat = 'AB.mat'
-        # self.plotMethod = 0
-        # self.plotColors = ''
-        # self.plotWavenum = 0
-        # self.spectraCount = 0
-        # self.spectraAuto = False
-        # self.acDo = False
-        # self.acSpline = True
-        # self.acLocal = True
-        # self.acSmooth = True
-        # self.acReference = ''
-        # self.scDo = False
-        # self.scRef = 'Casein'
-        # self.scOtherRef = ''
-        # self.scRefPercentile = 50
-        # self.scIters = 50
-        # self.scClusters = 30
-        # self.scStable = True
-        # self.scAlgorithm = 'bassan'
-        # self.scResolution = 10
-        # self.scAmin = 1.1
-        # self.scAmax = 1.4
-        # self.scDmin = 2
-        # self.scDmax = 8
-        # self.scConstant = True
-        # self.scLinear = False
-        # self.scPrefitReference = True
-        # self.scPenalize = False
-        # self.scPenalizeLambda = 10.
-        # self.scPCADynamic = False
-        # self.scPCA = 7
-        # self.scPCAMax = 12
-        # self.scPCAVariance = 99.96
-        # self.scAutoIters = True
-        # self.scMinImprov = 5
-        # self.mcDo = False
-        # self.mcEndpoints = 6
-        # self.mcSlopefactor = .5
-        # self.sgfDo = False
-        # self.sgfWindow = 9
-        # self.sgfOrder = 3
-        # self.srDo = False
-        # self.srMin = 800
-        # self.srMax = 4000
-        # self.bcDo = False
-        # self.bcMethod = 'none'
-        # self.bcIters = 10
-        # self.bcLambda = 10000
-        # self.bcP = 0.01
-        # self.bcLambdaArpls = 10000
-        # self.bcThreshold = 0.01
-        # self.bcPoly = 3
-        # self.normDo = False
-        # self.normMethod = 'none'
-        # self.normWavenum = 1655
 
     def setAlgorithm(self, algo: str):
         algs = ['bassan', 'konevskikh', 'rasskazov']

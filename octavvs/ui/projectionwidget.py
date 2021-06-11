@@ -23,6 +23,7 @@ from sklearn.metrics import pairwise_distances_argmin_min
 # lower_case for private stuff
 class ProjectionWidget(FigureCanvas):
     changedSelected = pyqtSignal(int)
+    updatedProjection = pyqtSignal(np.ndarray)
 
     def __init__(self, parent=None):
         self.fig = Figure()
@@ -164,6 +165,7 @@ class ProjectionWidget(FigureCanvas):
                 bgimg.autoscale()
 
         self.trigger_redraw()
+        self.updatedProjection.emit(self.pixel_levels)
 
     def getWavenumbers(self):
         return self.wavenumber
@@ -211,7 +213,7 @@ class ProjectionWidget(FigureCanvas):
             cols = [matplotlib.colors.to_rgb(name[4:])]
         else:
             cm = plt.get_cmap(name)
-            if hasattr(cm, 'colors'):
+            if hasattr(cm, 'colors') and cm.N < 32:
                 cols = cm.colors
             else:
                 n = max(len(self.selected), 1)
@@ -233,9 +235,9 @@ class ProjectionWidget(FigureCanvas):
 
     def setFill(self, fill):
         "Fill/unfill pixelxy patches" # Todo: save/reset this state
-        for p in self.patches.items():
+        for p in self.patches.values():
             p.set_fill(fill)
-        for p in self.pop_patches.items():
+        for p in self.pop_patches.values():
             p.set_fill(fill)
         self.trigger_redraw()
 
@@ -349,7 +351,7 @@ class ProjectionWidget(FigureCanvas):
         self.changedSelected.emit(len(self.selected))
 
     def onclick(self, event):
-        if event.xdata is None or self.raw is None:
+        if event.xdata is None:
             return
         if event.inaxes == self.ax:
             patches = self.patches
@@ -366,7 +368,7 @@ class ProjectionWidget(FigureCanvas):
                         self.deselect_point(p)
                     else:
                         self.select_point(p)
-        else:
+        elif self.wh is not None:
             x, y = (int(event.xdata), int(event.ydata))
             if not (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
                 return

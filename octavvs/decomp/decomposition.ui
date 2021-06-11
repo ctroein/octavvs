@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1293</width>
+    <width>1111</width>
     <height>785</height>
    </rect>
   </property>
@@ -57,430 +57,47 @@ margin: 5px;
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,0,0,2,0,0,0">
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
-        <property name="topMargin">
+       <layout class="QHBoxLayout" name="horizontalLayout_8">
+        <property name="bottomMargin">
          <number>5</number>
         </property>
         <item>
-         <widget class="QCheckBox" name="checkBoxROI">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Region-of-interest</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton">
-          <property name="text">
-           <string>Edit ROI</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QLabel" name="label_20">
-          <property name="text">
-           <string>Save in</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox">
-          <item>
-           <property name="text">
-            <string>Same directory</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Bugger if I know</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,1,2,1,1,1,2">
-        <item>
-         <widget class="QCheckBox" name="checkBoxDecomp">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="text">
-           <string>Decomposition</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>Algorithm</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxAlgorithm">
-          <item>
-           <property name="text">
-            <string>MCR-ALS</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Something better</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Components</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spinBoxComponents">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>40</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>40</number>
-          </property>
-          <property name="value">
-           <number>5</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Starting point</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxStartingPoint">
-          <item>
-           <property name="text">
-            <string>Spectra</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Concentrations</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,1,1,1,1">
-        <item>
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Initial values</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxInitialValues">
-          <item>
-           <property name="text">
-            <string>Simplisma</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>K means cluster centra</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Load from file</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_17">
-          <property name="text">
-           <string>Simplisma noise</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="LineDouble" name="lineEditSimplismaNoise">
-          <property name="text">
-           <string>0.1</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_10">
-          <property name="text">
-           <string>Iterations</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spinBoxIterations">
-          <property name="minimumSize">
-           <size>
-            <width>50</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>9999</number>
-          </property>
-          <property name="value">
-           <number>100</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_13">
-          <property name="text">
-           <string>Stopping tolerance</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="LineDouble" name="lineEditTolerance">
-          <property name="text">
-           <string>0.00001</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,0,1,3,1,1">
-        <item>
-         <widget class="QPushButton" name="pushButtonStart">
-          <property name="text">
-           <string>Start decomposition</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButtonStop">
-          <property name="text">
-           <string>Stop</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_15">
-          <property name="text">
-           <string>Iteration</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QProgressBar" name="progressBarIteration">
-          <property name="value">
-           <number>0</number>
-          </property>
-          <property name="format">
-           <string>idle</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_16">
-          <property name="text">
-           <string>Rel. error</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="LineDouble" name="lineEditRelError">
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,2,1,0">
-        <item>
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Plot mode</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxPlotMode">
-          <property name="currentIndex">
-           <number>-1</number>
-          </property>
-          <property name="maxVisibleItems">
-           <number>16</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButtonCluster">
-          <property name="text">
-           <string>Cluster</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spinBoxClusters">
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="maximum">
-           <number>20</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>clusters</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="DecompositionPlotWidget" name="plot_decomp" native="true">
-        <property name="minimumSize">
-         <size>
-          <width>50</width>
-          <height>50</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="0,3,1,0">
-        <item>
-         <widget class="QCheckBox" name="checkBoxNorm">
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rescale each spectrum so that some quantity becomes 1.&lt;/p&gt;&lt;p&gt;Mean: Mean intensity = 1&lt;br/&gt;Total area: Area under curve = 1&lt;br/&gt;Wavenumber: Intensity at specified wavenumber = 1&lt;br/&gt;Maximum: The maximum intensity of the spectrum = 1&lt;br/&gt;Vector: Euclidean norm = 1&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>Where to save decomposition metadata (.dmd) files. 'Other directory' requires that input files have unique names.</string>
           </property>
           <property name="text">
-           <string>Placeholder</string>
+           <string>Save data in</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBoxNormMethod">
+         <widget class="QComboBox" name="comboBoxDirectory">
           <item>
            <property name="text">
-            <string>Mean</string>
+            <string>Input directory</string>
            </property>
           </item>
           <item>
            <property name="text">
-            <string>Total area</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Wavenumber</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Maximum</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Vector</string>
+            <string>Other directory</string>
            </property>
           </item>
          </widget>
         </item>
         <item>
-         <widget class="LineDouble" name="lineEditNormWavenum">
-          <property name="text">
-           <string>1655</string>
+         <widget class="QLineEdit" name="lineEditDirectory">
+          <property name="enabled">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_18">
+         <widget class="QPushButton" name="pushButtonDirectory">
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_13">
-        <item>
-         <widget class="QPushButton" name="pushButtonSaveParameters">
-          <property name="text">
-           <string>Save parameters</string>
+           <string>Select dir</string>
           </property>
          </widget>
         </item>
@@ -492,29 +109,943 @@ margin: 5px;
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButtonRun">
+         <widget class="QPushButton" name="pushButtonSaveParameters">
           <property name="text">
-           <string>Run batch</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QToolButton" name="pushButtonRunStop">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Stop</string>
+           <string>Save parameters</string>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QProgressBar" name="progressBarRun">
-        <property name="value">
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="currentIndex">
          <number>0</number>
         </property>
+        <widget class="QWidget" name="tab">
+         <attribute name="title">
+          <string>Region of interest</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0,1">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="0,0,0,1,0">
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiLoad">
+              <property name="toolTip">
+               <string>Load selection from an arbitrary file</string>
+              </property>
+              <property name="text">
+               <string>Load</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiSave">
+              <property name="text">
+               <string>Save</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxRoiAutosave">
+              <property name="toolTip">
+               <string>Automatically save all changes.</string>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string>Auto-save</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelRoiSelected">
+              <property name="text">
+               <string>Selected: XXXX / XXXX</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelRoiChanged">
+              <property name="text">
+               <string>*</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_9">
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiClear">
+              <property name="text">
+               <string>Clear all</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiAdd">
+              <property name="text">
+               <string>&amp;Add area</string>
+              </property>
+              <property name="shortcut">
+               <string>A</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiRemove">
+              <property name="text">
+               <string>&amp;Remove area</string>
+              </property>
+              <property name="shortcut">
+               <string>R</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiErase">
+              <property name="text">
+               <string>&amp;Erase last point</string>
+              </property>
+              <property name="shortcut">
+               <string>E</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiInvert">
+              <property name="text">
+               <string>In&amp;vert</string>
+              </property>
+              <property name="shortcut">
+               <string>V</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="RoiPlotWidget" name="plot_roi" native="true"/>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_2">
+         <attribute name="title">
+          <string>Decomposition</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,1,0">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,2,1,0,1,0,1,0">
+            <item>
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>Algorithm</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxAlgorithm">
+              <item>
+               <property name="text">
+                <string>MCR-ALS</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Something better</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Components</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxComponents">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>45</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>40</number>
+              </property>
+              <property name="value">
+               <number>5</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Starting point</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxStartingPoint">
+              <item>
+               <property name="text">
+                <string>Spectra</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Concentrations</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_25">
+              <property name="toolTip">
+               <string>How to treat the region of interest. If required, at least one spectrum must be selected in every image.</string>
+              </property>
+              <property name="text">
+               <string>ROI</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxUseRoi">
+              <property name="currentIndex">
+               <number>1</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>Ignored</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>If defined</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Required</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,1,1,1,1">
+            <item>
+             <widget class="QLabel" name="label_6">
+              <property name="text">
+               <string>Initial values</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxInitialValues">
+              <item>
+               <property name="text">
+                <string>Simplisma</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>K means clusters</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Load from file</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_17">
+              <property name="text">
+               <string>Simplisma noise</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="LineDouble" name="lineEditSimplismaNoise">
+              <property name="text">
+               <string>0.1</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_10">
+              <property name="text">
+               <string>Iterations</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxIterations">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>9999</number>
+              </property>
+              <property name="value">
+               <number>100</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_13">
+              <property name="text">
+               <string>Stopping tolerance</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="LineDouble" name="lineEditTolerance">
+              <property name="text">
+               <string>0.00001</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,0,1,3,1,1">
+            <item>
+             <widget class="QPushButton" name="pushButtonStart">
+              <property name="text">
+               <string>Run decomposition</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonStop">
+              <property name="text">
+               <string>Stop</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_15">
+              <property name="text">
+               <string>Iteration</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QProgressBar" name="progressBarIteration">
+              <property name="value">
+               <number>0</number>
+              </property>
+              <property name="format">
+               <string>idle</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_16">
+              <property name="text">
+               <string>Rel. error</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="LineDouble" name="lineEditRelError">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,2,0,0,0,0">
+            <item>
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>Plot mode</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxPlotMode">
+              <property name="currentIndex">
+               <number>-1</number>
+              </property>
+              <property name="maxVisibleItems">
+               <number>16</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonCluster">
+              <property name="text">
+               <string>Cluster</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>k =</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxClusters">
+              <property name="minimumSize">
+               <size>
+                <width>45</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>4</number>
+              </property>
+              <property name="maximum">
+               <number>20</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_2">
+              <property name="text">
+               <string>Info</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonSave">
+              <property name="text">
+               <string>Save</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="DecompositionPlotWidget" name="plot_decomp" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>50</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_13">
+            <item>
+             <widget class="QProgressBar" name="progressBarRun">
+              <property name="value">
+               <number>0</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRun">
+              <property name="text">
+               <string>Run batch</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="pushButtonRunStop">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Stop</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_3">
+         <attribute name="title">
+          <string>Clustering</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0,0,0,1">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="0,1,0,0,0">
+            <item>
+             <widget class="QLabel" name="label_34">
+              <property name="text">
+               <string>Input data</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox">
+              <item>
+               <property name="text">
+                <string>Raw data</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Decomposition</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_5">
+              <property name="text">
+               <string>Normalize</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxClusterNormMean">
+              <property name="text">
+               <string>Mean</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxClusterNormVar">
+              <property name="text">
+               <string>Variance</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="0,3,0,0,0,0,0">
+            <item>
+             <widget class="QLabel" name="label_26">
+              <property name="text">
+               <string>Method</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxClusterMetod">
+              <item>
+               <property name="text">
+                <string>K-means</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Something else</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_28">
+              <property name="text">
+               <string>Clusters</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxClusterClusters">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>2</number>
+              </property>
+              <property name="value">
+               <number>5</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_29">
+              <property name="text">
+               <string>Best of</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxClusterRestarts">
+              <property name="minimumSize">
+               <size>
+                <width>45</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>10000</number>
+              </property>
+              <property name="value">
+               <number>10</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_3">
+              <property name="text">
+               <string>Cluster</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_18"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_14">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_6">
+              <item>
+               <widget class="QLabel" name="label_18">
+                <property name="text">
+                 <string>Input data</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidgetClusterInputs">
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::MultiSelection</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Component 1</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Component 2</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Component 3</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_19">
+                <item>
+                 <widget class="QLabel" name="label_27">
+                  <property name="text">
+                   <string>Annotations</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="toolButtonAnnotationPlus">
+                  <property name="font">
+                   <font>
+                    <weight>75</weight>
+                    <bold>true</bold>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>+</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="toolButtonAnnotationMinus">
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="icon">
+                   <iconset theme="list-add.png">
+                    <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidgetClusterAnnotations">
+                <property name="dragEnabled">
+                 <bool>true</bool>
+                </property>
+                <property name="dragDropMode">
+                 <enum>QAbstractItemView::InternalMove</enum>
+                </property>
+                <property name="defaultDropAction">
+                 <enum>Qt::MoveAction</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Foreground</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Background</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <item>
+               <widget class="QLabel" name="label_31">
+                <property name="text">
+                 <string>Components</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidgetClusterAnnotations_2">
+                <property name="dragDropMode">
+                 <enum>QAbstractItemView::DragDrop</enum>
+                </property>
+                <property name="defaultDropAction">
+                 <enum>Qt::MoveAction</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Steve</string>
+                 </property>
+                 <property name="background">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="255">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>200</blue>
+                   </color>
+                  </brush>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Kevin</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_9">
+              <item>
+               <widget class="QLabel" name="label_32">
+                <property name="text">
+                 <string>Unused</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidgetClusterAnnotations_3">
+                <property name="dragDropMode">
+                 <enum>QAbstractItemView::DragDrop</enum>
+                </property>
+                <property name="defaultDropAction">
+                 <enum>Qt::MoveAction</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Alice</string>
+                 </property>
+                 <property name="background">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="255">
+                    <red>255</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bob</string>
+                 </property>
+                 <property name="background">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="255">
+                    <red>0</red>
+                    <green>200</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_16">
+            <item>
+             <widget class="QLabel" name="label_33">
+              <property name="toolTip">
+               <string>Where to save decomposition metadata (.dmd) files. 'Other directory' requires that input files have unique names.</string>
+              </property>
+              <property name="text">
+               <string>Save in</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxRoiDir_3">
+              <item>
+               <property name="text">
+                <string>Input directory</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Other directory</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditRoiDirectory_3">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiDir_3">
+              <property name="text">
+               <string>Select dir</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRoiLoad_2">
+              <property name="toolTip">
+               <string>Load selection from an arbitrary file</string>
+              </property>
+              <property name="text">
+               <string>Load</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_4">
+              <property name="text">
+               <string>Save</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QWidget" name="plot_cluster" native="true"/>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>
@@ -550,12 +1081,15 @@ margin: 5px;
    <header location="global">octavvs/ui/imagevisualizer.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>RoiPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/decomp/plotwidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>comboBoxNormMethod</tabstop>
-  <tabstop>lineEditNormWavenum</tabstop>
-  <tabstop>pushButtonSaveParameters</tabstop>
-  <tabstop>pushButtonLoadParameters</tabstop>
+  <tabstop>comboBoxClusterMetod</tabstop>
   <tabstop>pushButtonRun</tabstop>
   <tabstop>pushButtonRunStop</tabstop>
  </tabstops>

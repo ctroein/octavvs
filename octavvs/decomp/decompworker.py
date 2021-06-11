@@ -13,7 +13,7 @@ import scipy.signal, scipy.io
 # from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from octavvs.io import SpectralData, Parameters
+from octavvs.io import DecompositionData, Parameters
 from octavvs.algorithms import decomposition
 import pymcr
 import time
@@ -39,7 +39,7 @@ class DecompWorker(QObject):
     progressPlot = pyqtSignal(int, np.ndarray, np.ndarray)
 
     fileLoaded = pyqtSignal(int)
-    loadFailed = pyqtSignal(str, str, str)
+    loadFailed = pyqtSignal(str, str, str, bool) # file, msg, details, is_warn
 
     batchProgress = pyqtSignal(int, int)
     batchDone = pyqtSignal(bool)
@@ -49,7 +49,7 @@ class DecompWorker(QObject):
         self.halt = False
 
     @pyqtSlot(int)
-    def loadFile(self, data, num):
+    def loadFile(self, data, num, rcd_dir=None):
         "Load file number num in the data object, emitting a signal on failure"
         try:
             file = data.filenames[num]
@@ -57,10 +57,18 @@ class DecompWorker(QObject):
                 return True
             data.read_matrix(file)
         except (RuntimeError, FileNotFoundError) as e:
-            self.loadFailed.emit(file, str(e), '')
+            self.loadFailed.emit(file, str(e), '', False)
         except Exception as e:
-            self.loadFailed.emit(file, str(e), traceback.format_exc())
+            self.loadFailed.emit(file, str(e), traceback.format_exc(), False)
         else:
+            try:
+                data.clear_rcd()
+                if rcd_dir is not None:
+                    data.load_rcd(filedir=rcd_dir)
+            except Exception as e:
+                self.loadFailed.emit(
+                    file, str(e), traceback.format_exc(), True)
+
             self.fileLoaded.emit(num)
             return True
         return False
@@ -72,10 +80,25 @@ class DecompWorker(QObject):
         self.progress.emit(*pargs)
 
 
-    def callDecomp(self, data, params, wn, y):
+    def callDecomp(self, data, params):
         """
         Run decomposition stuff
         """
+
+        use_roi = False
+        if params.dcRoi == 'If defined':
+            if data.roi is not None and data.roi.any():
+                use_roi = True
+        elif params.dcRoi == 'Required':
+            if data.roi is None:
+                raise ValueError('No ROI defined')
+            if not data.roi.any():
+                raise ValueError('ROI must not be empty')
+            use_roi = True
+        if use_roi:
+            y = data.raw[data.roi, :]
+        else:
+            y = data.raw
 
         conc, pureix = decomposition.simplisma(
             y.T, params.dcComponents, params.dcSimplismaNoise)
@@ -102,15 +125,15 @@ class DecompWorker(QObject):
         return mcr.C_opt_.T, mcr.ST_opt_
 
 
-    @pyqtSlot(SpectralData, Parameters)
+    @pyqtSlot(DecompositionData, Parameters)
     def decompose(self, data, params):
         """ Run decomposition on all or a subset of the raw data.
         Parameters:
-            data: SpectralData object with raw data
+            data: DecompositionData object with raw data
             params: Parameters with things set
         """
         try:
-            self.callDecomp(data, params, data.wavenumber, data.raw)
+            self.callDecomp(data, params)
         except InterruptedError:
             self.stopped.emit()
         except Exception as e:
@@ -119,28 +142,13 @@ class DecompWorker(QObject):
         self.stopped.emit()
 
 
-    def saveCorrected(self, outfile, fmt, data, wn, y):
-        if fmt == 'Quasar.mat':
-            out = {'y': y, 'wavenumber': wn}
-            if data.pixelxy is not None:
-                map_x = np.array([x for (x,y) in data.pixelxy])
-                map_y = np.array([y for (x,y) in data.pixelxy])
-            else:
-                map_x = np.tile(data.wh[0], data.wh[1])
-                map_y = np.repeat(range(data.wh[0]), data.wh[1])
-            out['map_x'] = map_x[:, None]
-            out['map_y'] = map_y[:, None]
-            scipy.io.savemat(outfile, out)
-        else:
-            ab = np.hstack((wn[:, None], y.T))
-            scipy.io.savemat(outfile, {'AB': ab, 'wh': data.wh } )
 
-    @pyqtSlot(SpectralData, Parameters, str, bool)
+    @pyqtSlot(DecompositionData, Parameters, str, bool)
     def startBatch(self, data, params, folder, preservepath):
         """
         Run the batch processing of all the files listed in 'data'
         Parameters:
-            data: SpectralData object with one or more files
+            data: DecompositionData object with one or more files
             params: Parameters object from the user
             folder: output directory
             preservepath: if True, all processed files whose paths are under
@@ -150,12 +158,13 @@ class DecompWorker(QObject):
         try:
             for fi in range(len(data.filenames)):
                 self.batchProgress.emit(fi, len(data.filenames))
-                if not self.loadFile(data, fi):
+                rcd_dir = params.directory if params.dirMode else None
+                if not self.loadFile(data, fi, rcd_dir=rcd_dir):
                     continue
 
-                wn = data.wavenumber
+                # wn = data.wavenumber
 
-                CT, ST = self.callDecomp(data, params, wn, data.raw)
+                CT, ST = self.callDecomp(data, params)
 
                 # Figure out where to save the file
                 filename = data.curFile

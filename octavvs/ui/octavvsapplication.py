@@ -58,25 +58,34 @@ class OctavvsMainWindow(QMainWindow):
         q.addButton('OK', QMessageBox.AcceptRole)
         return q.exec()
 
-    def loadErrorBox(self, file, err):
+    def loadErrorBox(self, file, err, warning=False):
         "Prepare an error dialog for failure to load a file"
         q = QMessageBox(self)
-        q.setIcon(QMessageBox.Warning)
-        q.setWindowTitle("Error loading file")
-        q.setText("Failed to load '"+file+"':\n"+err[0])
+        if warning:
+            q.setIcon(QMessageBox.Information)
+            q.setWindowTitle("Warning loading file")
+            q.setText("Warning from loading '"+file+"':\n"+err[0])
+        else:
+            q.setIcon(QMessageBox.Warning)
+            q.setWindowTitle("Error loading file")
+            q.setText("Failed to load '"+file+"':\n"+err[0])
         q.setTextFormat(Qt.PlainText)
         q.setDetailedText(err[1])
         return q
 
     def getLoadSaveFileName(self, title, filter=None, settingname=None,
                             savesuffix=None, multiple=False,
-                            settingdefault=None):
+                            settingdefault=None,
+                            directory=None, defaultfilename=None):
         "Show a file dialog and select one or more files"
         setting = self.settings.value(settingname, settingdefault
                                       ) if settingname is not None else None
-        directory = setting if type(setting) is str else None
+        if directory is None:
+            directory = setting if type(setting) is str else None
         dialog = QFileDialog(parent=self, caption=title,
                              directory=directory, filter=filter)
+        if defaultfilename is not None:
+            dialog.selectFile(defaultfilename)
 #        if setting and type(setting) is not str:
 #            dialog.restoreState(setting)
         dialog.setOption(QFileDialog.DontUseNativeDialog, True)
@@ -114,7 +123,8 @@ class OctavvsMainWindow(QMainWindow):
 
     def getDirectoryName(self, title, settingname=None, savesetting=True):
         "Show a file dialog and select a directory"
-        directory = self.settings.value(settingname, None) if settingname is not None else None
+        directory = self.settings.value(settingname, None) if \
+            settingname is not None else None
         dialog = QFileDialog(parent=self, caption=title,
                              directory=directory)
 

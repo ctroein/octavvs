@@ -31,30 +31,29 @@ class FileLoaderWidget(QWidget, FileLoaderUi):
 
         self.spinBoxFileNumber.setStyle(NoRepeatStyle())
         self.comboBoxSingMult.currentIndexChanged.connect(
-                lambda ix: self.lineEditLoadFilter.setEnabled(ix > 0))
+            lambda ix: self.lineEditLoadFilter.setEnabled(ix > 0))
+        self.pushButtonFilePrev.clicked.connect(
+            lambda: self.spinBoxFileNumber.setValue(
+                self.spinBoxFileNumber.value() - 1))
+        self.pushButtonFileNext.clicked.connect(
+            lambda: self.spinBoxFileNumber.setValue(
+                self.spinBoxFileNumber.value() + 1))
 
     def setEnabled(self, onoff):
         self.pushButtonLoad.setEnabled(onoff)
         self.pushButtonAdd.setEnabled(onoff)
         self.spinBoxFileNumber.setEnabled(onoff)
         self.pushButtonShowFiles.setEnabled(onoff)
-        self.lineEditSaveExt.setEnabled(onoff)
-        self.comboBoxSaveFormat.setEnabled(onoff)
-
-    def setSuffix(self, suffix):
-        self.lineEditSaveExt.setText(suffix)
+        self.pushButtonFilePrev.setEnabled(onoff)
+        self.pushButtonFileNext.setEnabled(onoff)
 
     def saveParameters(self, p):
         "Copy from UI to some kind of parameters object"
         p.fileFilter = self.lineEditLoadFilter.text()
-        p.saveExt = self.lineEditSaveExt.text()
-        p.saveFormat = self.comboBoxSaveFormat.currentText()
 
     def loadParameters(self, p):
         "Copy to UI from some kind of parameters object"
         self.lineEditLoadFilter.setText(p.fileFilter)
-        self.lineEditSaveExt.setText(p.saveExt)
-        self.comboBoxSaveFormat.setCurrentText(p.saveFormat)
 
 
 
@@ -156,7 +155,8 @@ class FileLoader():
         """
         if add:
             existing = set(self.data.filenames)
-            filenames = self.data.filenames + [f for f in filenames if f not in existing]
+            filenames = self.data.filenames + [
+                f for f in filenames if f not in existing]
 
         if avoidreload:
             # Is the current file already in our list?
@@ -167,7 +167,7 @@ class FileLoader():
             else:
                 self.updateFileListInfo(filenames)
                 self.fileLoader.spinBoxFileNumber.setValue(ix+1)
-                return
+                return True
 
         skipall = False
         while len(filenames):
@@ -245,7 +245,5 @@ class FileLoader():
         super().updateWavenumberRange()
         if self.data.wavenumber is not None:
             self.fileLoader.lineEditLength.setText(str(len(self.data.wavenumber)))
-
-
 
 

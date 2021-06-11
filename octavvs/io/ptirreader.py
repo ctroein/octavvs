@@ -24,8 +24,6 @@ class PtirReader:
         image: tuple (img_data_bytes, img_type_str)
     """
 
-
-
     def __init__(self, filename=None):
         """
         filename:  HDF5 file to load data from
@@ -38,7 +36,7 @@ class PtirReader:
         if filename is not None:
             self.load(filename)
 
-    def load(self, filename):
+    def load(self, filename, clip_to_images=True):
         f = h5py.File(filename, mode='r')
 
         wns = []
@@ -97,3 +95,13 @@ class PtirReader:
                               im.attrs['SizeHeight'][0]])
                     self.images.append(img)
 
+        if clip_to_images:
+            # Remove pixel outside imaging area (always the first one?)
+            imgxy = np.array([img.xy for img in self.images])
+            imgwh = np.array([img.wh for img in self.images])
+            minxy = (imgxy - imgwh / 2).min(0)
+            maxxy = (imgxy + imgwh / 2).max(0)
+            inside = (minxy <= self.xy).all(1) & (self.xy <= maxxy).all(1)
+            self.xy = self.xy[inside,:]
+            self.AB = self.AB[inside,:]
+            self.wh = (len(self.AB), 1)

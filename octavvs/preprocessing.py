@@ -38,7 +38,7 @@ class DialogCreateReference(QDialog, Ui_DialogCreateReference):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow):
+class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow):
 
     closing = pyqtSignal()
     startRmiesc = pyqtSignal(SpectralData, dict)
@@ -71,7 +71,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.spinBoxPolyOrder.setStyle(NoRepeatStyle())
         self.spinBoxWindowLength.setStyle(NoRepeatStyle())
 
-        self.fileLoader.setSuffix('_prep')
+        self.lineEditSaveExt.setText('_prep')
 
         self.imageVisualizer.plot_spectra.updated.connect(self.updateMC)
         self.plot_MC.clicked.connect(self.plot_MC.popOut)
@@ -276,7 +276,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
 
     def loadFolder(self, *argv, **kwargs):
         assert self.rmiescRunning == 0
-        super().loadFolder(*argv, **kwargs)
+        return super().loadFolder(*argv, **kwargs)
 
     @pyqtSlot(int)
     def updateFile(self, num):
@@ -289,8 +289,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.widgetMC.setHidden(not self.ptirMode)
         self.plot_MC.setHidden(not self.ptirMode)
 
-        self.updateWavenumberRange()
-
         if self.bcNext:
             self.abcWorker.haltBC = True
             self.bcNext = True
@@ -299,7 +297,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             self.acNext = True
         self.clearSC()
 
-        super().updatedFile()
+        self.updateWavenumberRange()
+        self.updatedFile()
 
 
     @pyqtSlot(str, str, str)
@@ -432,7 +431,7 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
             settings=None reads settings from the UI
         """
         if self.plot_SC.getWavenumbers() is None:
-            return False
+            return True
         if not self.scSettings:
             return True
         if not settings:
@@ -460,6 +459,8 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
     def toggleRunning(self, newstate):
         onoff = not newstate
         self.fileLoader.setEnabled(onoff)
+        self.lineEditSaveExt.setEnabled(onoff)
+        self.comboBoxSaveFormat.setEnabled(onoff)
         self.pushButtonRun.setEnabled(onoff)
         self.pushButtonSCRefresh.setEnabled(onoff)
         self.dialogCreateReference.pushButtonCreateReference.setEnabled(onoff)
@@ -712,8 +713,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         "Copy from UI to some kind of parameters object"
         p = PrepParameters()
         self.fileLoader.saveParameters(p)
-        ImageVisualizer.getParameters(self, p)
+        self.imageVisualizer.saveParameters(p)
 
+        p.saveExt = self.lineEditSaveExt.text()
+        p.saveFormat = self.comboBoxSaveFormat.currentText()
         p.acDo = self.checkBoxAC.isChecked()
         p.acSpline = self.checkBoxSpline.isChecked()
         p.acLocal = self.checkBoxLocalPeak.isChecked()
@@ -784,7 +787,10 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         "Copy from some kind of parameters object to UI"
         self.spinBoxSpectra.setValue(0)
         self.fileLoader.loadParameters(p)
+        self.imageVisualizer.loadParameters(p)
 
+        self.lineEditSaveExt.setText(p.saveExt)
+        self.comboBoxSaveFormat.setCurrentText(p.saveFormat)
         self.checkBoxAC.setChecked(p.acDo)
         self.checkBoxSpline.setChecked(p.acSpline)
         self.checkBoxLocalPeak.setChecked(p.acLocal)
@@ -850,7 +856,6 @@ class MyMainWindow(FileLoader, ImageVisualizer, OctavvsMainWindow, Ui_MainWindow
         self.wavenumberEdit()
 
         self.updateSGF()
-        ImageVisualizer.setParameters(self, p)
 
     def loadParameters(self, checked=False, filename=None):
         """

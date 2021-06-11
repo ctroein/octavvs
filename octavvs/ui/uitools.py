@@ -20,9 +20,11 @@ def ixfinder_nomore(wn, val):
     return wn[::-1].searchsorted(val, 'right')-1
 
 def slider_to_box(slider, box, wn, ixfinder):
-    "Set a QLineEdit from the value on a slider, discretized by the wavenumber array wn"
+    """Set a QLineEdit from the value on a slider, discretized by
+    the wavenumber array wn"""
     if wn is not None:
-        if (not box.hasAcceptableInput() or slider.value() != ixfinder(wn, box.value())):
+        if (not box.hasAcceptableInput() or
+            slider.value() != ixfinder(wn, box.value())):
             box.setValue(wn[-1-slider.value()])
     elif (not box.hasAcceptableInput() or
             slider.value() != int(round(slider.maximum() *
@@ -31,9 +33,11 @@ def slider_to_box(slider, box, wn, ixfinder):
                      slider.value() / slider.maximum())
 
 def box_to_slider(slider, box, wn, ixfinder):
-    "Set a slider from the value in a lineedit, discretized by the wavenumber array wn"
+    """Set a slider from the value in a lineedit, discretized by
+    the wavenumber array wn"""
     oldb = slider.blockSignals(True)
     if wn is not None:
+        # assert slider.maximum() == len(wn) - 1
         if slider.maximum() != len(wn) - 1:
             slider.setMaximum(len(wn) - 1)
         if box.hasAcceptableInput():

@@ -16,8 +16,8 @@ from .ptirreader import PtirReader
 
 class SpectralData:
     """
-    The list of current files and the raw data loaded from a hyperspectral image
-    file in the preprocessing GUI.
+    The list of current files and the raw data loaded from a hyperspectral
+    image file in the GUIs.
     """
     def __init__(self):
         self.foldername = '' # Root dir

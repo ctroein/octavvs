@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>592</width>
+    <width>547</width>
     <height>131</height>
    </rect>
   </property>
@@ -33,7 +33,7 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_26" stretch="2,2,1,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_26" stretch="2,2,1,0">
      <item>
       <widget class="QComboBox" name="comboBoxSingMult">
        <item>
@@ -70,14 +70,14 @@
      <item>
       <widget class="QPushButton" name="pushButtonShowFiles">
        <property name="text">
-        <string>Show/edit list</string>
+        <string>Edit list</string>
        </property>
       </widget>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_28" stretch="0,1,1,2,1,2">
+    <layout class="QHBoxLayout" name="horizontalLayout_28" stretch="0,2,1,1,0,0,0">
      <item>
       <widget class="QLabel" name="label_3">
        <property name="text">
@@ -99,71 +99,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_13">
-       <property name="text">
-        <string>Save suffix</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="lineEditSaveExt">
-       <property name="toolTip">
-        <string>Extension added before .mat in output files.</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_8">
-       <property name="text">
-        <string>Save format</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="comboBoxSaveFormat">
-       <item>
-        <property name="text">
-         <string>AB.mat</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Quasar.mat</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="0,10,0,0,0">
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Filename</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="lineEditFilename">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>File</string>
+        <string>Current file</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -202,6 +140,44 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonFilePrev">
+       <property name="text">
+        <string>&amp;Prev</string>
+       </property>
+       <property name="shortcut">
+        <string>P</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonFileNext">
+       <property name="text">
+        <string>&amp;Next</string>
+       </property>
+       <property name="shortcut">
+        <string>N</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="0,10">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Filename</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEditFilename">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -209,7 +185,7 @@
      <item>
       <widget class="QLabel" name="label_4">
        <property name="text">
-        <string>Wavenums</string>
+        <string>Wavenumbers</string>
        </property>
       </widget>
      </item>
