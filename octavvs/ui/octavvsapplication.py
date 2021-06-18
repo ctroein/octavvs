@@ -100,7 +100,8 @@ class OctavvsMainWindow(QMainWindow):
         files = dialog.selectedFiles()
         if not dialog.result() or not files:
             return None
-        self.settings.setValue(settingname, os.path.dirname(files[0]))
+        if settingname is not None:
+            self.settings.setValue(settingname, os.path.dirname(files[0]))
         return files if multiple else files[0]
 
     def getSaveFileName(self, title, suffix='', **kwargs):
@@ -150,17 +151,22 @@ class OctavvsMainWindow(QMainWindow):
 
 
     @classmethod
-    def run_octavvs_application(windowclass, parser=None, parameters=[], isChild=False):
+    def run_octavvs_application(windowclass, parser=None, parameters=[],
+                                isChild=False):
         res = 1
         try:
-            progver = 'OCTAVVS %s %s' % (windowclass.program_name(), OctavvsMainWindow.octavvs_version)
+            progver = 'OCTAVVS %s %s' % (windowclass.program_name(),
+                                         OctavvsMainWindow.octavvs_version)
             windowparams = {}
             if parser is not None:
-                parser.add_argument('--version', action='version', version=progver)
-                parser.add_argument('--mpmethod')
+                parser.add_argument('--version', action='version',
+                                    version=progver)
+                selmp = multiprocessing.get_start_method(allow_none=True) is None
+                if selmp:
+                    parser.add_argument('--mpmethod', help='')
                 args = parser.parse_args()
                 windowparams = { k: args.__dict__[k] for k in parameters }
-                if args.mpmethod and multiprocessing.get_start_method(allow_none=True) is None:
+                if selmp and args.mpmethod:
                     multiprocessing.set_start_method(args.mpmethod)
 
             app = QApplication.instance()

@@ -27,24 +27,8 @@ class BasePlotWidget(FigureCanvas):
         self.pixel_radius = 3
 
 
-    def set_geometry(self, wh=None, pixelxy=None):
-        "Change shape/points. Returns whether pixel count changed."
-        if wh is None and pixelxy is None:
-            raise ValueError('Either wh or pixelxy must be specified')
-        if wh is not None:
-            pixels = wh[0] * wh[1]
-        else:
-            pixels = len(pixelxy)
-        changed = pixels != self.pixels
-        self.wh = wh
-        self.pixelxy = pixelxy
-        self.pixels = pixels
-        return changed
-
-
-
 class RoiPlotWidget(BasePlotWidget):
-    updated = pyqtSignal(int, int, bool)  # N out of M selected
+    updated = pyqtSignal(int, int)  # N out of M selected
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -53,7 +37,7 @@ class RoiPlotWidget(BasePlotWidget):
         # Data to plot
         self.data = None
         self.roi = None
-        self.roi_alpha = np.array([200, 200, 200, 100], dtype=np.uint8)
+        self.roi_alpha = np.array([200, 200, 200, 128], np.uint8) # RGBA
         self.polystart = None   # Patch created when starting polygon
         self.polyline = None    # Line2D for lines in polygon
         self.drawmode = 'click' # click, add, remove
@@ -63,22 +47,36 @@ class RoiPlotWidget(BasePlotWidget):
         self.mpl_connect('button_release_event', self.on_release)
         self.mpl_connect('motion_notify_event', self.on_move)
 
-    def emit_updated(self, draw=True):
+    def emit_updated(self):
         n = 0 if self.roi is None else self.roi.sum()
-        self.updated.emit(n, self.pixels, draw)
+        self.updated.emit(n, self.pixels)
 
-    def set_geometry(self, wh=None, pixelxy=None):
-        "Change shape/points. Returns whether pixel count changed."
-        if super().set_geometry(wh, pixelxy):
-            self.data = None
-            self.roi = np.zeros((self.pixels), dtype=bool)
-            self.polyline = None
-            self.polystart = None
-            self.patches = []
-            # self.polygon = []    # list of x,y for active polygon
-            self.ax.clear()
-            self.emit_updated(False)
+    def set_basic_data(self, wh=None, pixelxy=None):
+        "Set shape/points and clears ROI etc"
+        if wh is None and pixelxy is None:
+            raise ValueError('Either wh or pixelxy must be specified')
+        if pixelxy is not None:
+            pixels = len(pixelxy)
+        else:
+            pixels = wh[0] * wh[1]
+        self.wh = wh
+        self.pixelxy = pixelxy
+        self.pixels = pixels
+        self.data = None
+        self.roi = np.zeros((self.pixels), dtype=bool)
+        self.polyline = None
+        self.polystart = None
+        self.patches = []
+        self.ax.clear()
+        self.emit_updated()
         self.draw_idle()
+
+    def adjust_geometry(self, wh):
+        "Update the plot geometry, keeping the pixel count"
+        pixels = wh[0] * wh[1]
+        assert pixels == self.pixels
+        self.wh = wh
+        self.set_data(self.data)
 
     def get_roi(self):
         "Return the ROI as a bool array (not a copy; beware)"
@@ -94,7 +92,7 @@ class RoiPlotWidget(BasePlotWidget):
                 raise ValueError('ROI size must match the current geometry')
             self.roi = roi
         self.update_roi_image()
-        self.emit_updated(False)
+        self.emit_updated()
         self.draw_idle()
 
     @pyqtSlot(np.ndarray)
@@ -133,21 +131,23 @@ class RoiPlotWidget(BasePlotWidget):
                 for i in range(self.pixels):
                     self.patches[i].set_facecolor(cmap(norm(data[i])))
         else:
-            data2d = data.reshape(self.wh)
+            data2d = data.reshape((self.wh[1], self.wh[0]))
             if self.data is None:
-                self.pixel_radius = 1.5
                 self.ax.imshow(data2d, cmap=self.cmap, zorder=-1)
-                m = 2 * self.pixel_radius
-                self.ax.set_xlim(-m, self.wh[0]-1 + m)
-                self.ax.set_ylim(self.wh[1]-1 + m, -m)
                 # Turn roi into rgba
                 roi2d = np.outer(self.roi, self.roi_alpha).reshape(
-                    self.wh[0], self.wh[1], 4)
+                    self.wh[1], self.wh[0], 4)
                 self.ax.imshow(roi2d, zorder=0)
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(data2d)
                 im.set_clim(data.min(), data.max())
+                im.set_extent((0, self.wh[0]-1, self.wh[1]-1, 0))
+                self.ax.autoscale()
+            self.pixel_radius = 1.5
+            m = 2 * self.pixel_radius
+            self.ax.set_xlim(-m, self.wh[0]-1 + m)
+            self.ax.set_ylim(self.wh[1]-1 + m, -m)
 
         self.data = data
         self.draw_idle()
@@ -181,7 +181,7 @@ class RoiPlotWidget(BasePlotWidget):
                 self.select_pixel(i, self.roi[i])
         else:
             roi2d = np.outer(self.roi, self.roi_alpha).reshape(
-                self.wh[0], self.wh[1], 4)
+                self.wh[1], self.wh[0], 4)
             self.ax.get_images()[1].set_data(roi2d)
 
     def invert_roi(self):
@@ -301,8 +301,6 @@ class RoiPlotWidget(BasePlotWidget):
     def on_click(self, event):
         if self.data is None or event.inaxes != self.ax:
             return
-        print('click at', event.x, event.y, event.inaxes == self.ax,
-              event.xdata, event.ydata, event.button)
         if self.drawing: # Click while drawing? We'd better just stop.
             self.drawing = False
         elif self.drawmode == 'click':
@@ -330,29 +328,32 @@ class DecompositionPlotWidget(BasePlotWidget):
 
         self.window_title = 'Decomposition'
         # Data to plot
-        self.concentrations = np.empty((0,0))
         self.wn = None
-        self.spectra = []
         self.roi = None
-        self.init_spectra = []
-        self.error_log = []
-        self.cluster_maps = {}
         # What/how to plot
         self.discrete_cmap = 'tab10'
         self.display_mode = 0 # Index for now - should perhaps be string
-        self.update_display_modes()
+        self.clear_data()
 
+    def clear_data(self):
+        self.error_log = []
+        self.concentrations = None
+        self.cluster_maps = {}
+        self.init_spectra = None
+        self.spectra = None
+        self.update_display_modes()
 
     def mousePressEvent(self, event):
         self.popOut()
 
     def update_display_modes(self):
         "Create/update the list of display modes and signal the change"
-        m = [ 'Error progress', 'Initial spectra', 'Spectra',
-             'Concentrations' ]
-        for i in range(len(self.concentrations)):
-            m.append('Concentration %d' % (i+1))
-        m = m + list(self.cluster_maps.keys())
+        m = ['Error progress']
+        if self.concentrations is not None:
+            m = m + [ 'Initial spectra', 'Spectra', 'Concentrations' ]
+            for i in range(len(self.concentrations)):
+                m.append('Concentration %d' % (i+1))
+            m = m + list(self.cluster_maps.keys())
         self.display_modes = m
         if self.display_mode <= len(m):
             self.display_mode = len(m) - 1
@@ -364,18 +365,33 @@ class DecompositionPlotWidget(BasePlotWidget):
         self.display_mode = m
         self.draw_idle()
 
-    def set_geometry(self, wh=None, pixelxy=None):
-        "Change shape/points. Returns whether pixel count changed."
-        if super().set_geometry(wh, pixelxy):
-            self.concentrations = np.empty((0,0))
-            self.cluster_maps = {}
-            self.roi = None
-            self.update_display_modes()
+    def set_basic_data(self, wn, wh, pixelxy):
+        "Set wavenumbers and geometric data that won't change for this file"
+        if wh is None and pixelxy is None:
+            raise ValueError('Either wh or pixelxy must be specified')
+        if pixelxy is not None:
+            pixels = len(pixelxy)
+        else:
+            pixels = wh[0] * wh[1]
+        self.wh = wh
+        self.pixelxy = pixelxy
+        self.pixels = pixels
+        self.wn = wn
+        self.clear_and_set_roi()
+
+    def adjust_geometry(self, wh):
+        "Change shape without altering pixel count"
+        pixels = wh[0] * wh[1]
+        assert pixels == self.pixels
+        self.wh = wh
         self.draw_idle()
 
-    def set_wavenumbers(self, wn):
-        self.wn = wn
-        self.spectra = []
+    def clear_and_set_roi(self, roi=None):
+        "Set ROI and clear spectra/concentrations"
+        if roi is not None:
+            assert len(roi) == self.pixels
+        self.roi = roi
+        self.clear_data()
         self.draw_idle()
 
     def set_concentrations(self, concentrations):
@@ -390,17 +406,26 @@ class DecompositionPlotWidget(BasePlotWidget):
         Returns
         -------
         None.
-
         """
-        assert concentrations.ndim == 2
-        udm = len(concentrations) != len(self.concentrations)
+        assert self.wn is not None
+        if concentrations is None:
+            self.concentrations = None
+            self.draw_idle()
+            return
+        comps, pixels = concentrations.shape
+        udm = self.concentrations is None or len(self.concentrations) != comps
         if self.roi is None:
-            assert concentrations.shape[1] == self.pixels
+            print('set_c', concentrations.shape, self.pixels)
+            assert pixels == self.pixels
+            self.concentrations = concentrations
+        elif pixels != self.roi.sum():
+            # Discard ROI if it's apparently unused
+            assert pixels == self.pixels
+            self.roi = None
             self.concentrations = concentrations
         else:
             if udm:
-                self.concentrations = np.empty(
-                    (len(concentrations), self.pixels))
+                self.concentrations = np.empty((comps, self.pixels))
             self.concentrations[...] = concentrations.min(1)[:,None]
             self.concentrations[:, self.roi] = concentrations
 
@@ -417,14 +442,14 @@ class DecompositionPlotWidget(BasePlotWidget):
         self.spectra = spectra
         self.draw_idle()
 
-    def set_roi(self, roi):
-        self.roi = roi
+    def set_initial_spectra(self, spectra):
+        self.init_spectra = spectra
+        self.draw_idle()
 
-    def clear_errors(self):
-        self.error_log = []
-
-    def add_error(self, e):
-        self.error_log.append(e)
+    def set_errors(self, errors):
+        "Set the list/array of errors"
+        self.error_log = errors
+        self.draw_idle()
 
     @pyqtSlot('QString')
     def set_cmap(self, s):
@@ -454,13 +479,15 @@ class DecompositionPlotWidget(BasePlotWidget):
 
     def draw_error_log(self, ax):
         ax.set_yscale('log')
+        if self.error_log is None:
+            return
         if len(self.error_log):
             ax.plot(self.error_log, label='Error')
             ax.legend()
 
     def draw_init_spectra(self, ax):
         ax.set_yscale('linear')
-        if len(self.init_spectra):
+        if self.init_spectra is not None:
             for i in range(len(self.init_spectra)):
                 ax.plot(self.wn, self.init_spectra[i,:],
                         label='Initial component %d'%(i+1))
@@ -468,7 +495,7 @@ class DecompositionPlotWidget(BasePlotWidget):
 
     def draw_spectra(self, ax):
         ax.set_yscale('linear')
-        if len(self.spectra):
+        if self.spectra is not None:
             for i in range(len(self.spectra)):
                 s = self.spectra[i]
                 ax.plot(self.wn, s / s.mean(), label='Component %d'%(i+1))
@@ -476,8 +503,9 @@ class DecompositionPlotWidget(BasePlotWidget):
 
     def draw_concentrations(self, ax):
         ax.set_yscale('linear')
-        for i in self.concentrations:
-            ax.plot(i / i.mean())
+        if self.concentrations is not None:
+            for i in self.concentrations:
+                ax.plot(i / i.mean())
 
     def draw_heatmap(self, ax, data, discrete=False, cbfig=None):
         if discrete:
@@ -515,14 +543,14 @@ class DecompositionPlotWidget(BasePlotWidget):
                 ax.set_ylim(minxy[1] - m, maxxy[1] + m)
                 # ax.set_extent((minxy[1], maxxy[1], maxxy[0], minxy[0]))
         else:
-            data = data.reshape(self.wh)
+            data = data.reshape((self.wh[1], self.wh[0]))
             imgs = ax.get_images()
             if imgs:
                 im = imgs[0]
                 im.set_data(data)
                 im.set_cmap(cmap)
                 im.set_clim(*cminmax)
-                im.set_extent((0, self.wh[1], self.wh[0], 0))
+                im.set_extent((-.5, self.wh[0]-.5, self.wh[1]-.5, -.5))
                 im.autoscale()
             else:
                 ax.clear()
@@ -571,4 +599,140 @@ class DecompositionPlotWidget(BasePlotWidget):
                     cnum - len(self.concentrations)]
                 self.draw_heatmap(ax, data, discrete=True, cbfig=fig)
 
+
+class ClusterPlotWidget(BasePlotWidget):
+    clicked = pyqtSignal(int)  # Clicked on cluster N
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.window_title = 'Clustering'
+        # Data to plot
+        self.clusters = None
+        self.roi = None
+        self.cmap = 'tab10'
+        self.mpl_connect('button_press_event', self.on_click)
+
+    def set_basic_data(self, wh=None, pixelxy=None):
+        "Set shape/points and clears clusters"
+        if wh is None and pixelxy is None:
+            raise ValueError('Either wh or pixelxy must be specified')
+        if pixelxy is not None:
+            pixels = len(pixelxy)
+        else:
+            pixels = wh[0] * wh[1]
+        self.wh = wh
+        self.pixelxy = pixelxy
+        self.pixels = pixels
+        self.roi = np.zeros((self.pixels), dtype=bool)
+        self.clusters = None
+        # 0 or cluster+1 for all pixels
+        self.clusters_of_all = np.zeros((self.pixels), dtype=np.uint8)
+        self.ax.clear()
+        self.draw_idle()
+
+    def adjust_geometry(self, wh):
+        "Update the plot geometry, keeping the pixel count"
+        pixels = wh[0] * wh[1]
+        assert pixels == self.pixels
+        self.wh = wh
+        self.update_image()
+
+    @pyqtSlot('QString')
+    def set_cmap(self, s):
+        "Set colors for clustering etc"
+        self.cmap = s
+        self.draw_idle()
+
+    def clear_clusters(self):
+        self.roi = None
+        self.clusters = None
+        self.clusters_of_all.fill(0)
+        self.ax.clear()
+        self.draw_idle()
+
+    def cluster_color(self, cluster):
+        return self.cmap_object(self.norm(cluster))
+
+    @pyqtSlot(np.ndarray)
+    def set_roi_and_clusters(self, roi, clusters):
+        "Set ROI and cluster labels for all pixels in ROI"
+        if roi is not None:
+            if len(roi) != self.pixels:
+                raise ValueError('ROI size must match the current geometry')
+        setup_axes = self.clusters is None
+        self.roi = roi
+        self.clusters = clusters
+        if clusters is None:
+            self.clusters_of_all.fill(0)
+            self.draw_idle()
+            return
+
+        if roi is None:
+            self.clusters_of_all[:] = clusters + 1
+        else:
+            self.clusters_of_all.fill(0)
+            self.clusters_of_all[roi] = clusters + 1
+
+        if setup_axes:
+            # Things common to both display modes
+            self.ax.set_aspect('equal')
+            self.ax.tick_params(bottom=False, labelbottom=False,
+                                left=False, labelleft=False)
+            self.ax.set_facecolor('#eee')
+
+        lc = clusters.max()
+        cminmax = (0, lc)
+        cmap = plt.get_cmap(self.cmap)
+        if hasattr(cmap, 'colors') and cmap.N < 32:
+            # Reshape color list to match the input values
+            cmap = matplotlib.colors.ListedColormap(cmap.colors, N=lc+1)
+        self.cmap_object = cmap
+        self.norm = matplotlib.colors.Normalize(
+            vmin=cminmax[0], vmax=cminmax[1])
+
+        if self.pixelxy is not None:
+            unroi = (.5, .5, .5)
+            if setup_axes:
+                minxy = np.min(self.pixelxy, axis=0)
+                maxxy = np.max(self.pixelxy, axis=0)
+                r = (maxxy - minxy).max() * .02
+                for i, xy in enumerate(self.pixelxy):
+                    c = self.clusters_of_all[i]
+                    fc = self.cluster_color(c - 1) if c else unroi
+                    p = matplotlib.patches.Circle(xy, radius=r, facecolor=fc)
+                    self.ax.add_patch(p)
+                m = 3 * r
+                self.ax.set_xlim(minxy[0] - m, maxxy[0] + m)
+                self.ax.set_ylim(minxy[1] - m, maxxy[1] + m)
+            else:
+                for i, p in enumerate(self.ax.patches):
+                    c = self.clusters_of_all[i]
+                    p.set_facecolor(self.cluster_color(c - 1) if c else unroi)
+        else:
+            i2d = np.zeros((self.wh[1] * self.wh[0], 4))
+            i2d[roi, :] = self.cluster_color(clusters)
+            i2d = i2d.reshape((self.wh[1], self.wh[0], 4))
+            if setup_axes:
+                self.ax.imshow(i2d, zorder=0)
+            else:
+                im = self.ax.get_images()[0]
+                im.set_data(i2d)
+        self.draw_idle()
+
+    def on_click(self, event):
+        if self.clusters is None or event.inaxes != self.ax:
+            return
+        if self.pixelxy is not None:
+            for i, p in enumerate(self.ax.patches):
+                if self.roi is None or self.roi[i]:
+                    if p.contains(event)[0]:
+                        self.clicked.emit(self.clusters_of_all[i] - 1)
+        else:
+            x, y = (int(event.xdata), int(event.ydata))
+            if (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
+                i = x + y * self.wh[0]
+                c = self.clusters_of_all[i]
+                if c:
+                    self.clicked.emit(c - 1)
 

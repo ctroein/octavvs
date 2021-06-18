@@ -20,10 +20,14 @@ class DecompositionData(SpectralData):
 
         self.decomposition_settings = None # dict with decomp settings
         self.decomposition_roi = None # ROI actually used for decomp, or None
-         # list/1d-array of iterations at which spectra were stored
-        self.saved_iterations = None
-        self.spectra = None  # array (iteration, component, wavenum)
-        self.concentrations = None # array (iteration, component, pixel)
+        # {iteration: {'spectra': array(component, wavenum),
+        # 'concentrations': array(component, pixel) } }
+        self.decomposition_data = None
+        self.decomposition_errors = None # 1d array of error values
+        self.clustering_settings = None # dict with clustering settings
+        self.clustering_roi = None # ROI actually used for clustering, or None
+        self.clustering_labels = None # 1d int array of labels
+        self.clustering_annotations = None # {str: [labels]}
 
     def get_duplicate_filenames(self):
         """
@@ -71,19 +75,20 @@ class DecompositionData(SpectralData):
 
 
     def set_roi(self, roi):
-        "Set ROI from array. Returns whether is was really changed."
-        if self.roi is not None and np.array_equal(self.roi, roi):
-            return False
-        if roi.shape != (self.raw.shape[0],):
+        "Set ROI from array."
+        if roi is None:
+            self.roi = None
+        elif roi.shape != (self.raw.shape[0],):
             raise ValueError('Wrong number of values for ROI (%s)' %
                              str(roi.shape))
-
-        self.roi = roi if roi.any() else None
-        return True
+        else:
+            self.roi = roi if roi.any() else None
 
     def set_decomposition_settings(self, params):
         """
-        Populate decomposition_settings from a Parameters object
+        Populate decomposition_settings from a Parameters object,
+        set the decomposition ROI depending on params.dcRoi,
+        and clear stored data.
 
         Parameters
         ----------
@@ -92,23 +97,197 @@ class DecompositionData(SpectralData):
 
         Returns
         -------
-        None.
+        None
+
+        Raises
+        -------
+        ValueError
+            If the dcRoi parameter is inconsistent with current ROI
         """
         dcs = params.filtered('dc')
-        self.decomposition_settings = {k[2:]: v for k, v in dcs.items()}
+        roi = None
+        if params.dcRoi == 'ignore':
+            roi = None
+        elif params.dcRoi == 'require':
+            if self.roi is None:
+                raise ValueError('ROI is required but not defined')
+            roi = self.roi.copy()
+        elif params.dcRoi == 'ifdef':
+            roi = self.roi.copy() if self.roi is not None else None
+        else:
+            raise ValueError('Bad value for params.dcRoi')
 
-    def load_rdc(self, filename=None, filedir=None):
+        self.decomposition_settings = {k[2:]: v for k, v in dcs.items()}
+        self.decomposition_roi = roi
+        self.decomposition_data = {}
+
+    def set_decomposition_errors(self, errors):
+        "Set the history of least squares error values"
+        self.decomposition_errors = np.asarray(errors)
+
+    def add_decomposition_data(self, iteration, spectra, concentrations):
+        "Set data for a specific iteration; 0=initial"
+        pixels = self.decomposition_roi.sum() if self.decomposition_roi \
+            is not None else self.raw.shape[0]
+        comps = self.decomposition_settings['Components']
+        assert spectra.shape == (comps, self.raw.shape[1])
+        assert concentrations.shape == (comps, pixels)
+        assert iteration <= self.decomposition_settings['Iterations']
+        self.decomposition_data[iteration] = {
+            'spectra': spectra.copy(),
+            'concentrations': concentrations.copy()}
+
+    def set_clustering_settings(self, params, roi):
         """
-        Load ROI/decomp/clust from a named file or a file in the
-        input/output directory.
-        The default is curFile with extension .odd
+        Populate decomposition_settings from a Parameters object,
+        copy the decomposition ROI, and clear stored clustering data.
 
         Parameters
         ----------
-        filename : str, optional
-            A named file, takes precedence
-        filedir : str, optional
-            Directory where to look for filepart(curFile)
+        params : Parameters
+            Only the ca settings will be copied, without the 'ca' prefix.
+
+        Returns
+        -------
+        None
+        """
+        cas = params.filtered('ca')
+        self.clustering_settings = {k[2:]: v for k, v in cas.items()}
+
+        self.clustering_roi = roi.copy() if roi is not None else None
+        self.clustering_labels = None
+        self.clustering_annotations = {}
+
+    def set_clustering_labels(self, labels):
+        pixels = self.clustering_roi.sum() if self.clustering_roi \
+            is not None else self.raw.shape[0]
+        print('pix', pixels, len(labels))
+        assert labels.shape == (pixels,)
+        self.clustering_labels = labels
+
+    def annotation_add(self, annotation, cluster):
+        if annotation not in self.clustering_annotations:
+            self.clustering_annotations[annotation] = set()
+        self.clustering_annotations[annotation].update(cluster)
+
+    def annotation_del(self, annotation, cluster):
+        self.clustering_annotations[annotation].remove(cluster)
+
+    def rename_annotation(self, was, becomes):
+        ...
+
+    def load_rdc_(self, f, what, imgnum):
+        grp = f['SpectralData/Image_%d' % imgnum]
+
+        if what in ['all', 'roi']:
+            if 'ROI' in grp:
+                roi = grp['ROI']
+                if roi.shape != (self.raw.shape[0],):
+                    raise ValueError('Wrong number of values for ROI (%d)' %
+                                     (len(roi)))
+                roi = roi[:]
+            else:
+                roi = None
+
+        if what in ['all', 'decomposition']:
+            dcroi = None
+            dcerrors = None
+            if 'Decomposition' in grp:
+                dc = grp['Decomposition']
+                dcsettings = dict(dc.attrs.items())
+                pixels = 0
+                if 'ROI' in dc:
+                    dcroi = dc['ROI'][:]
+                    if dcroi.shape != (self.raw.shape[0],):
+                        raise ValueError(
+                            'Wrong number of values for '
+                            'Decomposition ROI (%d)' % (len(dcroi)))
+                    pixels = dcroi.sum()
+                if not pixels:
+                    pixels = self.raw.shape[0]
+                comps = dcsettings['Components']
+                dcdata = {}
+                for ds in dc['Data'].values():
+                    it = ds.attrs['Iteration']
+                    conc = ds['Concentrations'][:]
+                    if conc.shape[1] != pixels:
+                        raise ValueError('Concentration pixel count mismatch')
+                    if conc.shape[0] != comps:
+                        raise ValueError(
+                            'Concentration component count mismatch')
+                    spect = ds['Spectra'][:]
+                    if spect.shape[1] != self.raw.shape[1]:
+                        raise ValueError('Spectra wavenumber count mismatch')
+                    if spect.shape[0] != comps:
+                        raise ValueError('Spectra component count mismatch')
+                    dcdata[it] = {'concentrations': conc, 'spectra': spect}
+                if 'Errors' in dc:
+                    dcerrors = dc['Errors'][:]
+                    if len(dcerrors) >= dcsettings['Iterations']:
+                        raise ValueError('Too many elements in Errors')
+            else:
+                dcsettings = None
+                dcdata = None
+
+        if what in ['all', 'clustering']:
+            caroi = None
+            calabels = None
+            casettings = None
+            caannot = {}
+            if 'Clustering' in grp:
+                ca = grp['Clustering']
+                casettings = dict(ca.attrs.items())
+                pixels = 0
+                if 'ROI' in ca:
+                    caroi = ca['ROI'][:]
+                    if caroi.shape != (self.raw.shape[0],):
+                        raise ValueError(
+                            'Wrong number of values for '
+                            'Clustering ROI (%d)' % (len(caroi)))
+                    pixels = caroi.sum()
+                if not pixels:
+                    pixels = self.raw.shape[0]
+                maxclust = casettings['caClusters']
+                if 'Labels' in ca:
+                    calabels = ca['Labels'][:]
+                    if calabels.shape != (pixels,):
+                        raise ValueError('Cluster label count mismatch')
+                    if calabels.max() < 0 or calabels.max() >= maxclust:
+                        raise ValueError('Cluster label range error')
+                if 'Annotations' in ca:
+                    for ann in ca['Annotations']:
+                        atxt = ann.attrs['Text']
+                        avals = set(ann[:])
+                        if np.min(avals) < 0 or np.max(avals) >= maxclust:
+                            raise ValueError('Annotation cluster range error')
+                        if atxt in caannot:
+                            caannot[atxt].update(avals)
+                        else:
+                            caannot[atxt] = avals
+
+        if what in ['all', 'roi']:
+            self.roi = roi
+        if what in ['all', 'decomposition']:
+            self.decomposition_settings = dcsettings
+            self.decomposition_roi = dcroi
+            self.decomposition_data = dcdata
+            self.decomposition_errors = dcerrors
+        if what in ['all', 'clustering']:
+            self.clustering_settings = casettings
+            self.clustering_roi = caroi
+            self.clustering_labels = calabels
+            for k, v in caannot.items():
+                caannot[k] = list(v)
+            self.clustering_annotations = caannot
+
+    def load_rdc(self, filename, what='all'):
+        """
+        Load ROI/decomp/clust from a named file.
+
+        Parameters
+        ----------
+        filename : str
+            A named file; possibly from rdc_filename
 
         Returns
         -------
@@ -116,82 +295,13 @@ class DecompositionData(SpectralData):
             Whether data was loaded
 
         """
-        if filename is None:
-            filename = self.rdc_filename(filedir)
-        f = h5py.File(filename, mode='r')
-        grp = f['SpectralData/Image_0']
-        if 'ROI' in grp:
-            roi = grp['ROI']
-            if roi.shape != (self.raw.shape[0],):
-                raise ValueError('Wrong number of values for ROI (%d)' %
-                                 (len(roi)))
-            roi = roi[:]
-        else:
-            roi = None
+        with h5py.File(filename, mode='r') as f:
+            return self.load_rdc_(f, what, 0)
 
-        dcroi = None
-        if 'Decomposition' in grp:
-            dc = grp['Decomposition']
-            dcsettings = dict(dc.attrs.items())
-            pixels = 0
-            if 'ROI' in dc:
-                dcroi = dc['ROI'][:]
-                if roi.shape != (self.raw.shape[0],):
-                    raise ValueError('Wrong number of values for '
-                                     'Decomposition.ROI (%d)' % (len(dcroi)))
-                pixels = dcroi.sum()
-            if not pixels:
-                pixels = self.raw.shape[0]
-            iters = dc['Iterations'][:]
-            conc = dc['Concentrations'][:]
-            spectra = dc['Spectra'][:]
-
-            if conc.shape != (len(iters), conc.shape[1], pixels):
-                raise ValueError('Concentration matrix size mismatch')
-            if spectra.shape != (len(iters), conc.shape[1], self.raw.shape[1]):
-                raise ValueError('Decomposed spectra matrix size mismatch')
-        else:
-            dcsettings = None
-            iters = None
-            conc = None
-            spectra = None
-
-        f.close()
-
-        self.roi = roi
-        self.decomposition_settings = dcsettings
-        self.decomposition_roi = dcroi
-        self.saved_iterations = iters
-        self.concentrations = conc
-        self.spectra = spectra
-        return True
-
-    def save_rdc(self, filename=None, filedir=None, save_roi=True,
-                 save_decomposition=True, save_clustering=True):
-        """
-        Save data to a named file or a file in the input/output directory.
-        The default is based on curFile.
-
-        Parameters
-        ----------
-        filename : str, optional
-            A named file, takes precedence
-        filedir : str, optional
-            Directory where to look for filepart(curFile)
-
-        Returns
-        -------
-        None.
-
-        """
-        if filename is None:
-            if filedir == '':
-                raise ValueError("ROI directory cannot be ''")
-            filename = self.roi_filename(filedir)
-        f = h5py.File(filename, mode='a')
+    def save_rdc_(self, f, what, imgnum):
         grp = f.require_group('SpectralData')
         grp.attrs.create('Creator', 'OCTAVVS')
-        grp = grp.require_group('Image_0')
+        grp = grp.require_group('Image_%d' % imgnum)
 
         def replace_data(grp, name, arr):
             if name in grp:
@@ -202,37 +312,63 @@ class DecompositionData(SpectralData):
             if arr is not None and name not in grp:
                 grp.create_dataset(name, data=arr)
 
-        if save_roi:
+        if what in ['all', 'roi']:
             replace_data(grp, 'ROI', self.roi)
 
-        if save_decomposition:
+        if what in ['all', 'decomposition'] and \
+            self.decomposition_settings is not None:
             dc = grp.require_group('Decomposition')
-            if self.decomposition_settings:
-                for k, v in self.decomposition_settings.items():
-                    dc.attrs[k] = v
-            else:
-                for k in dc.attrs.keys():
-                    del dc.attrs[k]
-
+            for k, v in self.decomposition_settings.items():
+                dc.attrs[k] = v
             replace_data(dc, 'ROI', self.decomposition_roi)
-            replace_data(dc, 'Iterations', self.saved_iterations)
-            replace_data(dc, 'Concentrations', self.concentrations)
-            replace_data(dc, 'Spectra', self.spectra)
+            ddg = dc.require_group('Data')
+            for k, ds in ddg.items():
+                it = ds.attrs['Iteration']
+                if it not in self.decomposition_data \
+                    or k != 'Iter_%d' % it:
+                    del ddg[k]
+            for it, vals in self.decomposition_data.items():
+                ds = ddg.require_group('Iter_%d' % it)
+                ds.attrs['Iteration'] = it
+                replace_data(ds, 'Concentrations', vals['concentrations'])
+                replace_data(ds, 'Spectra', vals['spectra'])
+            replace_data(dc, 'Errors', self.decomposition_errors)
 
-        if save_clustering:
-            if 'Clustering' in grp:
-                del grp['Clustering']
+        if what in ['all', 'clustering'] and\
+            self.clustering_settings is not None:
+            ca = grp.require_group('Clustering')
+            for k, v in self.clustering_settings.items():
+                ca.attrs[k] = v
+            replace_data(ca, 'ROI', self.clustering_roi)
+            replace_data(ca, 'Labels', self.clustering_labels)
+            if 'Annotations' in ca:
+                del ca['Annotations']
+            if self.clustering_annotations is not None:
+                ag = dc.require_group('Annotations')
+                for i, (ann, labels) in enumerate(
+                        self.clustering_annotations.items()):
+                    ds = ag.create_dataset('Annotation_%d' % i, data=labels)
+                    ds.attrs['Text'] = ann
 
-        f.close()
 
-    def save_roi(self, filename=None, filedir=None):
-        "See save_rdc"
-        self.save_rdc(filename=filename, filedir=filedir, save_roi=True,
-                      save_decomposition=False, save_clustering=False)
 
-    def save_decomposition(self, filename=None, filedir=None):
-        "See save_rdc"
-        self.save_rdc(filename=filename, filedir=filedir, save_roi=False,
-                      save_decomposition=True, save_clustering=False)
+    def save_rdc(self, filename, what='all'):
+        """
+        Save data to a named file or a file in the input/output directory.
+        The default is based on curFile.
 
+        Parameters
+        ----------
+        filename : str
+            A named file; possibly from rdc_filename
+        what : str
+            One of 'all', 'roi', 'decomposition', 'clustering'
+
+        Returns
+        -------
+        None.
+
+        """
+        with h5py.File(filename, mode='a') as f:
+            return self.save_rdc_(f, what, 0)
 

@@ -22,8 +22,10 @@ from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
                         NoRepeatStyle, uitools)
 
 
-Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "prep/preprocessing_ui.ui"))[0]
-Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(__name__, "prep/scadvanced.ui"))[0]
+Ui_MainWindow = uic.loadUiType(resource_filename(
+    __name__, "prep/preprocessing_ui.ui"))[0]
+Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(
+    __name__, "prep/scadvanced.ui"))[0]
 Ui_DialogCreateReference = uic.loadUiType(resource_filename(
     __name__, "prep/create_reference.ui"))[0]
 

@@ -120,7 +120,7 @@ margin: 5px;
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -140,7 +140,7 @@ margin: 5px;
            <number>6</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="0,0,0,1,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="0,0,0,1">
             <item>
              <widget class="QPushButton" name="pushButtonRoiLoad">
               <property name="toolTip">
@@ -178,13 +178,6 @@ margin: 5px;
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelRoiChanged">
-              <property name="text">
-               <string>*</string>
               </property>
              </widget>
             </item>
@@ -537,7 +530,7 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,2,0,0,0,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,0,0,0">
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
@@ -556,39 +549,16 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButtonCluster">
+             <widget class="QPushButton" name="pushButtonSettingsInfo">
               <property name="text">
-               <string>Cluster</string>
+               <string>Show settings</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label">
+             <widget class="QPushButton" name="pushButtonLoad">
               <property name="text">
-               <string>k =</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="spinBoxClusters">
-              <property name="minimumSize">
-               <size>
-                <width>45</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="minimum">
-               <number>4</number>
-              </property>
-              <property name="maximum">
-               <number>20</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_2">
-              <property name="text">
-               <string>Info</string>
+               <string>Load</string>
               </property>
              </widget>
             </item>
@@ -668,7 +638,7 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="comboBox">
+             <widget class="QComboBox" name="comboBoxClusterInput">
               <item>
                <property name="text">
                 <string>Raw data</string>
@@ -717,7 +687,7 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="comboBoxClusterMetod">
+             <widget class="QComboBox" name="comboBoxClusterMethod">
               <item>
                <property name="text">
                 <string>K-means</string>
@@ -780,7 +750,7 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_3">
+             <widget class="QPushButton" name="pushButtonCluster">
               <property name="text">
                <string>Cluster</string>
               </property>
@@ -865,23 +835,20 @@ margin: 5px;
               </item>
               <item>
                <widget class="QListWidget" name="listWidgetClusterAnnotations">
-                <property name="dragEnabled">
-                 <bool>true</bool>
-                </property>
-                <property name="dragDropMode">
-                 <enum>QAbstractItemView::InternalMove</enum>
-                </property>
-                <property name="defaultDropAction">
-                 <enum>Qt::MoveAction</enum>
-                </property>
                 <item>
                  <property name="text">
                   <string>Foreground</string>
+                 </property>
+                 <property name="flags">
+                  <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
                  </property>
                 </item>
                 <item>
                  <property name="text">
                   <string>Background</string>
+                 </property>
+                 <property name="flags">
+                  <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
                  </property>
                 </item>
                </widget>
@@ -893,12 +860,12 @@ margin: 5px;
               <item>
                <widget class="QLabel" name="label_31">
                 <property name="text">
-                 <string>Components</string>
+                 <string>Assigned clusters</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QListWidget" name="listWidgetClusterAnnotations_2">
+               <widget class="QListWidget" name="listWidgetClusterUsed">
                 <property name="dragDropMode">
                  <enum>QAbstractItemView::DragDrop</enum>
                 </property>
@@ -921,7 +888,7 @@ margin: 5px;
                 </item>
                 <item>
                  <property name="text">
-                  <string>Kevin</string>
+                  <string>Alex</string>
                  </property>
                 </item>
                </widget>
@@ -933,12 +900,12 @@ margin: 5px;
               <item>
                <widget class="QLabel" name="label_32">
                 <property name="text">
-                 <string>Unused</string>
+                 <string>Unassigned clusters</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QListWidget" name="listWidgetClusterAnnotations_3">
+               <widget class="QListWidget" name="listWidgetClusterUnused">
                 <property name="dragDropMode">
                  <enum>QAbstractItemView::DragDrop</enum>
                 </property>
@@ -950,7 +917,7 @@ margin: 5px;
                   <string>Alice</string>
                  </property>
                  <property name="background">
-                  <brush brushstyle="NoBrush">
+                  <brush brushstyle="SolidPattern">
                    <color alpha="255">
                     <red>255</red>
                     <green>0</green>
@@ -964,11 +931,11 @@ margin: 5px;
                   <string>Bob</string>
                  </property>
                  <property name="background">
-                  <brush brushstyle="NoBrush">
+                  <brush brushstyle="SolidPattern">
                    <color alpha="255">
-                    <red>0</red>
-                    <green>200</green>
-                    <blue>0</blue>
+                    <red>255</red>
+                    <green>241</green>
+                    <blue>42</blue>
                    </color>
                   </brush>
                  </property>
@@ -980,50 +947,9 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_16">
+           <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="2,2,1,1,1,0">
             <item>
-             <widget class="QLabel" name="label_33">
-              <property name="toolTip">
-               <string>Where to save decomposition metadata (.dmd) files. 'Other directory' requires that input files have unique names.</string>
-              </property>
-              <property name="text">
-               <string>Save in</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="comboBoxRoiDir_3">
-              <item>
-               <property name="text">
-                <string>Input directory</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Other directory</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="lineEditRoiDirectory_3">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonRoiDir_3">
-              <property name="text">
-               <string>Select dir</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonRoiLoad_2">
+             <widget class="QPushButton" name="pushButtonClusterLoad">
               <property name="toolTip">
                <string>Load selection from an arbitrary file</string>
               </property>
@@ -1033,16 +959,70 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_4">
+             <widget class="QPushButton" name="pushButtonClusterSave">
               <property name="text">
                <string>Save</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxClusterAutosave">
+              <property name="toolTip">
+               <string>Automatically save all changes.</string>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string>Auto-save</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>Colors</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxClusterCmap">
+              <item>
+               <property name="text">
+                <string>tab10</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>tab20</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>rainbow</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>terrain</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBoxClusterShowAnnotations">
+              <property name="text">
+               <string>Show annotations</string>
               </property>
              </widget>
             </item>
            </layout>
           </item>
           <item>
-           <widget class="QWidget" name="plot_cluster" native="true"/>
+           <widget class="ClusterPlotWidget" name="plot_cluster" native="true"/>
           </item>
          </layout>
         </widget>
@@ -1087,9 +1067,15 @@ margin: 5px;
    <header location="global">octavvs/decomp/plotwidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>ClusterPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/decomp/plotwidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>comboBoxClusterMetod</tabstop>
+  <tabstop>comboBoxClusterMethod</tabstop>
   <tabstop>pushButtonRun</tabstop>
   <tabstop>pushButtonRunStop</tabstop>
  </tabstops>

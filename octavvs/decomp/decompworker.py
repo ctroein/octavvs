@@ -32,10 +32,10 @@ class DecompWorker(QObject):
     Worker thread class for the heavy parts of the decomposition
     """
     # Signals for when finished or failed, and for progress indication
-    done = pyqtSignal(np.ndarray, np.ndarray) # conc, spectra
+    done = pyqtSignal(np.ndarray, np.ndarray, np.ndarray) # conc, spectra, errs
     stopped = pyqtSignal()
     failed = pyqtSignal(str, str)
-    progress = pyqtSignal(int, float)
+    progress = pyqtSignal(list) # errors for all iterations
     progressPlot = pyqtSignal(int, np.ndarray, np.ndarray)
 
     fileLoaded = pyqtSignal(int)
@@ -63,8 +63,9 @@ class DecompWorker(QObject):
         else:
             try:
                 data.clear_rcd()
-                if rcd_dir is not None:
-                    data.load_rcd(filedir=rcd_dir)
+                fn = data.rcd_filename(filedir=rcd_dir)
+                if os.path.exists(fn):
+                    data.load_rcd(filename=fn)
             except Exception as e:
                 self.loadFailed.emit(
                     file, str(e), traceback.format_exc(), True)
@@ -85,24 +86,14 @@ class DecompWorker(QObject):
         Run decomposition stuff
         """
 
-        use_roi = False
-        if params.dcRoi == 'If defined':
-            if data.roi is not None and data.roi.any():
-                use_roi = True
-        elif params.dcRoi == 'Required':
-            if data.roi is None:
-                raise ValueError('No ROI defined')
-            if not data.roi.any():
-                raise ValueError('ROI must not be empty')
-            use_roi = True
-        if use_roi:
-            y = data.raw[data.roi, :]
-        else:
-            y = data.raw
+        y = data.raw
+        roi = data.decomposition_roi
+        if roi is not None:
+            y = y[roi, :]
 
         conc, pureix = decomposition.simplisma(
             y.T, params.dcComponents, params.dcSimplismaNoise)
-        self.emitProgress(0, -1.)
+        self.emitProgress([])
         initst = y[pureix,:]
         self.progressPlot.emit(0, conc, initst)
 
@@ -112,7 +103,7 @@ class DecompWorker(QObject):
                               tol_n_above_min=30)
         update_interval = 1
         def half_iter(C, ST, D, Dcalc):
-            self.emitProgress(mcr.n_iter, mcr.err[-1])
+            self.emitProgress(mcr.err)
             t = time.monotonic()
             if t - half_iter.iter_time > update_interval:
                 half_iter.iter_time = t
@@ -120,9 +111,9 @@ class DecompWorker(QObject):
         half_iter.iter_time = time.monotonic()
         mcr.fit(y, ST=initst, post_iter_fcn=half_iter)
 
-        # self.emitProgress(0, -1)
-        self.done.emit(mcr.C_opt_.T, mcr.ST_opt_)
-        return mcr.C_opt_.T, mcr.ST_opt_
+        errs = np.asarray(mcr.err).reshape((-1, 2))
+        self.done.emit(mcr.C_opt_.T, mcr.ST_opt_, errs)
+        return True
 
 
     @pyqtSlot(DecompositionData, Parameters)
@@ -143,17 +134,13 @@ class DecompWorker(QObject):
 
 
 
-    @pyqtSlot(DecompositionData, Parameters, str, bool)
-    def startBatch(self, data, params, folder, preservepath):
+    @pyqtSlot(DecompositionData, Parameters)
+    def startBatch(self, data, params):
         """
         Run the batch processing of all the files listed in 'data'
         Parameters:
             data: DecompositionData object with one or more files
             params: Parameters object from the user
-            folder: output directory
-            preservepath: if True, all processed files whose paths are under
-            data.foldername will be placed in the corresponding subdirectory
-            of the output directory.
         """
         try:
             for fi in range(len(data.filenames)):
@@ -162,23 +149,11 @@ class DecompWorker(QObject):
                 if not self.loadFile(data, fi, rcd_dir=rcd_dir):
                     continue
 
-                # wn = data.wavenumber
+                data.set_decomposition_settings(params)
+                self.callDecomp(data, params)
+                ...
+                # need to save the data
 
-                CT, ST = self.callDecomp(data, params)
-
-                # Figure out where to save the file
-                filename = data.curFile
-                if preservepath and filename.startswith(data.foldername):
-                    filename = filename[len(data.foldername):]
-                    filename = folder + filename
-                    os.makedirs(os.path.dirname(filename), exist_ok=True)
-                else:
-                    filename = os.path.join(folder, os.path.basename(filename))
-                # Add the extension
-                filename = os.path.splitext(filename)
-                filename = filename[0] + params.saveExt + '.mat'
-
-                # self.saveCorrected(filename, params.saveFormat, data, wn, y)
             self.batchDone.emit(True)
             return
 
@@ -188,5 +163,4 @@ class DecompWorker(QObject):
             traceback.print_exc()
             self.failed.emit(repr(e), traceback.format_exc())
         self.batchDone.emit(False)
-
 
