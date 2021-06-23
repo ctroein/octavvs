@@ -106,6 +106,10 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             self.style().standardIcon(QStyle.SP_TrashIcon))
         self.toolButtonAnnotationPlus.clicked.connect(self.caAddAnnotation)
         self.toolButtonAnnotationMinus.clicked.connect(self.caDelAnnotation)
+        self.listWidgetClusterAnnotations.itemSelectionChanged.connect(
+            self.caSelectAnnotation)
+        self.listWidgetClusterAnnotations.itemChanged.connect(
+            self.caEditedAnnotation)
         self.listWidgetClusterUsed.itemDoubleClicked.connect(
             self.caClickedUsed)
         self.listWidgetClusterUnused.itemDoubleClicked.connect(
@@ -113,6 +117,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.plot_cluster.clicked.connect(self.caSelectCluster)
         self.pushButtonClusterLoad.clicked.connect(self.caLoad)
         self.pushButtonClusterSave.clicked.connect(self.caSave)
+        self.selectedAnnotation = None
 
         self.worker = DecompWorker()
         self.workerThread = QThread()
@@ -284,7 +289,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             except OSError:
                 return
             except Exception as e:
-                print('Warning:', e)
+                print('Warning:', str(e))
                 return
         else:
             path = os.path.split(filename)
@@ -329,13 +334,13 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             if not filename:
                 return
 
+        # Make sure self.data is up-to-date
         if what in ['roi', 'all']:
             self.data.set_roi(self.plot_roi.get_roi())
         if what in ['decomposition', 'all']:
             ...
         if what in ['clustering', 'all']:
-            # from list to data...
-            ...
+            self.caSelectAnnotation()
         self.data.save_rdc(filename, what=what)
 
 
@@ -424,9 +429,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             'Processing failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
         self.dcStopped()
 
-    @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
-    def dcDone(self, concentrations, spectra, errors):
-        self.data.add_decomposition_data(len(errors), spectra, concentrations)
+    @pyqtSlot(int, np.ndarray, np.ndarray, np.ndarray)
+    def dcDone(self, iteration, concentrations, spectra, errors):
+        self.data.add_decomposition_data(iteration, spectra, concentrations)
         self.data.set_decomposition_errors(errors)
         self.plot_decomp.set_spectra(spectra)
         self.plot_decomp.set_concentrations(concentrations)
@@ -538,59 +543,128 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             self.data.clustering_roi, self.data.clustering_labels)
         self.caPopulateLists()
 
-    def caAddAnnotation(self, checked, name='New annotation', edit=True):
+    def caAddAnnotation(self, checked=False, name='New annotation',
+                        edit=True):
+        # self.caSelectAnnotation()
+        # self.selectedAnnotation = None
         item = QListWidgetItem(name, parent=self.listWidgetClusterAnnotations)
         item.setFlags(item.flags() | Qt.ItemIsEditable)
+        item.octavvs_id = name
         self.listWidgetClusterAnnotations.addItem(item)
         if edit:
             self.listWidgetClusterAnnotations.editItem(item)
 
+    def caAddClustersToList(self, clusters, listw):
+        for c in clusters:
+            item = QListWidgetItem('Cluster %d' % c)
+            cc = np.asarray(self.plot_cluster.cluster_color(c)[:3]) * 255
+            item.setBackground(QtGui.QBrush(QtGui.QColor(*cc)))
+            item.octavvs_id = c
+            listw.addItem(item)
+
+    def caClearList(self, listw):
+        while listw.count():
+            listw.takeItem(0)
+
     def caPopulateLists(self):
-        for l in [self.listWidgetClusterUsed, self.listWidgetClusterUnused,
-                  self.listWidgetClusterAnnotations]:
-            while l.count():
-                l.takeItem(0)
-        if self.data.clustering_annotations is None:
-            return
-        used = set()
-        for aname, clusters in self.data.clustering_annotations.items():
-            self.caAddAnnotation(name=aname, edit=False)
-            used.update(clusters)
+        for l in [self.listWidgetClusterUsed, self.listWidgetClusterUnused ]:
+            self.caClearList(l)
+        awlist = self.listWidgetClusterAnnotations
+        awlist.setCurrentItem(None)
+        self.listWidgetClusterUsed.setEnabled(False)
+        anns = set()
+        for r in reversed(range(awlist.count())):
+            name = awlist.item(r).text()
+            # Remove duplicates. Should maybe also remove if not in self.data
+            if name in anns:
+                awlist.takeItem(r)
+            else:
+                anns.add(name)
+        if self.data.clustering_annotations:
+            for name in self.data.clustering_annotations:
+                if name not in anns:
+                    self.caAddAnnotation(name=name, edit=False)
         if self.data.clustering_labels is not None:
-            unused = set(self.data.clustering_labels) - used
-            for u in unused:
-                item = QListWidgetItem('Cluster %d' % u)
-                cc = np.asarray(self.plot_cluster.cluster_color(u)[:3]) * 255
-                print(cc)
-                color = QtGui.QColor(*cc)
-                print('color',color.rgb())
-                item.setBackground(QtGui.QBrush(color))
-                # item.setForeground(QtGui.QBrush(color))
-                self.listWidgetClusterUnused.addItem(item)
+            self.caAddClustersToList(self.data.get_unannotated_clusters(),
+                                     self.listWidgetClusterUnused)
+
+    def caUpdateAnnotation(self):
+        "Save selected clusters to self.data"
+        sel = self.listWidgetClusterAnnotations.selectedItems()
+        sel = sel[0].text() if sel else None
+        if sel:
+            clusters = []
+            for r in range(self.listWidgetClusterUsed.count()):
+                clusters.append(self.listWidgetClusterUsed.item(r).octavvs_id)
+            self.data.set_annotation_clusters(sel, clusters)
+        else:
+            assert not self.listWidgetClusterUsed.isEnabled()
+
+    def caSelectAnnotation(self):
+        "Update the currently selected annotation"
+        sel = self.listWidgetClusterAnnotations.selectedItems()
+        sel = sel[0].text() if sel else None
+        while self.listWidgetClusterUsed.count():
+            self.listWidgetClusterUsed.takeItem(0)
+        if sel:
+            used = self.data.get_annotation_clusters(sel)
+            self.caAddClustersToList(used, self.listWidgetClusterUsed)
+        self.listWidgetClusterUsed.setEnabled(sel is not None)
+
+    def caStoreAnnotations(self):
+        "Save all to self.data"
+        self.caUpdateAnnotation()
+        awlist = self.listWidgetClusterAnnotations
+        for r in range(awlist.count()):
+            name = awlist.item(r).text()
+            self.data.set_annotation_clusters(name)
 
     def caDelAnnotation(self):
+        "Delete annotation and make items unused"
         sel = self.listWidgetClusterAnnotations.selectedItems()
         if not sel:
             return
-        for s in sel:
-            self.listWidgetClusterAnnotations.takeItem(
-                self.listWidgetClusterAnnotations.row(s))
+        self.data.del_annotation(sel[0].text())
+        while self.listWidgetClusterUsed.count():
+            item = self.listWidgetClusterUsed.takeItem(0)
+            self.listWidgetClusterUnused.addItem(item)
+        self.listWidgetClusterAnnotations.takeItem(
+            self.listWidgetClusterAnnotations.row(sel[0]))
 
+    def caEditedAnnotation(self, item):
+        "Enact annotation name change"
+        if hasattr(item, 'octavvs_id'):
+            self.data.del_annotation(item.octavvs_id)
+        item.octavvs_id = item.text()
+        self.caUpdateAnnotation()
 
     def caClickedUsed(self, item):
-        print('double c1')
+        if not self.listWidgetClusterAnnotations.selectedItems():
+            return
         self.listWidgetClusterUsed.takeItem(
             self.listWidgetClusterUsed.row(item))
         self.listWidgetClusterUnused.addItem(item)
+        self.caUpdateAnnotation()
 
     def caClickedUnused(self, item):
-        print('double c2')
+        if not self.listWidgetClusterAnnotations.selectedItems():
+            return
         self.listWidgetClusterUnused.takeItem(
             self.listWidgetClusterUnused.row(item))
         self.listWidgetClusterUsed.addItem(item)
+        self.caUpdateAnnotation()
 
     def caSelectCluster(self, num):
-        ...
+        if not self.listWidgetClusterAnnotations.selectedItems():
+            return
+        for r in range(self.listWidgetClusterUnused.count()):
+            item = self.listWidgetClusterUnused.item(r)
+            if item.octavvs_id == num:
+                item = self.listWidgetClusterUnused.takeItem(
+                    self.listWidgetClusterUnused.row(item))
+                self.listWidgetClusterUsed.addItem(item)
+                self.caUpdateAnnotation()
+                break
 
     def caClear(self):
         "A bit brutal as response to changes, maybe"
@@ -672,7 +746,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
 
     def setParameters(self, p):
         "Copy from some kind of parameters object to UI"
-        self.spinBoxSpectra.setValue(0)
         self.fileLoader.loadParameters(p)
         self.imageVisualizer.loadParameters(p)
 
@@ -704,7 +777,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             annots.add(item.text())
         for a in p.caAnnotations:
             if a not in annots:
-                self.caAddAnnotation(name=a)
+                self.caAddAnnotation(name=a, edit=False)
 
 
     def loadParameters(self, checked=False, filename=None):

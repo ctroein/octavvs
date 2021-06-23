@@ -774,24 +774,12 @@ margin: 5px;
               </item>
               <item>
                <widget class="QListWidget" name="listWidgetClusterInputs">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="selectionMode">
                  <enum>QAbstractItemView::MultiSelection</enum>
                 </property>
-                <item>
-                 <property name="text">
-                  <string>Component 1</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Component 2</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Component 3</string>
-                 </property>
-                </item>
                </widget>
               </item>
              </layout>
@@ -834,24 +822,7 @@ margin: 5px;
                </layout>
               </item>
               <item>
-               <widget class="QListWidget" name="listWidgetClusterAnnotations">
-                <item>
-                 <property name="text">
-                  <string>Foreground</string>
-                 </property>
-                 <property name="flags">
-                  <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Background</string>
-                 </property>
-                 <property name="flags">
-                  <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                 </property>
-                </item>
-               </widget>
+               <widget class="QListWidget" name="listWidgetClusterAnnotations"/>
               </item>
              </layout>
             </item>
@@ -866,31 +837,18 @@ margin: 5px;
               </item>
               <item>
                <widget class="QListWidget" name="listWidgetClusterUsed">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="dragDropMode">
                  <enum>QAbstractItemView::DragDrop</enum>
                 </property>
                 <property name="defaultDropAction">
                  <enum>Qt::MoveAction</enum>
                 </property>
-                <item>
-                 <property name="text">
-                  <string>Steve</string>
-                 </property>
-                 <property name="background">
-                  <brush brushstyle="NoBrush">
-                   <color alpha="255">
-                    <red>0</red>
-                    <green>0</green>
-                    <blue>200</blue>
-                   </color>
-                  </brush>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Alex</string>
-                 </property>
-                </item>
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::NoSelection</enum>
+                </property>
                </widget>
               </item>
              </layout>
@@ -912,34 +870,9 @@ margin: 5px;
                 <property name="defaultDropAction">
                  <enum>Qt::MoveAction</enum>
                 </property>
-                <item>
-                 <property name="text">
-                  <string>Alice</string>
-                 </property>
-                 <property name="background">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>255</red>
-                    <green>0</green>
-                    <blue>0</blue>
-                   </color>
-                  </brush>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Bob</string>
-                 </property>
-                 <property name="background">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>255</red>
-                    <green>241</green>
-                    <blue>42</blue>
-                   </color>
-                  </brush>
-                 </property>
-                </item>
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::NoSelection</enum>
+                </property>
                </widget>
               </item>
              </layout>

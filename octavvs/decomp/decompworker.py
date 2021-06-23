@@ -32,7 +32,8 @@ class DecompWorker(QObject):
     Worker thread class for the heavy parts of the decomposition
     """
     # Signals for when finished or failed, and for progress indication
-    done = pyqtSignal(np.ndarray, np.ndarray, np.ndarray) # conc, spectra, errs
+    # done: iteration, conc, spectra, errs
+    done = pyqtSignal(int, np.ndarray, np.ndarray, np.ndarray)
     stopped = pyqtSignal()
     failed = pyqtSignal(str, str)
     progress = pyqtSignal(list) # errors for all iterations
@@ -111,8 +112,9 @@ class DecompWorker(QObject):
         half_iter.iter_time = time.monotonic()
         mcr.fit(y, ST=initst, post_iter_fcn=half_iter)
 
-        errs = np.asarray(mcr.err).reshape((-1, 2))
-        self.done.emit(mcr.C_opt_.T, mcr.ST_opt_, errs)
+        # errs = np.asarray(mcr.err).reshape((-1, 2))
+        self.done.emit(mcr.n_iter, mcr.C_opt_.T, mcr.ST_opt_,
+                       np.asarray(mcr.err))
         return True
 
 

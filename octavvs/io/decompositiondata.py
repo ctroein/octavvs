@@ -153,28 +153,45 @@ class DecompositionData(SpectralData):
         """
         cas = params.filtered('ca')
         self.clustering_settings = {k[2:]: v for k, v in cas.items()}
-
         self.clustering_roi = roi.copy() if roi is not None else None
         self.clustering_labels = None
+        self.clustering_label_set = None
         self.clustering_annotations = {}
 
     def set_clustering_labels(self, labels):
         pixels = self.clustering_roi.sum() if self.clustering_roi \
             is not None else self.raw.shape[0]
-        print('pix', pixels, len(labels))
         assert labels.shape == (pixels,)
         self.clustering_labels = labels
+        self.clustering_label_set = set(labels)
 
-    def annotation_add(self, annotation, cluster):
+    def get_annotation_clusters(self, annotation):
+        if self.clustering_annotations is None:
+            self.clustering_annotations = {}
         if annotation not in self.clustering_annotations:
             self.clustering_annotations[annotation] = set()
-        self.clustering_annotations[annotation].update(cluster)
+        return self.clustering_annotations[annotation]
 
-    def annotation_del(self, annotation, cluster):
-        self.clustering_annotations[annotation].remove(cluster)
+    def get_unannotated_clusters(self):
+        used = set()
+        for c in self.clustering_annotations.values():
+            used.update(c)
+        return self.clustering_label_set - used
 
-    def rename_annotation(self, was, becomes):
-        ...
+    def set_annotation_clusters(self, annotation, clusters=None):
+        self.get_annotation_clusters(annotation)
+        if clusters is not None:
+            cset = set(clusters)
+            self.clustering_annotations[annotation] = cset
+            for c in self.clustering_annotations.values():
+                if c != cset:
+                    assert not cset.intersection(c)
+
+    def del_annotation(self, annotation):
+        if self.clustering_annotations is not None and \
+            annotation in self.clustering_annotations:
+                del self.clustering_annotations[annotation]
+
 
     def load_rdc_(self, f, what, imgnum):
         grp = f['SpectralData/Image_%d' % imgnum]
@@ -223,8 +240,8 @@ class DecompositionData(SpectralData):
                     dcdata[it] = {'concentrations': conc, 'spectra': spect}
                 if 'Errors' in dc:
                     dcerrors = dc['Errors'][:]
-                    if len(dcerrors) >= dcsettings['Iterations']:
-                        raise ValueError('Too many elements in Errors')
+                    # if len(dcerrors) >= dcsettings['Iterations']:
+                    #     raise ValueError('Too many elements in Errors')
             else:
                 dcsettings = None
                 dcdata = None
@@ -233,7 +250,7 @@ class DecompositionData(SpectralData):
             caroi = None
             calabels = None
             casettings = None
-            caannot = {}
+            caannot = None
             if 'Clustering' in grp:
                 ca = grp['Clustering']
                 casettings = dict(ca.attrs.items())
@@ -247,7 +264,7 @@ class DecompositionData(SpectralData):
                     pixels = caroi.sum()
                 if not pixels:
                     pixels = self.raw.shape[0]
-                maxclust = casettings['caClusters']
+                maxclust = casettings['Clusters']
                 if 'Labels' in ca:
                     calabels = ca['Labels'][:]
                     if calabels.shape != (pixels,):
@@ -255,6 +272,7 @@ class DecompositionData(SpectralData):
                     if calabels.max() < 0 or calabels.max() >= maxclust:
                         raise ValueError('Cluster label range error')
                 if 'Annotations' in ca:
+                    caannot = {}
                     for ann in ca['Annotations']:
                         atxt = ann.attrs['Text']
                         avals = set(ann[:])
@@ -276,9 +294,11 @@ class DecompositionData(SpectralData):
             self.clustering_settings = casettings
             self.clustering_roi = caroi
             self.clustering_labels = calabels
-            for k, v in caannot.items():
-                caannot[k] = list(v)
-            self.clustering_annotations = caannot
+            self.clustering_label_set = set(calabels) if calabels else None
+            if caannot is not None:
+                for k, v in caannot.items():
+                    caannot[k] = list(v)
+                self.clustering_annotations = caannot
 
     def load_rdc(self, filename, what='all'):
         """
@@ -344,7 +364,7 @@ class DecompositionData(SpectralData):
             if 'Annotations' in ca:
                 del ca['Annotations']
             if self.clustering_annotations is not None:
-                ag = dc.require_group('Annotations')
+                ag = ca.require_group('Annotations')
                 for i, (ann, labels) in enumerate(
                         self.clustering_annotations.items()):
                     ds = ag.create_dataset('Annotation_%d' % i, data=labels)

@@ -479,6 +479,9 @@ class DecompositionPlotWidget(BasePlotWidget):
 
     def draw_error_log(self, ax):
         ax.set_yscale('log')
+        ax.xaxis.set_major_locator(
+            matplotlib.ticker.MaxNLocator(integer=True))
+        ax.set_xlabel('Iteration')
         if self.error_log is None:
             return
         if len(self.error_log):
