@@ -70,79 +70,94 @@ def simplisma(d, nr, f):
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
 
+# import pymcr
+
+
+# def pymcr_als(sp, initial_components, maxiters, reltol,
+#             callback_iter):
+
+#     mcr = pymcr.mcr.McrAR(max_iter=maxiters,
+#                           tol_err_change=reltol,
+#                           tol_increase=1., tol_n_increase=10,
+#                           tol_n_above_min=30)
+#     mcr.fit(sp, ST=initial_components, post_iter_fcn=callback_iter)
+
+#     return mcr.n_iter, mcr.C_opt_.T, mcr.ST_opt_, np.asarray(mcr.err)
 
 
 
-# def mcr_als(sp, initial_components, maxiters=1000, reltol=1e-2,
-#             callback_a=None, callback_b=None):
-#     """
-#     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
+def mcr_als(sp, initial_components, maxiters, tol_rel_error,
+            tol_ups_after_best=None, callback=None):
+    """
+    Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
 
-#     Parameters
-#     ----------
-#     sp : array(nrow, ncol)
-#         Spectra to be decomposed.
-#     initial_components : None or array(ncomponents, ncol)
-#         Initial concentrations.
-#     maxiters : int
-#         Maximum number of iterations.
-#     reltol : float
-#         Relative error target.
-#     callback_a : func(int iter, float err, A)
-#         Callback for when concentrations(?) are updated
-#     callback_concentrations : func(int iter, float err, B)
-#         Callback for when spectra(?) are updated
+    Parameters
+    ----------
+    sp : array(nsamples, nfeatures)
+        Spectra to be decomposed.
+    initial_components : array(ncomponents, nfeatures)
+        Initial concentrations.
+    maxiters : int
+        Maximum number of iterations.
+    tol_rel_error : float
+        Error target (relative to first iteration).
+    tol_ups_after_best : float, optional
+        Stop after error going net up this many times since best error.
+    callback : func(it : int, err : array(float), A : array, B : array)
+        Callback for every half-iteration.
 
-#     Returns
-#     -------
-#     foo : array(...)
-#     Something.
+    Returns
+    -------
+    iterations : int
+    Number of iterations performed
+    A : array(ncomponents, nfeatures)
+    Spectra (at lowest error)
+    B : array(ncomponents, nsamples)
+    Concentrations at lowest error
+    error : list(float)
+    Errors at all half-iterations
+    """
+    nrow, ncol = np.shape(sp)
+    nr = initial_components.shape[0]
+    # u, s, v = np.linalg.svd(sp)
+    # s = scipy.linalg.diagsvd(s, nrow, ncol)
+    # u = u[:, :nr]
+    # s = s[:nr, :nr]
+    # v = v[:nr, :]
+    # dauxt = sklearn.preprocessing.normalize((u @ s @ v).T)
+    # dauxt = sp.T
+    A = initial_components.T.copy()
+    B = np.empty((nr, nrow))
+    errors = []
+    errorbest = None # Avoid spurious warning
 
-#     """
+    for it in range(maxiters * 2):
+        if it & 1:
+            for i in range(ncol):
+                A[i, :] = scipy.optimize.nnls(B.T, sp[:, i])[0]
+        else:
+            for i in range(nrow):
+                B[:, i] = scipy.optimize.nnls(A, sp[i, :])[0]
 
-#     u, s, v = np.linalg.svd(sp)
-#     nrow, ncol = np.shape(sp)
-#     nr = initial_components.shape[0]
-#     assert initial_components.shape[0] == ncol
-#     s = scipy.linalg.diagsvd(s, nrow, ncol)
-#     u = u[:, :nr]
-#     s = s[:nr, :nr]
-#     v = v[:nr, :]
-#     dn = u @ s @ v
-#     A = initial_components
-#     dauxt = sklearn.preprocessing.normalize(dn.T)
+        error = sklearn.metrics.mean_squared_error(sp.T, np.dot(A, B))
+        errors.append(error)
+        if not it or error < errorbest:
+            errorbest = error
+            Abest = A.copy()
+            Bbest = B.copy()
+            netups = 0
+        elif it:
+            if tol_ups_after_best is not None:
+                if error < errors[-2]:
+                    netups = max(0, netups - 1)
+                else:
+                    netups = netups + 1
+                    if netups > tol_ups_after_best:
+                        break
+            if np.abs(error - errors[0]) / error < tol_rel_error:
+                break
+        if callback is not None:
+            callback(it, errors, A.T, B)
 
-
-#     for it in range(maxiters):
-
-#         Btemp = scipy.optimize.nnls(A.T, dauxt.T)
-#         # self.solve_lineq(ST_.T,dauxt.T)
-
-#         Dcal = np.dot(Btemp.T, A)
-#         error = sklearn.metrics.mean_squared_error(dauxt, Dcal)
-
-#         if iter == 0:
-#             error0 = error.copy()
-#             B = Btemp
-
-#         err = abs(error-error0)/error
-#         print(it,'err',err)
-#         if err == 0:
-#             Bf = B.copy()
-#             Af = A.copy()
-#             A_temp = A.copy()
-#             status = 'Iterating'
-
-#         elif  per < reltol:
-#             Cf = C_.copy()
-#             Sf = ST_.copy()
-#             status = 'converged'
-#             break
-#         else:
-#             error0 = error.copy()
-#             C_ = Ctemp.copy()
-#             Sf = ST_.copy()
-#             # status = 'Iterating'
-#             # self.purest.emit(iter,per,status, C_.T,Sf.T)
-
+    return it // 2, Abest.T, Bbest, errors
 

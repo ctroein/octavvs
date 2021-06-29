@@ -415,15 +415,16 @@ class DecompositionPlotWidget(BasePlotWidget):
         comps, pixels = concentrations.shape
         udm = self.concentrations is None or len(self.concentrations) != comps
         if self.roi is None:
-            print('set_c', concentrations.shape, self.pixels)
+            # print('set_c', concentrations.shape, self.pixels)
             assert pixels == self.pixels
             self.concentrations = concentrations
-        elif pixels != self.roi.sum():
-            # Discard ROI if it's apparently unused
-            assert pixels == self.pixels
-            self.roi = None
-            self.concentrations = concentrations
+        # elif pixels != self.roi.sum():
+        #     # Discard ROI if it's apparently unused
+        #     assert pixels == self.pixels
+        #     self.roi = None
+        #     self.concentrations = concentrations
         else:
+            assert pixels == self.roi.sum()
             if udm:
                 self.concentrations = np.empty((comps, self.pixels))
             self.concentrations[...] = concentrations.min(1)[:,None]
@@ -449,7 +450,8 @@ class DecompositionPlotWidget(BasePlotWidget):
     def set_errors(self, errors):
         "Set the list/array of errors"
         self.error_log = errors
-        self.draw_idle()
+        if self.display_mode == 0:
+            self.draw_idle()
 
     @pyqtSlot('QString')
     def set_cmap(self, s):
@@ -463,14 +465,6 @@ class DecompositionPlotWidget(BasePlotWidget):
         self.discrete_cmap = s
         self.draw_idle()
 
-    @pyqtSlot(int, np.ndarray, np.ndarray)
-    def plot_progress(self, iteration, concentrations, spectra):
-        if iteration:
-            self.set_concentrations(concentrations)
-            self.set_spectra(spectra)
-        else:
-            self.init_spectra = spectra
-
     def add_clustering(self, name, clustered):
         assert len(clustered) == self.pixels
         self.cluster_maps[name] = clustered
@@ -481,7 +475,7 @@ class DecompositionPlotWidget(BasePlotWidget):
         ax.set_yscale('log')
         ax.xaxis.set_major_locator(
             matplotlib.ticker.MaxNLocator(integer=True))
-        ax.set_xlabel('Iteration')
+        ax.set_xlabel('Half-iteration')
         if self.error_log is None:
             return
         if len(self.error_log):
@@ -501,14 +495,16 @@ class DecompositionPlotWidget(BasePlotWidget):
         if self.spectra is not None:
             for i in range(len(self.spectra)):
                 s = self.spectra[i]
-                ax.plot(self.wn, s / s.mean(), label='Component %d'%(i+1))
+                if s.any():
+                    ax.plot(self.wn, s / s.mean(), label='Component %d'%(i+1))
             ax.legend()
 
     def draw_concentrations(self, ax):
         ax.set_yscale('linear')
         if self.concentrations is not None:
             for i in self.concentrations:
-                ax.plot(i / i.mean())
+                if i.any():
+                    ax.plot(i)
 
     def draw_heatmap(self, ax, data, discrete=False, cbfig=None):
         if discrete:

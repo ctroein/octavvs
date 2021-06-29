@@ -57,7 +57,7 @@ margin: 5px;
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0">
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0">
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_8">
         <property name="bottomMargin">
@@ -118,9 +118,43 @@ margin: 5px;
        </layout>
       </item>
       <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="0,0,0">
+        <item>
+         <widget class="QPushButton" name="pushButtonRdcLoad">
+          <property name="toolTip">
+           <string>Load selection from an arbitrary file</string>
+          </property>
+          <property name="text">
+           <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonRdcSave">
+          <property name="text">
+           <string>Save</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBoxRdcAutosave">
+          <property name="toolTip">
+           <string>Automatically save all changes.</string>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="text">
+           <string>Auto-save all changes</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -139,50 +173,6 @@ margin: 5px;
           <property name="bottomMargin">
            <number>6</number>
           </property>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="0,0,0,1">
-            <item>
-             <widget class="QPushButton" name="pushButtonRoiLoad">
-              <property name="toolTip">
-               <string>Load selection from an arbitrary file</string>
-              </property>
-              <property name="text">
-               <string>Load</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonRoiSave">
-              <property name="text">
-               <string>Save</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBoxRoiAutosave">
-              <property name="toolTip">
-               <string>Automatically save all changes.</string>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="text">
-               <string>Auto-save</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelRoiSelected">
-              <property name="text">
-               <string>Selected: XXXX / XXXX</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_9">
             <item>
@@ -241,6 +231,16 @@ margin: 5px;
            </layout>
           </item>
           <item>
+           <widget class="QLabel" name="labelRoiSelected">
+            <property name="text">
+             <string>Selected: XXXX / XXXX</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="RoiPlotWidget" name="plot_roi" native="true"/>
           </item>
          </layout>
@@ -249,7 +249,7 @@ margin: 5px;
          <attribute name="title">
           <string>Decomposition</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,1,0">
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,0,1,0">
           <property name="leftMargin">
            <number>6</number>
           </property>
@@ -263,7 +263,133 @@ margin: 5px;
            <number>6</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,2,1,0,1,0,1,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,2,1,0,0,0,1,1">
+            <item>
+             <widget class="QLabel" name="label_8">
+              <property name="text">
+               <string>Derivative</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxDerivative">
+              <item>
+               <property name="text">
+                <string>None</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>1st derivative</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>2nd derivative</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_9">
+              <property name="text">
+               <string>SG window</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxDerivativeWindow">
+              <property name="minimumSize">
+               <size>
+                <width>45</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>5</number>
+              </property>
+              <property name="singleStep">
+               <number>2</number>
+              </property>
+              <property name="value">
+               <number>11</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_11">
+              <property name="text">
+               <string>SG polyorder</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBoxDerivativePoly">
+              <property name="minimumSize">
+               <size>
+                <width>45</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>5</number>
+              </property>
+              <property name="singleStep">
+               <number>2</number>
+              </property>
+              <property name="value">
+               <number>3</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_25">
+              <property name="toolTip">
+               <string>How to treat the region of interest. If required, at least one spectrum must be selected in every image.</string>
+              </property>
+              <property name="text">
+               <string>ROI</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxUseRoi">
+              <property name="currentIndex">
+               <number>1</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>Ignored</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>If defined</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Required</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,2,1,0,1,0">
             <item>
              <widget class="QLabel" name="label_7">
               <property name="text">
@@ -340,41 +466,6 @@ margin: 5px;
               <item>
                <property name="text">
                 <string>Concentrations</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_25">
-              <property name="toolTip">
-               <string>How to treat the region of interest. If required, at least one spectrum must be selected in every image.</string>
-              </property>
-              <property name="text">
-               <string>ROI</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="comboBoxUseRoi">
-              <property name="currentIndex">
-               <number>1</number>
-              </property>
-              <item>
-               <property name="text">
-                <string>Ignored</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>If defined</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Required</string>
                </property>
               </item>
              </widget>
@@ -458,7 +549,7 @@ margin: 5px;
             <item>
              <widget class="QLabel" name="label_13">
               <property name="text">
-               <string>Stopping tolerance</string>
+               <string>Stopping error</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -468,7 +559,7 @@ margin: 5px;
             <item>
              <widget class="LineDouble" name="lineEditTolerance">
               <property name="text">
-               <string>0.00001</string>
+               <string>0.001</string>
               </property>
              </widget>
             </item>
@@ -521,7 +612,7 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="LineDouble" name="lineEditRelError">
+             <widget class="QLineEdit" name="lineEditRelError">
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -530,7 +621,7 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,0,0,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,0">
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
@@ -551,21 +642,7 @@ margin: 5px;
             <item>
              <widget class="QPushButton" name="pushButtonSettingsInfo">
               <property name="text">
-               <string>Show settings</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonLoad">
-              <property name="text">
-               <string>Load</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonSave">
-              <property name="text">
-               <string>Save</string>
+               <string>Show settings used</string>
               </property>
              </widget>
             </item>
@@ -592,6 +669,9 @@ margin: 5px;
             </item>
             <item>
              <widget class="QPushButton" name="pushButtonRun">
+              <property name="toolTip">
+               <string>Run decomposition with the current setting on all data files</string>
+              </property>
               <property name="text">
                <string>Run batch</string>
               </property>
@@ -639,14 +719,22 @@ margin: 5px;
             </item>
             <item>
              <widget class="QComboBox" name="comboBoxClusterInput">
+              <property name="currentIndex">
+               <number>2</number>
+              </property>
               <item>
                <property name="text">
-                <string>Raw data</string>
+                <string>Raw data (ROI)</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Decomposition</string>
+                <string>Raw data (all)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Decomposition concentrations</string>
                </property>
               </item>
              </widget>
@@ -678,7 +766,7 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="0,3,0,0,0,0,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="0,1,0,0,0,0,1">
             <item>
              <widget class="QLabel" name="label_26">
               <property name="text">
@@ -691,11 +779,6 @@ margin: 5px;
               <item>
                <property name="text">
                 <string>K-means</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Something else</string>
                </property>
               </item>
              </widget>
@@ -880,44 +963,11 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="2,2,1,1,1,0">
-            <item>
-             <widget class="QPushButton" name="pushButtonClusterLoad">
-              <property name="toolTip">
-               <string>Load selection from an arbitrary file</string>
-              </property>
-              <property name="text">
-               <string>Load</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonClusterSave">
-              <property name="text">
-               <string>Save</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBoxClusterAutosave">
-              <property name="toolTip">
-               <string>Automatically save all changes.</string>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="text">
-               <string>Auto-save</string>
-              </property>
-             </widget>
-            </item>
+           <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="0,1,1,1">
             <item>
              <widget class="QLabel" name="label">
               <property name="text">
                <string>Colors</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
              </widget>
             </item>
@@ -949,6 +999,25 @@ margin: 5px;
              <widget class="QCheckBox" name="checkBoxClusterShowAnnotations">
               <property name="text">
                <string>Show annotations</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="toolButtonClusterExport">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Export annotated spectra</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::InstantPopup</enum>
+              </property>
+              <property name="arrowType">
+               <enum>Qt::NoArrow</enum>
               </property>
              </widget>
             </item>

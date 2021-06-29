@@ -14,9 +14,10 @@ import scipy.signal, scipy.io
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import DecompositionData, Parameters
-from octavvs.algorithms import decomposition
+from octavvs.algorithms import decomposition, correction
 import pymcr
 import time
+import sklearn.cluster
 
 import sys
 import logging
@@ -32,12 +33,13 @@ class DecompWorker(QObject):
     Worker thread class for the heavy parts of the decomposition
     """
     # Signals for when finished or failed, and for progress indication
-    # done: iteration, conc, spectra, errs
+    # done: iteration, spectra, concentrations, errors
     done = pyqtSignal(int, np.ndarray, np.ndarray, np.ndarray)
     stopped = pyqtSignal()
     failed = pyqtSignal(str, str)
     progress = pyqtSignal(list) # errors for all iterations
-    progressPlot = pyqtSignal(int, np.ndarray, np.ndarray)
+    # done: iteration, spectra, concentrations, errors
+    progressPlot = pyqtSignal(int, np.ndarray, np.ndarray, list)
 
     fileLoaded = pyqtSignal(int)
     loadFailed = pyqtSignal(str, str, str, bool) # file, msg, details, is_warn
@@ -82,22 +84,7 @@ class DecompWorker(QObject):
         self.progress.emit(*pargs)
 
 
-    def callDecomp(self, data, params):
-        """
-        Run decomposition stuff
-        """
-
-        y = data.raw
-        roi = data.decomposition_roi
-        if roi is not None:
-            y = y[roi, :]
-
-        conc, pureix = decomposition.simplisma(
-            y.T, params.dcComponents, params.dcSimplismaNoise)
-        self.emitProgress([])
-        initst = y[pureix,:]
-        self.progressPlot.emit(0, conc, initst)
-
+    def decompPymcr(self, params, y, initst):
         mcr = pymcr.mcr.McrAR(max_iter=params.dcIterations,
                               tol_err_change=params.dcTolerance,
                               tol_increase=1., tol_n_increase=10,
@@ -108,13 +95,79 @@ class DecompWorker(QObject):
             t = time.monotonic()
             if t - half_iter.iter_time > update_interval:
                 half_iter.iter_time = t
-                self.progressPlot.emit(mcr.n_iter, C.T, ST)
+                self.progressPlot.emit(mcr.n_iter, ST, C.T, mcr.err)
         half_iter.iter_time = time.monotonic()
         mcr.fit(y, ST=initst, post_iter_fcn=half_iter)
+        return mcr.n_iter, mcr.ST_opt_, mcr.C_opt_.T, np.asarray(mcr.err)
 
-        # errs = np.asarray(mcr.err).reshape((-1, 2))
-        self.done.emit(mcr.n_iter, mcr.C_opt_.T, mcr.ST_opt_,
-                       np.asarray(mcr.err))
+    def callDecompPymcr(self, data, params):
+        """
+        Run decomposition stuff
+        """
+        y = data.raw
+        if data.decomposition_roi is not None:
+            y = y[data.decomposition_roi, :]
+
+        initst, pureix = decomposition.simplisma(
+            y.T, params.dcComponents, params.dcSimplismaNoise)
+        self.emitProgress([])
+        data.add_decomposition_data(0, initst, None)
+        self.progressPlot.emit(0, initst, np.array(()))
+
+        iters, spectra, concentrations, errors = \
+            self.decompPymcr(params, y, initst)
+
+        data.add_decomposition_data(iters, spectra, concentrations)
+        data.set_decomposition_errors(errors)
+        self.done.emit(iters, spectra, concentrations, errors)
+        return True
+
+    def callDecomp(self, data, params):
+        """
+        Run decomposition stuff
+        """
+        y = data.raw
+        if data.decomposition_roi is not None:
+            y = y[data.decomposition_roi, :]
+
+        if params.dcDerivative:
+            y = scipy.signal.savgol_filter(
+                y, window_length=params.dcDerivativeWindow,
+                polyorder=params.dcDerivativePoly,
+                deriv=params.dcDerivative, axis=1)
+            y = correction.nonnegative(y, 0, 0)
+
+        if params.dcInitialValues == 'simplisma':
+            initst, pureix = decomposition.simplisma(
+                y.T, params.dcComponents, params.dcSimplismaNoise)
+        elif params.dcInitialValues == 'kmeans':
+            km = sklearn.cluster.MiniBatchKMeans(
+                n_clusters=params.dcComponents).fit(y)
+            initst = km.cluster_centers_
+        else:
+            raise ValueError('Unknown params.dcInitialValues')
+        self.emitProgress([])
+        data.add_decomposition_data(0, initst, None)
+        self.progressPlot.emit(0, initst, np.array(()), [])
+
+        update_interval = 1.5
+        def half_iter(it, errs, spectra, concentrations):
+            self.emitProgress(errs)
+            t = time.monotonic()
+            if t - half_iter.iter_time > update_interval:
+                half_iter.iter_time = t
+                self.progressPlot.emit(it, spectra, concentrations, errs)
+        half_iter.iter_time = time.monotonic()
+
+        iters, spectra, concentrations, errors  = decomposition.mcr_als(
+            y, initst, maxiters=params.dcIterations,
+            tol_rel_error=params.dcTolerance,
+            tol_ups_after_best=50, callback=half_iter)
+
+        errors = np.asarray(errors)
+        data.add_decomposition_data(iters, spectra, concentrations)
+        data.set_decomposition_errors(errors)
+        self.done.emit(iters, spectra, concentrations, errors)
         return True
 
 

@@ -38,7 +38,7 @@ def load_reference(wn, what=None, matfilename=None):
     ref = PchipInterpolator(ref[::d,0], ref[::d,1])(wn)
     return ref #/ ref.max()
 
-def nonnegative(y, fracspectra=.02, fracvalues=.02):
+def nonnegative(y, fracspectra=.01, fracvalues=.01):
     """
     Make a matrix of spectral data nonnegative by shifting all the spectra up by the same computed
     amount, followed by setting negative values to 0. The shift is chosen such that at most

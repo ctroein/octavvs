@@ -17,7 +17,7 @@ from PyQt5.QtCore import pyqtSlot #, QLocale
 class LineDouble(QLineEdit):
     def __init__(self, parent=None, vmin=0, vmax=100, fmt='%.2f'):
         QLineEdit.__init__(self)
-        self.default = None
+        self.default = (vmin + vmax) / 2
         self.min = vmin
         self.max = vmax
         self.setFormat(fmt)

@@ -9,6 +9,7 @@ Created on Wed Jun  2 23:00:44 2021
 import os.path
 import numpy as np
 import h5py
+import csv
 
 from .spectraldata import SpectralData
 
@@ -130,12 +131,19 @@ class DecompositionData(SpectralData):
         pixels = self.decomposition_roi.sum() if self.decomposition_roi \
             is not None else self.raw.shape[0]
         comps = self.decomposition_settings['Components']
-        assert spectra.shape == (comps, self.raw.shape[1])
-        assert concentrations.shape == (comps, pixels)
         assert iteration <= self.decomposition_settings['Iterations']
+        if iteration:
+            assert spectra is not None and concentrations is not None
+        else:
+            assert spectra is not None or concentrations is not None
+        if spectra is not None:
+            assert spectra.shape == (comps, self.raw.shape[1])
+            spectra = spectra.copy()
+        if concentrations is not None:
+            assert concentrations.shape == (comps, pixels)
+            concentrations = concentrations.copy()
         self.decomposition_data[iteration] = {
-            'spectra': spectra.copy(),
-            'concentrations': concentrations.copy()}
+            'spectra': spectra, 'concentrations': concentrations}
 
     def set_clustering_settings(self, params, roi):
         """
@@ -158,19 +166,23 @@ class DecompositionData(SpectralData):
         self.clustering_label_set = None
         self.clustering_annotations = {}
 
-    def set_clustering_labels(self, labels):
-        pixels = self.clustering_roi.sum() if self.clustering_roi \
-            is not None else self.raw.shape[0]
+    def set_clustering_labels(self, labels, relabel):
+        pixels = self.clustering_roi.sum() if \
+            self.clustering_roi is not None else self.raw.shape[0]
         assert labels.shape == (pixels,)
-        self.clustering_labels = labels
-        self.clustering_label_set = set(labels)
+        # Count labels, sort indexes and invert permutation array
+        bc = np.bincount(labels)
+        mapp = np.empty(bc.size, bc.dtype)
+        mapp[np.argsort(bc)[::-1]] = np.arange(bc.size)
+        self.clustering_labels = mapp[labels]
+        self.clustering_label_set = set(self.clustering_labels)
 
     def get_annotation_clusters(self, annotation):
         if self.clustering_annotations is None:
             self.clustering_annotations = {}
         if annotation not in self.clustering_annotations:
             self.clustering_annotations[annotation] = set()
-        return self.clustering_annotations[annotation]
+        return self.clustering_annotations[annotation].copy()
 
     def get_unannotated_clusters(self):
         used = set()
@@ -184,8 +196,9 @@ class DecompositionData(SpectralData):
             cset = set(clusters)
             self.clustering_annotations[annotation] = cset
             for c in self.clustering_annotations.values():
-                if c != cset:
-                    assert not cset.intersection(c)
+                if c is not cset and cset.intersection(c):
+                    print('Error: duplicated cluster id',
+                          self.clustering_annotations)
 
     def del_annotation(self, annotation):
         if self.clustering_annotations is not None and \
@@ -226,17 +239,21 @@ class DecompositionData(SpectralData):
                 dcdata = {}
                 for ds in dc['Data'].values():
                     it = ds.attrs['Iteration']
-                    conc = ds['Concentrations'][:]
-                    if conc.shape[1] != pixels:
-                        raise ValueError('Concentration pixel count mismatch')
-                    if conc.shape[0] != comps:
-                        raise ValueError(
-                            'Concentration component count mismatch')
-                    spect = ds['Spectra'][:]
-                    if spect.shape[1] != self.raw.shape[1]:
-                        raise ValueError('Spectra wavenumber count mismatch')
-                    if spect.shape[0] != comps:
-                        raise ValueError('Spectra component count mismatch')
+                    conc = None
+                    if 'Concentrations' in ds:
+                        conc = ds['Concentrations'][:]
+                        if conc.shape[1] != pixels:
+                            raise ValueError('Concentration pixel count mismatch')
+                        if conc.shape[0] != comps:
+                            raise ValueError(
+                                'Concentration component count mismatch')
+                    spect = None
+                    if 'Spectra' in ds:
+                        spect = ds['Spectra'][:]
+                        if spect.shape[1] != self.raw.shape[1]:
+                            raise ValueError('Spectra wavenumber count mismatch')
+                        if spect.shape[0] != comps:
+                            raise ValueError('Spectra component count mismatch')
                     dcdata[it] = {'concentrations': conc, 'spectra': spect}
                 if 'Errors' in dc:
                     dcerrors = dc['Errors'][:]
@@ -273,15 +290,15 @@ class DecompositionData(SpectralData):
                         raise ValueError('Cluster label range error')
                 if 'Annotations' in ca:
                     caannot = {}
-                    for ann in ca['Annotations']:
+                    for ann in ca['Annotations'].values():
                         atxt = ann.attrs['Text']
-                        avals = set(ann[:])
-                        if np.min(avals) < 0 or np.max(avals) >= maxclust:
+                        avals = ann[:]
+                        if min(avals) < 0 or np.max(avals) >= maxclust:
                             raise ValueError('Annotation cluster range error')
                         if atxt in caannot:
-                            caannot[atxt].update(avals)
+                            caannot[atxt].update(set(avals))
                         else:
-                            caannot[atxt] = avals
+                            caannot[atxt] = set(avals)
 
         if what in ['all', 'roi']:
             self.roi = roi
@@ -294,7 +311,8 @@ class DecompositionData(SpectralData):
             self.clustering_settings = casettings
             self.clustering_roi = caroi
             self.clustering_labels = calabels
-            self.clustering_label_set = set(calabels) if calabels else None
+            self.clustering_label_set = set(calabels) if \
+                calabels is not None else None
             if caannot is not None:
                 for k, v in caannot.items():
                     caannot[k] = list(v)
@@ -325,11 +343,11 @@ class DecompositionData(SpectralData):
 
         def replace_data(grp, name, arr):
             if name in grp:
-                if arr is not None and grp[name].shape != arr.shape:
+                if arr is not None and grp[name].shape == arr.shape:
                     grp[name][...] = arr
-                else:
-                    del grp[name]
-            if arr is not None and name not in grp:
+                    return
+                del grp[name]
+            if arr is not None:
                 grp.create_dataset(name, data=arr)
 
         if what in ['all', 'roi']:
@@ -367,9 +385,9 @@ class DecompositionData(SpectralData):
                 ag = ca.require_group('Annotations')
                 for i, (ann, labels) in enumerate(
                         self.clustering_annotations.items()):
-                    ds = ag.create_dataset('Annotation_%d' % i, data=labels)
+                    ds = ag.create_dataset('Annotation_%d' % i,
+                                           data=list(labels))
                     ds.attrs['Text'] = ann
-
 
 
     def save_rdc(self, filename, what='all'):
@@ -392,3 +410,80 @@ class DecompositionData(SpectralData):
         with h5py.File(filename, mode='a') as f:
             return self.save_rdc_(f, what, 0)
 
+    def get_headers_as_lists(self):
+        headers = []
+        headers.append(['#Input file', self.curFile])
+        if self.clustering_settings['Input'] == 'decomposition':
+            for k, v in self.decomposition_settings.items():
+                headers.append(['#Decomposition ' + k, v])
+        for k, v in self.clustering_settings.items():
+            headers.append(['#Clustering ' + k, v])
+        return headers
+
+    def save_spectra_csv(self, writer, average):
+        writer.writerows(self.get_headers_as_lists())
+        if average:
+            unused = self.get_unannotated_clusters()
+            # # If all are unannotated, output cluster labels instead
+            # by_cluster = len(unused) == len(self.clustering_label_set)
+            header = ['Wavenumber/%s' % average]
+            avg_indexes = []
+            if self.clustering_roi is None:
+                roi_indexes = np.arange(len(self.raw))
+            else:
+                roi_indexes = self.clustering_roi.nonzero()[0]
+            if average == 'cluster':
+                for c in self.clustering_label_set:
+                    header.append('Cluster %d' % c)
+                    avg_indexes.append(
+                        roi_indexes[self.clustering_labels == c])
+            else:
+                for a, cs in self.clustering_annotations.items():
+                    if cs:
+                        header.append(a)
+                        avg_indexes.append(roi_indexes[
+                            np.isin(self.clustering_labels, list(cs))])
+                if unused:
+                    header.append('(unannotated)')
+                    avg_indexes.append(roi_indexes[
+                        np.isin(self.clustering_labels, list(unused))])
+            writer.writerow(['Nspectra'] + [len(ixs) for ixs in avg_indexes])
+            writer.writerow(header)
+            for i, wn in enumerate(self.wavenumber):
+                row = [wn]
+                for aix in avg_indexes:
+                    row.append(self.raw[aix, i].mean())
+                writer.writerow(row)
+        else:
+            cluster_annots = {c: '(unannotated)' for c in
+                              self.get_unannotated_clusters()}
+            for a, cc in self.clustering_annotations.items():
+                for c in cc:
+                    cluster_annots[c] = a
+            headers = [['x'], ['y'], ['Cluster'], ['Wavenumber/Annotation']]
+            if self.clustering_roi is None:
+                roi_indexes = np.arange(len(self.raw))
+            else:
+                roi_indexes = self.clustering_roi.nonzero()[0]
+            for i, ix in enumerate(roi_indexes):
+                if self.pixelxy is None:
+                    xy = (ix % self.wh[0], ix // self.wh[0])
+                else:
+                    xy = self.pixelxy[ix]
+                headers[0].append(xy[0])
+                headers[1].append(xy[1])
+                c = self.clustering_labels[i]
+                headers[2].append(c)
+                headers[3].append(cluster_annots[c])
+            writer.writerows(headers)
+            writer.writerows(np.hstack((self.wavenumber[:,None],
+                                        self.raw[roi_indexes,:].T)))
+
+    def save_annotated_spectra(self, filename, filetype, average):
+        if average not in ['annotation', 'cluster', None]:
+            raise ValueError("Invalid value for 'average'")
+        if filetype == 'csv':
+            with open(filename, 'w', newline='') as f:
+                self.save_spectra_csv(csv.writer(f), average=average)
+        else:
+            raise ValueError('Invalid filetype %d' % filetype)
