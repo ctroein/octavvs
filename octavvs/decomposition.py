@@ -190,6 +190,24 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.autosaveCheck()
         return super().loadFile(file)
 
+    def populatePlots(self):
+        "Send data to plots etc after loading rdc"
+        self.plot_roi.set_roi(self.data.roi)
+        self.dcSettingsUpdate()
+        self.plot_decomp.clear_and_set_roi(self.data.decomposition_roi)
+        self.plot_decomp.set_errors(self.data.decomposition_errors)
+        dd = self.data.decomposition_data
+        if dd:
+            if 0 in dd:
+                self.plot_decomp.set_initial_spectra(dd[0]['spectra'])
+            lastiter = max(dd.keys())
+            ds = dd[lastiter]
+            self.plot_decomp.set_concentrations(ds['concentrations'])
+            self.plot_decomp.set_spectra(ds['spectra'])
+        self.plot_cluster.set_roi_and_clusters(
+            self.data.clustering_roi, self.data.clustering_labels)
+        self.caPopulateLists()
+
     @pyqtSlot(int)
     def updateFile(self, num):
         super().updateFile(num)
@@ -201,15 +219,17 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             wh=self.data.wh, pixelxy=self.data.pixelxy)
         self.plot_cluster.set_basic_data(
             wh=self.data.wh, pixelxy=self.data.pixelxy)
-        self.genericLoad(auto=True)
+        # self.genericLoad(auto=True)
+        self.populatePlots()
         self.updatedFile()
 
-    @pyqtSlot(str, str, str, bool)
-    def showLoadErrorMessage(self, file, err, details, warning):
+    @pyqtSlot(str, str, str)
+    def showLoadErrorMessage(self, file, err, details):
         """
         Error message from loading a file in the worker thread,
         with abort option
         """
+        warning=False
         q = self.loadErrorBox(file, (err, details if details else None),
                               warning)
         q.addButton('Ignore' if warning else 'Skip file',
@@ -217,7 +237,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         abort = q.addButton('Abort', QMessageBox.AcceptRole)
         q.exec()
         if q.clickedButton() == abort:
-            self.dcStop()
+            self.stopDC()
 
     def updateDimensions(self, wh):
         super().updateDimensions(wh)
@@ -251,6 +271,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                 q.exec()
             if not self.lineEditDirectory.text():
                 self.dirSelect()
+        else:
+            self.data.set_rdc_directory(self.dirCurrent())
 
     def dirSelect(self):
         rdir = self.getDirectoryName(
@@ -263,72 +285,43 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def dirEditCheck(self):
         if not self.lineEditDirectory.text():
             self.comboBoxDirectory.setCurrentIndex(0)
+        self.data.set_rdc_directory(self.dirCurrent())
         if self.data.curFile:
-            filename = self.data.rdc_filename(filedir=self.dirCurrent())
+            filename = self.data.rdc_filename()
             if os.path.exists(filename):
                 yn = QMessageBox.question(
                     self, 'Directory changed',
                     '(Re)load saved data from selected directory?')
                 if yn == QMessageBox.Yes:
-                    self.data.load_rdc(filename)
-                    self.plot_roi.set_roi(self.data.roi)
+                    self.data.load_rdc()
+                    self.populatePlots()
 
 
-    # Loading and saving data
-    def genericLoad(self, auto=False, what='all', description='data'):
+    # Loading and saving rdc data
+    def genericLoad(self, what='all', description='data'):
         if not self.data.curFile:
             return
-        filename = self.data.rdc_filename(filedir=self.dirCurrent())
-        if auto:
-            try:
-                self.data.load_rdc(filename, what=what)
-            except OSError:
-                return
-            except Exception:
-                traceback.print_exc()
-                print('Warning: auto-load failed')
-                return
-        else:
-            path = os.path.split(filename)
-            filename = self.getLoadFileName(
-                "Load %s from file" % description,
-                filter="Decomposition HDF5 files (*.odd);;All files (*)",
-                directory=path[0], defaultfilename=path[1])
-            if not filename:
-                return
-            self.data.load_rdc(filename, what=what)
-        if what in ['roi', 'all']:
-            self.plot_roi.set_roi(self.data.roi)
-        if what in ['decomposition', 'all']:
-            self.dcSettingsUpdate()
-            self.plot_decomp.clear_and_set_roi(self.data.decomposition_roi)
-            self.plot_decomp.set_errors(self.data.decomposition_errors)
-            dd = self.data.decomposition_data
-            if dd is not None and len(dd):
-                lastiter = max(dd.keys())
-                ds = dd[lastiter]
-                self.plot_decomp.set_concentrations(ds['concentrations'])
-                self.plot_decomp.set_spectra(ds['spectra'])
-                if 0 in dd:
-                    self.plot_decomp.set_initial_spectra(dd[0]['spectra'])
-        if what in ['clustering', 'all']:
-            self.plot_cluster.set_roi_and_clusters(
-                self.data.clustering_roi, self.data.clustering_labels)
-            self.caPopulateLists()
+        path = os.path.split(self.data.rdc_filename())
+        filename = self.getLoadFileName(
+            "Load %s from file" % description,
+            filter="Decomposition HDF5 files (*.odd);;All files (*)",
+            directory=path[0], defaultfilename=path[1])
+        if not filename:
+            return
+        self.data.load_rdc(filename, what=what)
+        self.populatePlots()
 
-    def genericSave(self, auto=False, what='all', description='data'):
+    def genericSave(self, what='all', description='data'):
         if not self.data.curFile:
             return
 
-        filename = self.data.rdc_filename(filedir=self.dirCurrent())
-        if not auto:
-            path = os.path.split(filename)
-            filename = self.getSaveFileName(
-                "Save %s to file" % description,
-                filter="Decomposition HDF5 files (*.odd);;All files (*)",
-                directory=path[0], defaultfilename=path[1])
-            if not filename:
-                return
+        path = os.path.split(self.data.rdc_filename())
+        filename = self.getSaveFileName(
+            "Save %s to file" % description,
+            filter="Decomposition HDF5 files (*.odd);;All files (*)",
+            directory=path[0], defaultfilename=path[1])
+        if not filename:
+            return
 
         # Make sure self.data is up-to-date
         if what in ['roi', 'all']:
@@ -340,8 +333,11 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.data.save_rdc(filename, what=what)
 
     def autosaveCheck(self):
-        if self.data.curFile and self.checkBoxRdcAutosave.isChecked():
-            self.genericSave(auto=True)
+        if self.data.curFile and self.checkBoxRdcAutosave.isChecked() \
+            and not self.workerRunning:
+                self.data.set_roi(self.plot_roi.get_roi())
+                self.caSelectAnnotation()
+                self.data.save_rdc()
 
     # Roi, Region of interest
     def roiClear(self):
@@ -361,11 +357,11 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def roiUpdateSelected(self, n, m):
         self.labelRoiSelected.setText('Selected: %d / %d' % (n, m))
 
-    def roiLoad(self, auto=False):
-        self.genericLoad(auto, what='roi', description='ROI')
+    # def roiLoad(self, auto=False):
+    #     self.genericLoad(auto, what='roi', description='ROI')
 
-    def roiSave(self, auto=False):
-        self.genericSave(auto, what='roi', description='ROI')
+    # def roiSave(self, auto=False):
+    #     self.genericSave(auto, what='roi', description='ROI')
 
 
     # DC, Decomposition
@@ -391,6 +387,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         "Move between states: 0=idle, 1=run one, 2=run batch"
         onoff = not newstate
         self.fileLoader.setEnabled(onoff)
+        self.pushButtonRdcLoad.setEnabled(onoff)
+        self.pushButtonRdcSave.setEnabled(onoff)
         self.pushButtonRun.setEnabled(onoff)
         self.pushButtonStart.setEnabled(onoff)
         if newstate:
@@ -484,13 +482,13 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     #     self.comboBoxPlotMode.setCurrentText('K-means')
     #     self.plot_decomp.draw_idle()
 
-    def dcLoad(self, auto=False):
-        self.genericLoad(auto, what='decomposition',
-                         description='decomposition data')
+    # def dcLoad(self, auto=False):
+    #     self.genericLoad(auto, what='decomposition',
+    #                      description='decomposition data')
 
-    def dcSave(self, auto=False):
-        self.genericSave(auto, what='decomposition',
-                         description='decomposition data')
+    # def dcSave(self, auto=False):
+    #     self.genericSave(auto, what='decomposition',
+    #                      description='decomposition data')
 
     def dcSettingsUpdate(self):
         "Update the table of most recent dc settings"
@@ -534,7 +532,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     @pyqtSlot(int, int)
     def dcBatchProgress(self, a, b):
         self.progressBarRun.setValue(a)
-        self.progressBarRun.setMaximum(b)
+        self.progressBarRun.setMaximum(b-1)
 
     @pyqtSlot(bool)
     def dcBatchDone(self, success):
@@ -653,6 +651,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         sel = sel[0].text() if sel else None
         if sel:
             used = self.data.get_annotation_clusters(sel)
+            print('used',used)
             self.caClustersToList(used, self.listWidgetClusterUsed)
         else:
             self.caClearList(self.listWidgetClusterUsed)
@@ -729,20 +728,22 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             while l.count():
                 l.takeItem(0)
 
-    def caLoad(self, auto=False):
-        self.genericLoad(auto, what='clustering', description='Clustering')
+    # def caLoad(self, auto=False):
+    #     self.genericLoad(auto, what='clustering', description='Clustering')
 
-    def caSave(self, auto=False):
-        self.genericSave(auto, what='clustering', description='Clustering')
+    # def caSave(self, auto=False):
+    #     self.genericSave(auto, what='clustering', description='Clustering')
 
     def caExport(self, average=None):
         if not self.data.curFile:
             return
+        filename = os.path.split(os.path.basename(self.data.curFile))[0]
         filename = self.getSaveFileName(
                 "Export annotated spectra",
                 filter="Comma-separated values (*.csv);;All files (*)",
                 settingname='exportDir',
-                suffix='csv')
+                suffix='csv',
+                defaultfilename=filename+'.csv')
         if filename:
             try:
                 self.data.save_annotated_spectra(

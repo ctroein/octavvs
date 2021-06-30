@@ -42,7 +42,7 @@ class DecompWorker(QObject):
     progressPlot = pyqtSignal(int, np.ndarray, np.ndarray, list)
 
     fileLoaded = pyqtSignal(int)
-    loadFailed = pyqtSignal(str, str, str, bool) # file, msg, details, is_warn
+    loadFailed = pyqtSignal(str, str, str) # file, msg, details
 
     batchProgress = pyqtSignal(int, int)
     batchDone = pyqtSignal(bool)
@@ -52,7 +52,7 @@ class DecompWorker(QObject):
         self.halt = False
 
     @pyqtSlot(int)
-    def loadFile(self, data, num, rcd_dir=None):
+    def loadFile(self, data, num):
         "Load file number num in the data object, emitting a signal on failure"
         try:
             file = data.filenames[num]
@@ -62,17 +62,8 @@ class DecompWorker(QObject):
         except (RuntimeError, FileNotFoundError) as e:
             self.loadFailed.emit(file, str(e), '', False)
         except Exception as e:
-            self.loadFailed.emit(file, str(e), traceback.format_exc(), False)
+            self.loadFailed.emit(file, str(e), traceback.format_exc())
         else:
-            try:
-                data.clear_rcd()
-                fn = data.rcd_filename(filedir=rcd_dir)
-                if os.path.exists(fn):
-                    data.load_rcd(filename=fn)
-            except Exception as e:
-                self.loadFailed.emit(
-                    file, str(e), traceback.format_exc(), True)
-
             self.fileLoaded.emit(num)
             return True
         return False
@@ -200,14 +191,13 @@ class DecompWorker(QObject):
         try:
             for fi in range(len(data.filenames)):
                 self.batchProgress.emit(fi, len(data.filenames))
-                rcd_dir = params.directory if params.dirMode else None
-                if not self.loadFile(data, fi, rcd_dir=rcd_dir):
+                # rcd_dir = params.directory if params.dirMode else None
+                if not self.loadFile(data, fi):
                     continue
 
                 data.set_decomposition_settings(params)
                 self.callDecomp(data, params)
-                ...
-                # need to save the data
+                data.save_rdc()
 
             self.batchDone.emit(True)
             return

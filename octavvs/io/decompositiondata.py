@@ -10,6 +10,7 @@ import os.path
 import numpy as np
 import h5py
 import csv
+import traceback
 
 from .spectraldata import SpectralData
 
@@ -17,8 +18,17 @@ class DecompositionData(SpectralData):
     "SpectralData with addition of ROI/decomposition data"
     def __init__(self):
         super().__init__()
-        self.roi = None # bool array or None if nothing is selected
+        self.clear_rdc()
 
+    def clear_rdc(self):
+        """
+        Clear the ROI/decomposition/clustering data.
+
+        Returns
+        -------
+        None.
+        """
+        self.roi = None # bool array or None if nothing is selected
         self.decomposition_settings = None # dict with decomp settings
         self.decomposition_roi = None # ROI actually used for decomp, or None
         # {iteration: {'spectra': array(component, wavenum),
@@ -29,6 +39,10 @@ class DecompositionData(SpectralData):
         self.clustering_roi = None # ROI actually used for clustering, or None
         self.clustering_labels = None # 1d int array of labels
         self.clustering_annotations = None # {str: [labels]}
+        self.rdc_directory = None # None means dirname(curFile)
+
+    def set_rdc_directory(self, directory):
+        self.rdc_directory = directory
 
     def get_duplicate_filenames(self):
         """
@@ -49,7 +63,7 @@ class DecompositionData(SpectralData):
                 seen[f] = i
         return list(dups)
 
-    def rdc_filename(self, filedir=None, filetype='odd'):
+    def rdc_filename(self, filetype='odd'):
         """
         Get the default name of the file where the current file's
         ROI, decomposition and clustering is stored.
@@ -67,14 +81,26 @@ class DecompositionData(SpectralData):
         filetypes = ['odd']
         if filetype not in filetypes:
             raise ValueError("File type must be one of " + str(filetypes))
-        if filedir is None:
+        if self.rdc_directory is None:
             return os.path.splitext(self.curFile)[0] + '.' + filetype
-        if not filedir:
+        if not self.rdc_directory:
             raise ValueError("Directory cannot be ''")
         fn = os.path.splitext(os.path.basename(self.curFile))[0]
-        return os.path.join(filedir, fn) + '.' + filetype
+        return os.path.join(self.rdc_directory, fn) + '.' + filetype
+
+    def read_matrix(self, filename):
+        self.clear_rdc()
+        super().read_matrix(filename)
+        try:
+            self.load_rdc()
+        except OSError:
+            pass
+        except Exception:
+            traceback.print_exc()
+            print('Warning: rdc auto-load failed')
 
 
+    # ROI stuff
     def set_roi(self, roi):
         "Set ROI from array."
         if roi is None:
@@ -85,6 +111,7 @@ class DecompositionData(SpectralData):
         else:
             self.roi = roi if roi.any() else None
 
+    # Decomposition stuff
     def set_decomposition_settings(self, params):
         """
         Populate decomposition_settings from a Parameters object,
@@ -145,6 +172,7 @@ class DecompositionData(SpectralData):
         self.decomposition_data[iteration] = {
             'spectra': spectra, 'concentrations': concentrations}
 
+    # Clustering/annotation stuff
     def set_clustering_settings(self, params, roi):
         """
         Populate decomposition_settings from a Parameters object,
@@ -205,7 +233,7 @@ class DecompositionData(SpectralData):
             annotation in self.clustering_annotations:
                 del self.clustering_annotations[annotation]
 
-
+    # Loading and saving
     def load_rdc_(self, f, what, imgnum):
         grp = f['SpectralData/Image_%d' % imgnum]
 
@@ -313,12 +341,12 @@ class DecompositionData(SpectralData):
             self.clustering_labels = calabels
             self.clustering_label_set = set(calabels) if \
                 calabels is not None else None
-            if caannot is not None:
-                for k, v in caannot.items():
-                    caannot[k] = list(v)
-                self.clustering_annotations = caannot
+            # if caannot is not None:
+            #     for k, v in caannot.items():
+            #         caannot[k] = list(v)
+            self.clustering_annotations = caannot
 
-    def load_rdc(self, filename, what='all'):
+    def load_rdc(self, filename=None, what='all'):
         """
         Load ROI/decomp/clust from a named file.
 
@@ -333,6 +361,9 @@ class DecompositionData(SpectralData):
             Whether data was loaded
 
         """
+        if filename is None:
+            filename = self.rdc_filename()
+        print('load rdc',filename)
         with h5py.File(filename, mode='r') as f:
             return self.load_rdc_(f, what, 0)
 
@@ -390,7 +421,7 @@ class DecompositionData(SpectralData):
                     ds.attrs['Text'] = ann
 
 
-    def save_rdc(self, filename, what='all'):
+    def save_rdc(self, filename=None, what='all'):
         """
         Save data to a named file or a file in the input/output directory.
         The default is based on curFile.
@@ -407,6 +438,9 @@ class DecompositionData(SpectralData):
         None.
 
         """
+        if filename is None:
+            filename = self.rdc_filename()
+        print('save rdc',filename)
         with h5py.File(filename, mode='a') as f:
             return self.save_rdc_(f, what, 0)
 
