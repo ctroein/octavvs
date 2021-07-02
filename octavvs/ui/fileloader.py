@@ -225,7 +225,6 @@ class FileLoader():
 
     def updateFile(self, num):
         file = self.data.filenames[num]
-        self.data.curFile = file
         self.fileLoader.spinBoxFileNumber.setValue(num+1)
         self.fileLoader.lineEditFilename.setText(file)
         self.fileLoader.lineEditWidth.setText(str(self.data.wh[0]))
