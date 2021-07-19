@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 from .decomp.decompworker import DecompWorker
 # import octavvs.io
-# from octavvs.algorithms import normalization
+from octavvs.algorithms import normalization
 from octavvs.io import DecompositionData, Parameters
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
                         NoRepeatStyle)
@@ -65,8 +65,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.lineEditDirectory.editingFinished.connect(self.dirEditCheck)
         self.pushButtonSaveParameters.clicked.connect(self.saveParameters)
         self.pushButtonLoadParameters.clicked.connect(self.loadParameters)
-        self.pushButtonRdcLoad.clicked.connect(self.genericLoad)
-        self.pushButtonRdcSave.clicked.connect(self.genericSave)
+        self.pushButtonRdcLoad.clicked.connect(self.rdcLoad)
+        self.pushButtonRdcSave.clicked.connect(self.rdcSave)
 
         self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
             self.plot_roi.set_cmap)
@@ -89,11 +89,12 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         # self.pushButtonSave.clicked.connect(self.dcSave)
         self.pushButtonRun.clicked.connect(self.dcBatchRun)
         self.pushButtonRunStop.clicked.connect(self.stopDC)
-
         self.pushButtonSettingsInfo.clicked.connect(self.dcSettingsShow)
         self.dialogSettingsTable = DialogSettingsTable()
         self.dialogSettingsTable.buttonBox.clicked.connect(
             self.dcSettingsClicked)
+        self.comboBoxInitialValues.currentIndexChanged.connect(
+            self.dcInitialValuesChanged)
 
         self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
             self.plot_decomp.set_cmap)
@@ -182,7 +183,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def updateFileList(self, *argv, **kwargs):
         ret = super().updateFileList(*argv, **kwargs)
         if ret:
-            self.dirModeCheck()
+            self.dirModeCheck(42)
         return ret
 
     def loadFile(self, file):
@@ -254,7 +255,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             return self.lineEditDirectory.text()
         return None
 
-    def dirModeCheck(self):
+    def dirModeCheck(self,qq=0):
         other = self.comboBoxDirectory.currentIndex()
         self.lineEditDirectory.setEnabled(other)
         if other:
@@ -271,14 +272,14 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                 q.exec()
             if not self.lineEditDirectory.text():
                 self.dirSelect()
-        else:
-            self.data.set_rdc_directory(self.dirCurrent())
+        self.data.set_rdc_directory(self.dirCurrent())
 
     def dirSelect(self):
         rdir = self.getDirectoryName(
             "Select ROI directory", settingname='rdcDir')
         if rdir is not None:
             self.lineEditDirectory.setText(rdir)
+            # self.data.set_rdc_directory(self.dirCurrent())
             self.comboBoxDirectory.setCurrentIndex(1)
             self.dirEditCheck()
 
@@ -311,6 +312,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.data.load_rdc(filename, what=what)
         self.populatePlots()
 
+    def rdcLoad(self):
+        self.genericLoad()
+
     def genericSave(self, what='all', description='data'):
         if not self.data.curFile:
             return
@@ -325,6 +329,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
 
         # Make sure self.data is up-to-date
         if what in ['roi', 'all']:
+            print('save set ROI',self.plot_roi.get_roi())
             self.data.set_roi(self.plot_roi.get_roi())
         if what in ['decomposition', 'all']:
             ...
@@ -332,12 +337,15 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             self.caSelectAnnotation()
         self.data.save_rdc(filename, what=what)
 
+    def rdcSave(self):
+        self.genericSave()
+
     def autosaveCheck(self):
-        if self.data.curFile and self.checkBoxRdcAutosave.isChecked() \
-            and not self.workerRunning:
-                self.data.set_roi(self.plot_roi.get_roi())
-                self.caSelectAnnotation()
-                self.data.save_rdc()
+        if (self.data.curFile and self.checkBoxRdcAutosave.isChecked()
+            and not self.workerRunning):
+            self.data.set_roi(self.plot_roi.get_roi())
+            self.caSelectAnnotation()
+            self.data.save_rdc()
 
     # Roi, Region of interest
     def roiClear(self):
@@ -444,23 +452,23 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             'Processing failed:<pre>\n' + err + "\n\n" + trace + '</pre>')
         self.dcStopped()
 
-    @pyqtSlot(int, np.ndarray, np.ndarray, np.ndarray)
-    def dcDone(self, iteration, spectra, concentrations, errors):
-        # self.data.add_decomposition_data(iteration, spectra, concentrations)
-        # self.data.set_decomposition_errors(errors)
+    @pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
+    def dcDone(self, spectra, concentrations, errors):
         self.plot_decomp.set_spectra(spectra)
         self.plot_decomp.set_concentrations(concentrations)
         self.plot_decomp.set_errors(errors)
+        self.progressBarIteration.setFormat('done')
+        self.progressBarIteration.setValue(0)
         self.dcStopped()
         self.caClear()
 
-    @pyqtSlot(list)
-    def dcProgress(self, errors):
-        if not errors:
+    @pyqtSlot(int, float)
+    def dcProgress(self, iteration, error):
+        if not iteration:
             self.progressBarIteration.setFormat('%v / %m')
         else:
-            self.progressBarIteration.setValue(len(errors) // 2)
-            self.lineEditRelError.setText('%.4g' % (errors[-1] / errors[0]))
+            self.progressBarIteration.setValue(iteration)
+            self.lineEditRelError.setText('%.4f' % (error * 100))
 
     @pyqtSlot(int, np.ndarray, np.ndarray, list)
     def dcProgressPlot(self, iteration, spectra, concentrations, errors):
@@ -489,6 +497,10 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     # def dcSave(self, auto=False):
     #     self.genericSave(auto, what='decomposition',
     #                      description='decomposition data')
+
+    def dcInitialValuesChanged(self):
+        self.lineEditSimplismaNoise.setEnabled(
+            self.comboBoxInitialValues.currentIndex() == 0)
 
     def dcSettingsUpdate(self):
         "Update the table of most recent dc settings"
@@ -549,7 +561,11 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p = self.getParameters()
         if p.caInput == 'decomposition':
             dd = self.data.decomposition_data
+            if dd is None:
+                return
             lastiter = max(dd.keys())
+            if not lastiter:
+                return # Only initial spectra available
             inp = dd[lastiter]['concentrations'].T
             roi = self.data.decomposition_roi
         else:
@@ -557,13 +573,15 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             roi = self.data.roi if p.caInput == 'raw-roi' else None
             if roi is not None:
                 inp = inp[roi]
-        if p.caNormalizeMean:
-            inp = inp - inp.mean(0)
-        if p.caNormalizeVariance:
-            inp = inp / inp.std(0)
+        inp = normalization.normalize_features(inp, p.caNormalization)
+
         if p.caMethod == 'kmeans':
             clusterer = sklearn.cluster.MiniBatchKMeans(
                 n_clusters=p.caClusters, n_init=p.caRestarts)
+            labels = clusterer.fit_predict(inp)
+        elif p.caMethod == 'strongest':
+            labels = inp.argmax(1)
+            p.caClusters = labels.max() + 1
         else:
             raise ValueError('Unknown clustering method %s' % p.caMethod)
         # elif p.caMethod == 'meanshift':
@@ -571,7 +589,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         # elif p.caMethod == 'spectral':
         #     clusterer = sklearn.cluster.SpectralClustering(
         #         n_clusters=p.caClusters, n_init=p.caRestarts, n_jobs=-1)
-        labels = clusterer.fit_predict(inp)
+        # labels = clusterer.fit_predict(inp)
         # if p.caMethod == 'meanshift':
         #     p.caClusters = labels.max() + 1
         self.data.set_clustering_settings(p, roi)
@@ -651,7 +669,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         sel = sel[0].text() if sel else None
         if sel:
             used = self.data.get_annotation_clusters(sel)
-            print('used',used)
             self.caClustersToList(used, self.listWidgetClusterUsed)
         else:
             self.caClearList(self.listWidgetClusterUsed)
@@ -756,9 +773,11 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
 
     # Parameter handling
     useRoiNames = ['ignore', 'ifdef', 'require']
-    initialValuesNames = ['simplisma', 'kmeans']
+    dcInitialValuesNames = ['simplisma', 'kmeans']
+    dcAlgorithmNames = ['mcr-als-anderson', 'mcr-als-ao', 'mcr-als']
     caInputNames = ['raw-roi', 'raw', 'decomposition']
-    caMethodNames = ['kmeans']
+    caMethodNames = ['kmeans', 'strongest']
+    caNormalizationNames = ['none', 'mean1', 'mean0', 'mean0var1']
     # caMethodNames = ['kmeans', 'meanshift', 'spectral']
 
     # Loading and saving parameters
@@ -775,19 +794,20 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.dcDerivative = self.comboBoxDerivative.currentIndex()
         p.dcDerivativeWindow = self.spinBoxDerivativeWindow.value()
         p.dcDerivativePoly = self.spinBoxDerivativePoly.value()
-        p.dcAlgorithm = self.comboBoxAlgorithm.currentText()
+        p.dcAlgorithm = self.dcAlgorithmNames[
+            self.comboBoxAlgorithm.currentIndex()]
         p.dcComponents = self.spinBoxComponents.value()
         p.dcStartingPoint = self.comboBoxStartingPoint.currentText()
         p.dcRoi = self.useRoiNames[self.comboBoxUseRoi.currentIndex()]
-        p.dcInitialValues = self.initialValuesNames[
+        p.dcInitialValues = self.dcInitialValuesNames[
             self.comboBoxInitialValues.currentIndex()]
         p.dcSimplismaNoise = self.lineEditSimplismaNoise.value()
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
 
         p.caInput = self.caInputNames[self.comboBoxClusterInput.currentIndex()]
-        p.caNormalizeMean = self.checkBoxClusterNormMean.isChecked()
-        p.caNormalizeVariance = self.checkBoxClusterNormVar.isChecked()
+        p.caNormalization = self.caNormalizationNames[
+            self.comboBoxClusterNormalization.currentIndex()]
         p.caMethod = self.caMethodNames[
             self.comboBoxClusterMethod.currentIndex()]
         p.caClusters = self.spinBoxClusterClusters.value()
@@ -818,27 +838,29 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.fileLoader.loadParameters(p)
         self.imageVisualizer.loadParameters(p)
 
-        self.comboBoxDirectory.setCurrentIndex(p.dirMode)
         self.lineEditDirectory.setText(p.directory)
+        self.comboBoxDirectory.setCurrentIndex(p.dirMode)
         self.checkBoxRdcAutosave.setChecked(p.autosave)
+        # self.data.set_rdc_directory(self.dirCurrent())
 
         self.comboBoxDerivative.setCurrentIndex(p.dcDerivative)
         self.spinBoxDerivativeWindow.setValue(p.dcDerivativeWindow)
         self.spinBoxDerivativePoly.setValue(p.dcDerivativePoly)
-        self.comboBoxAlgorithm.setCurrentText(p.dcAlgorithm)
+        self.comboBoxAlgorithm.setCurrentIndex(
+            self.dcAlgorithmNames.index(p.dcAlgorithm))
         self.spinBoxComponents.setValue(p.dcComponents)
         self.comboBoxStartingPoint.setCurrentText(p.dcStartingPoint)
         self.comboBoxUseRoi.setCurrentIndex(self.useRoiNames.index(p.dcRoi))
         self.comboBoxInitialValues.setCurrentIndex(
-            self.initialValuesNames.index(p.dcInitialValues))
+            self.dcInitialValuesNames.index(p.dcInitialValues))
         self.lineEditSimplismaNoise.setValue(p.dcSimplismaNoise)
         self.spinBoxIterations.setValue(p.dcIterations)
         self.lineEditTolerance.setValue(p.dcTolerance)
 
         self.comboBoxClusterInput.setCurrentIndex(
             self.caInputNames.index(p.caInput))
-        self.checkBoxClusterNormMean.setChecked(p.caNormalizeMean)
-        self.checkBoxClusterNormVar.setChecked(p.caNormalizeVariance)
+        self.comboBoxClusterNormalization.setCurrentIndex(
+             self.caNormalizationNames.index(p.caNormalization))
         self.comboBoxClusterMethod.setCurrentIndex(
             self.caMethodNames.index(p.caMethod))
         self.spinBoxClusterClusters.setValue(p.caClusters)

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1111</width>
+    <width>1099</width>
     <height>785</height>
    </rect>
   </property>
@@ -60,9 +60,6 @@ margin: 5px;
      <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0">
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_8">
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
         <item>
          <widget class="QLabel" name="label_20">
           <property name="toolTip">
@@ -401,12 +398,17 @@ margin: 5px;
              <widget class="QComboBox" name="comboBoxAlgorithm">
               <item>
                <property name="text">
-                <string>MCR-ALS</string>
+                <string>MCR-ALS + Anderson acceleration</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Something better</string>
+                <string>MCR-ALS + AdaptiveOverstep</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>MCR-ALS</string>
                </property>
               </item>
              </widget>
@@ -473,7 +475,7 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,1,1,1,1">
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,1,1,1,1,0">
             <item>
              <widget class="QLabel" name="label_6">
               <property name="text">
@@ -503,7 +505,7 @@ margin: 5px;
             <item>
              <widget class="QLabel" name="label_17">
               <property name="text">
-               <string>Simplisma noise</string>
+               <string>Noise</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -548,8 +550,11 @@ margin: 5px;
             </item>
             <item>
              <widget class="QLabel" name="label_13">
+              <property name="toolTip">
+               <string>Stop at this relative decrease in error</string>
+              </property>
               <property name="text">
-               <string>Stopping error</string>
+               <string>Stopping improv.</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -559,14 +564,21 @@ margin: 5px;
             <item>
              <widget class="LineDouble" name="lineEditTolerance">
               <property name="text">
-               <string>0.001</string>
+               <string>0.01</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_14">
+              <property name="text">
+               <string>%</string>
               </property>
              </widget>
             </item>
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,0,1,3,1,1">
+           <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,0,1,3,1,1,0">
             <item>
              <widget class="QPushButton" name="pushButtonStart">
               <property name="text">
@@ -615,6 +627,13 @@ margin: 5px;
              <widget class="QLineEdit" name="lineEditRelError">
               <property name="readOnly">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_12">
+              <property name="text">
+               <string>%</string>
               </property>
              </widget>
             </item>
@@ -709,7 +728,7 @@ margin: 5px;
            <number>6</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="0,1,0,0,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="0,1,0,0">
             <item>
              <widget class="QLabel" name="label_34">
               <property name="text">
@@ -742,7 +761,7 @@ margin: 5px;
             <item>
              <widget class="QLabel" name="label_5">
               <property name="text">
-               <string>Normalize</string>
+               <string>Feature scaling</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -750,17 +769,27 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="checkBoxClusterNormMean">
-              <property name="text">
-               <string>Mean</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBoxClusterNormVar">
-              <property name="text">
-               <string>Variance</string>
-              </property>
+             <widget class="QComboBox" name="comboBoxClusterNormalization">
+              <item>
+               <property name="text">
+                <string>As-is</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Unit mean (divisive)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Zero mean (subtractive)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Zero mean, unit variance</string>
+               </property>
+              </item>
              </widget>
             </item>
            </layout>
@@ -779,6 +808,11 @@ margin: 5px;
               <item>
                <property name="text">
                 <string>K-means</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Strongest component</string>
                </property>
               </item>
              </widget>

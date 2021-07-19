@@ -9,6 +9,8 @@ Created on Tue May 18 14:45:53 2021
 import numpy as np
 import scipy
 import sklearn
+import sklearn.metrics
+import time
 
 def simplisma(d, nr, f):
     """
@@ -86,8 +88,10 @@ def simplisma(d, nr, f):
 
 
 
-def mcr_als(sp, initial_components, maxiters, tol_rel_error,
-            tol_ups_after_best=None, callback=None):
+def mcr_als(sp, initial_components, maxiters, nonnegative=(True, True),
+            tol_abs_error=0, tol_rel_improv=None, tol_ups_after_best=None,
+            maxtime=None, callback=None, acceleration=None,
+            return_time=False, **kwargs):
     """
     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
 
@@ -99,54 +103,194 @@ def mcr_als(sp, initial_components, maxiters, tol_rel_error,
         Initial concentrations.
     maxiters : int
         Maximum number of iterations.
-    tol_rel_error : float
-        Error target (relative to first iteration).
-    tol_ups_after_best : float, optional
+    nonnegative : pair of bool
+        True if (initial, other) components must be non-negative
+    tol_abs_error : float, optional
+        Error target (mean square error).
+    tol_rel_improv : float, optional
+        Stop when relative improvement is less than this over 10 iterations.
+    tol_ups_after_best : int, optional
         Stop after error going net up this many times since best error.
-    callback : func(it : int, err : array(float), A : array, B : array)
-        Callback for every half-iteration.
+    maxtime : float, optional
+        Stop after this many seconds of process time have elapsed
+    callback : func(it : int, err : float, A : array, B : array)
+        Callback for every iteration.
+    acceleration : str
+        None, 'Anderson', 'AdaptiveOverstep'.
+        Use one of two stabilized acceleration schemes.
+        Anderson acceleration operates on whole iterations (A+B updates),
+        mixing earlier directions to step towards the fixed point. This
+        implementation temporarily falls back to basic updates if those
+        would be much better.
+        The AdaptiveOverstep algorithm attempts to gradually modify the
+        step length, picking the best of a shorter or longer step.
+    m : int, >1
+        For Anderson acceleration: the number of earlier steps to consider.
+    return_time : bool
+        Measure and return process_time at each iteration.
 
     Returns
     -------
-    iterations : int
-    Number of iterations performed
     A : array(ncomponents, nfeatures)
-    Spectra (at lowest error)
+        Spectra (at lowest error)
     B : array(ncomponents, nsamples)
-    Concentrations at lowest error
+        Concentrations at lowest error
     error : list(float)
-    Errors at all half-iterations
+        Mean square error at every iteration
+    process_time : list(float)
+        Time relative start at each iteration, only if return_time is True.
     """
     nrow, ncol = np.shape(sp)
     nr = initial_components.shape[0]
-    # u, s, v = np.linalg.svd(sp)
-    # s = scipy.linalg.diagsvd(s, nrow, ncol)
-    # u = u[:, :nr]
-    # s = s[:nr, :nr]
-    # v = v[:nr, :]
-    # dauxt = sklearn.preprocessing.normalize((u @ s @ v).T)
-    # dauxt = sp.T
     A = initial_components.T.copy()
     B = np.empty((nr, nrow))
     errors = []
     errorbest = None # Avoid spurious warning
+    prevA, prevB = (None, None)
 
-    for it in range(maxiters * 2):
-        if it & 1:
-            for i in range(ncol):
-                A[i, :] = scipy.optimize.nnls(B.T, sp[:, i])[0]
+    unknown_args = kwargs.keys() - {'m', 'aosettings', 'nnlsiter'}
+    if unknown_args:
+        raise TypeError('Unknown arguments: {}'.format(unknown_args))
+
+    nnlsiter = kwargs.get('nnlsiter', None)
+    if acceleration == 'Anderson':
+        ason_m = kwargs.get('m', 2)
+        ason_g = None
+        ason_G = []
+        ason_X = []
+    elif acceleration == 'AdaptiveOverstep':
+        if 'aosettings' in kwargs:
+            ao = kwargs['aosettings']
+            ao_stepsize = [ao[0], ao[0]]
+            ao_factors = np.asarray(ao[1:5]).reshape((2, 2))
+            ao_failscale = ao[5]
         else:
-            for i in range(nrow):
-                B[:, i] = scipy.optimize.nnls(A, sp[i, :])[0]
+            ao_stepsize = [.5, .5]
+            ao_factors = [[.92, -.02], [1.08, .02]]
+            ao_failscale = .5
+    elif acceleration:
+        raise ValueError("acceleration must be None or 'Anderson'")
 
-        error = sklearn.metrics.mean_squared_error(sp.T, np.dot(A, B))
+    starttime = time.process_time()
+    if return_time:
+        times = []
+    tol_rel_iters = 10
+
+    for it in range(maxiters):
+        for ba in range(2):
+            error = 0
+            if ba:
+                prevA = A
+                if nonnegative[0]:
+                    A = np.empty_like(A)
+                    for i in range(ncol):
+                        A[i, :], res = scipy.optimize.nnls(
+                            B.T, sp[:, i], maxiter=nnlsiter)
+                        error = error + res * res
+                else:
+                    A, res, _, _ = np.linalg.lstsq(B.T, sp, rcond=-1)
+                    A = A.T
+                    error = res.sum()
+            else:
+                prevB = B
+                if nonnegative[1]:
+                    B = np.empty_like(B)
+                    for i in range(nrow):
+                        B[:, i], res = scipy.optimize.nnls(
+                            A, sp[i, :], maxiter=nnlsiter)
+                        error = error + res * res
+                else:
+                    print('b1',B.shape)
+                    B, res, _, _ = np.linalg.lstsq(A, sp, rcond=-1).T
+                    print('b2',B.shape)
+                    error = res.sum()
+            error = error / sp.size
+
+            if acceleration == 'AdaptiveOverstep' and it > 3:
+                steps = [[max(ao_stepsize[ab] * fac[0] + fac[1], 0)
+                       for ab in range(2)] for fac in ao_factors]
+                AB = []
+                errorv = []
+                for ss in steps:
+                    AB.append([A + ss[0] * (A - prevA),
+                               B + ss[1] * (B - prevB)])
+                    for nn in np.argwhere(nonnegative).flatten():
+                        AB[-1][nn] = np.maximum(0, AB[-1][nn])
+                    errorv.append(np.linalg.norm(
+                        sp - AB[-1][1].T @ AB[-1][0].T)**2 / sp.size)
+                mm = np.argmin(errorv)
+                # if errorv[mm] < errors[-1]:
+                if errorv[mm] < error:
+                    if ba:
+                        A = AB[mm][0]
+                    else:
+                        B = AB[mm][1]
+                    error = errorv[mm]
+                    ao_stepsize = steps[mm]
+                elif errorv[mm] > errors[-1]:
+                # else:
+                    ao_stepsize = [s * ao_failscale for s in steps[mm]]
+
+        if acceleration == 'Anderson' and it > 2:
+            prevg = ason_g
+            ason_g = np.empty(A.size + B.size)
+            ason_g[:A.size] = (A - prevA).flatten()
+            ason_g[A.size:] = (B - prevB).flatten()
+            if len(ason_X) < 1:
+                ason_X.append(ason_g)
+            else:
+                ason_G.append(ason_g - prevg)
+                while(len(ason_G) > ason_m):
+                    ason_G.pop(0)
+                    ason_X.pop(0)
+                Garr = np.asarray(ason_G)
+                try:
+                    gamma = np.linalg.lstsq(Garr.T, ason_g, rcond=-1)[0]
+                except np.linalg.LinAlgError:
+                    print('lstsq failed to converge; restart at iter %d' % it)
+                    print('nans', np.isnan(Garr).sum(), np.isnan(ason_g).sum())
+                    ason_X = []
+                    ason_G = []
+                else:
+                    # print('gamma', gamma, np.linalg.norm(ason_g))
+                    xstep = ason_g - gamma @ (np.asarray(ason_X) + Garr)
+                    ason_X.append(xstep)
+                    nA = prevA + xstep[:A.size].reshape(A.shape)
+                    if nonnegative[0]:
+                        nA = np.maximum(0, nA)
+                    nB = prevB + xstep[A.size:].reshape(B.shape)
+                    if nonnegative[1]:
+                        nB = np.maximum(0, nB)
+                    nerror = np.linalg.norm(sp - nB.T @ nA.T)**2 / sp.size
+                    # Reject changes that are much worse than the basic step
+                    de = error - errors[-1]
+                    nde = nerror - errors[-1]
+                    if nde > .5 * de or (de > 0 and nde > 2 * de):
+                        ason_X = []
+                        ason_G = []
+                    else:
+                        A, B, error = (nA, nB, nerror)
+
+        # oerror = sklearn.metrics.mean_squared_error(sp.T, np.dot(A, B))
+        # qerror = np.linalg.norm(sp - B.T @ A.T)**2 / sp.size
+
+        curtime = time.process_time() - starttime
+        if return_time:
+            times.append(curtime)
         errors.append(error)
         if not it or error < errorbest:
             errorbest = error
-            Abest = A.copy()
-            Bbest = B.copy()
+            Abest = A
+            Bbest = B
             netups = 0
-        elif it:
+        if it:
+            if error < tol_abs_error:
+                break
+            if tol_rel_improv and it > tol_rel_iters:
+                emax = max(errors[-tol_rel_iters-1:-2])
+                if (emax - errors[-1]) * tol_rel_iters <= \
+                    tol_rel_improv * emax:
+                    break
             if tol_ups_after_best is not None:
                 if error < errors[-2]:
                     netups = max(0, netups - 1)
@@ -154,10 +298,12 @@ def mcr_als(sp, initial_components, maxiters, tol_rel_error,
                     netups = netups + 1
                     if netups > tol_ups_after_best:
                         break
-            if np.abs(error - errors[0]) / error < tol_rel_error:
-                break
+        if it and maxtime and curtime >= maxtime:
+            break
         if callback is not None:
             callback(it, errors, A.T, B)
 
-    return it // 2, Abest.T, Bbest, errors
+    if return_time:
+        return Abest.T, Bbest, errors, times
+    return Abest.T, Bbest, errors
 

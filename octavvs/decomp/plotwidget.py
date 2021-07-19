@@ -133,21 +133,23 @@ class RoiPlotWidget(BasePlotWidget):
         else:
             data2d = data.reshape((self.wh[1], self.wh[0]))
             if self.data is None:
-                self.ax.imshow(data2d, cmap=self.cmap, zorder=-1)
+                im = self.ax.imshow(data2d, cmap=self.cmap, zorder=-1,
+                                    origin='lower')
+                im.set_extent((0, self.wh[0]-1, 0, self.wh[1]-1))
                 # Turn roi into rgba
                 roi2d = np.outer(self.roi, self.roi_alpha).reshape(
                     self.wh[1], self.wh[0], 4)
-                self.ax.imshow(roi2d, zorder=0)
+                self.ax.imshow(roi2d, zorder=0, origin='lower')
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(data2d)
                 im.set_clim(data.min(), data.max())
-                im.set_extent((0, self.wh[0]-1, self.wh[1]-1, 0))
-                self.ax.autoscale()
+                im.set_extent((0, self.wh[0]-1, 0, self.wh[1]-1))
+            self.ax.autoscale()
             self.pixel_radius = 1.5
             m = 2 * self.pixel_radius
             self.ax.set_xlim(-m, self.wh[0]-1 + m)
-            self.ax.set_ylim(self.wh[1]-1 + m, -m)
+            self.ax.set_ylim(-m, self.wh[1]-1 + m)
 
         self.data = data
         self.draw_idle()
@@ -337,10 +339,11 @@ class DecompositionPlotWidget(BasePlotWidget):
 
     def clear_data(self):
         self.error_log = []
-        self.concentrations = None
-        self.cluster_maps = {}
+        self.init_concentrations = None
         self.init_spectra = None
+        self.concentrations = None
         self.spectra = None
+        self.cluster_maps = {}
         self.update_display_modes()
 
     def mousePressEvent(self, event):
@@ -415,14 +418,8 @@ class DecompositionPlotWidget(BasePlotWidget):
         comps, pixels = concentrations.shape
         udm = self.concentrations is None or len(self.concentrations) != comps
         if self.roi is None:
-            # print('set_c', concentrations.shape, self.pixels)
             assert pixels == self.pixels
             self.concentrations = concentrations
-        # elif pixels != self.roi.sum():
-        #     # Discard ROI if it's apparently unused
-        #     assert pixels == self.pixels
-        #     self.roi = None
-        #     self.concentrations = concentrations
         else:
             assert pixels == self.roi.sum()
             if udm:
@@ -441,6 +438,10 @@ class DecompositionPlotWidget(BasePlotWidget):
 
     def set_spectra(self, spectra):
         self.spectra = spectra
+        self.draw_idle()
+
+    def set_initial_concentrations(self, concentrations):
+        self.init_concentrations = concentrations
         self.draw_idle()
 
     def set_initial_spectra(self, spectra):
@@ -475,7 +476,7 @@ class DecompositionPlotWidget(BasePlotWidget):
         ax.set_yscale('log')
         ax.xaxis.set_major_locator(
             matplotlib.ticker.MaxNLocator(integer=True))
-        ax.set_xlabel('Half-iteration')
+        ax.set_xlabel('Iteration')
         if self.error_log is None:
             return
         if len(self.error_log):
@@ -485,26 +486,27 @@ class DecompositionPlotWidget(BasePlotWidget):
     def draw_init_spectra(self, ax):
         ax.set_yscale('linear')
         if self.init_spectra is not None:
-            for i in range(len(self.init_spectra)):
-                ax.plot(self.wn, self.init_spectra[i,:],
-                        label='Initial component %d'%(i+1))
+            for i, s in enumerate(self.init_spectra):
+                ax.plot(self.wn, s,
+                        label='Initial component %d' % (i + 1))
             ax.legend()
 
     def draw_spectra(self, ax):
         ax.set_yscale('linear')
         if self.spectra is not None:
-            for i in range(len(self.spectra)):
-                s = self.spectra[i]
+            for i, s in enumerate(self.spectra):
                 if s.any():
-                    ax.plot(self.wn, s / s.mean(), label='Component %d'%(i+1))
+                    ax.plot(self.wn, s / s.mean(),
+                            label='Component %d' % (i + 1))
             ax.legend()
 
     def draw_concentrations(self, ax):
         ax.set_yscale('linear')
         if self.concentrations is not None:
-            for i in self.concentrations:
-                if i.any():
-                    ax.plot(i)
+            for i, s in enumerate(self.concentrations):
+                if s.any():
+                    ax.plot(s, label='Component %d' % (i + 1))
+            ax.legend()
 
     def draw_heatmap(self, ax, data, discrete=False, cbfig=None):
         if discrete:
@@ -549,12 +551,12 @@ class DecompositionPlotWidget(BasePlotWidget):
                 im.set_data(data)
                 im.set_cmap(cmap)
                 im.set_clim(*cminmax)
-                im.set_extent((-.5, self.wh[0]-.5, self.wh[1]-.5, -.5))
+                im.set_extent((-.5, self.wh[0]-.5, -.5, self.wh[1]-.5))
                 im.autoscale()
             else:
                 ax.clear()
                 img = ax.imshow(data, cmap=cmap, zorder=0, aspect='equal',
-                          vmin=cminmax[0], vmax=cminmax[1])
+                          vmin=cminmax[0], vmax=cminmax[1], origin='lower')
                 if cbfig is not None:
                     cbfig.colorbar(img, ax=ax)
 
@@ -612,6 +614,13 @@ class ClusterPlotWidget(BasePlotWidget):
         self.cmap = 'tab10'
         self.mpl_connect('button_press_event', self.on_click)
 
+        # Things common to both display modes
+        self.ax.set_aspect('equal')
+        self.ax.tick_params(bottom=False, labelbottom=False,
+                            left=False, labelleft=False)
+        self.ax.set_facecolor('#eee')
+
+
     def set_basic_data(self, wh=None, pixelxy=None):
         "Set shape/points and clears clusters"
         if wh is None and pixelxy is None:
@@ -623,12 +632,9 @@ class ClusterPlotWidget(BasePlotWidget):
         self.wh = wh
         self.pixelxy = pixelxy
         self.pixels = pixels
-        self.roi = np.zeros((self.pixels), dtype=bool)
-        self.clusters = None
-        # 0 or cluster+1 for all pixels
+        # clusters_of_all: 0 or cluster+1 for all pixels
         self.clusters_of_all = np.zeros((self.pixels), dtype=np.uint8)
-        self.ax.clear()
-        self.draw_idle()
+        self.set_roi_and_clusters(None, None)
 
     def adjust_geometry(self, wh):
         "Update the plot geometry, keeping the pixel count"
@@ -644,11 +650,7 @@ class ClusterPlotWidget(BasePlotWidget):
         self.draw_idle()
 
     def clear_clusters(self):
-        self.roi = None
-        self.clusters = None
-        self.clusters_of_all.fill(0)
-        self.ax.clear()
-        self.draw_idle()
+        self.set_roi_and_clusters(None, None)
 
     def cluster_color(self, cluster):
         return self.cmap_object(self.norm(cluster))
@@ -664,6 +666,7 @@ class ClusterPlotWidget(BasePlotWidget):
         self.clusters = clusters
         if clusters is None:
             self.clusters_of_all.fill(0)
+            self.ax.clear()
             self.draw_idle()
             return
 
@@ -674,11 +677,7 @@ class ClusterPlotWidget(BasePlotWidget):
             self.clusters_of_all[roi] = clusters + 1
 
         if setup_axes:
-            # Things common to both display modes
-            self.ax.set_aspect('equal')
-            self.ax.tick_params(bottom=False, labelbottom=False,
-                                left=False, labelleft=False)
-            self.ax.set_facecolor('#eee')
+            ...
 
         lc = clusters.max()
         cminmax = (0, lc)
@@ -713,7 +712,7 @@ class ClusterPlotWidget(BasePlotWidget):
             i2d[roi, :] = self.cluster_color(clusters)
             i2d = i2d.reshape((self.wh[1], self.wh[0], 4))
             if setup_axes:
-                self.ax.imshow(i2d, zorder=0)
+                self.ax.imshow(i2d, zorder=0, origin='lower')
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(i2d)
@@ -728,7 +727,7 @@ class ClusterPlotWidget(BasePlotWidget):
                     if p.contains(event)[0]:
                         self.clicked.emit(self.clusters_of_all[i] - 1)
         else:
-            x, y = (int(event.xdata), int(event.ydata))
+            x, y = (int(event.xdata + .5), int(event.ydata + .5))
             if (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
                 i = x + y * self.wh[0]
                 c = self.clusters_of_all[i]

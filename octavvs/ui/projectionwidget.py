@@ -53,7 +53,8 @@ class ProjectionWidget(FigureCanvas):
         self.image = None       # ..io.Image object
         # Main/background image with placeholder data
         self.bgimg = self.ax.imshow(
-            np.random.rand(16, 16), cmap=self.cmap, zorder=0, aspect='equal')
+            np.random.rand(16, 16), cmap=self.cmap, zorder=0, aspect='equal',
+            origin='lower')
         self.pop_bgimg = None   # Ditto in pop-out plot
         self.pop_fig = None     # The pop-out Figure
         self.pop_ax = None      # ...and its Axes
@@ -125,7 +126,7 @@ class ProjectionWidget(FigureCanvas):
             for bgimg in self.bgimglist():
                 bgimg.set_data(imgdata)
                 bgimg.set_extent((image.xy[0] - hwh[0], image.xy[0] + hwh[0],
-                                  image.xy[1] + hwh[1], image.xy[1] - hwh[1]))
+                                  image.xy[1] - hwh[1], image.xy[1] + hwh[1]))
                 bgimg.autoscale()
             self.pixel_visible = [
                 (np.abs(image.xy - xy) < (hwh + self.rect_size / 2)).all()
@@ -161,7 +162,7 @@ class ProjectionWidget(FigureCanvas):
             data = data.reshape(self.wh[::-1])
             for bgimg in self.bgimglist():
                 bgimg.set_data(data)
-                bgimg.set_extent((0, self.wh[0], self.wh[1], 0))
+                bgimg.set_extent((0, self.wh[0], 0, self.wh[1]))
                 bgimg.autoscale()
 
         self.trigger_redraw()
@@ -405,7 +406,8 @@ class ProjectionWidget(FigureCanvas):
             self.pop_ax = fig.gca()
             self.pop_bgimg = self.pop_ax.imshow(
                 self.bgimg.get_array(), cmap=self.cmap,
-                zorder=0, aspect='equal', extent=self.bgimg.get_extent())
+                zorder=0, aspect='equal', extent=self.bgimg.get_extent(),
+                origin='lower')
             self.pop_bgimg.autoscale()
 
             self.pop_patches = {}

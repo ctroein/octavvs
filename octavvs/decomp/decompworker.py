@@ -34,10 +34,10 @@ class DecompWorker(QObject):
     """
     # Signals for when finished or failed, and for progress indication
     # done: iteration, spectra, concentrations, errors
-    done = pyqtSignal(int, np.ndarray, np.ndarray, np.ndarray)
+    done = pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     stopped = pyqtSignal()
     failed = pyqtSignal(str, str)
-    progress = pyqtSignal(list) # errors for all iterations
+    progress = pyqtSignal(int, float) # iteration, rel. error
     # done: iteration, spectra, concentrations, errors
     progressPlot = pyqtSignal(int, np.ndarray, np.ndarray, list)
 
@@ -121,12 +121,19 @@ class DecompWorker(QObject):
         if data.decomposition_roi is not None:
             y = y[data.decomposition_roi, :]
 
+        c_first = params.dcStartingPoint == 'Concentrations'
+        nonneg = [True, True]
+
         if params.dcDerivative:
             y = scipy.signal.savgol_filter(
                 y, window_length=params.dcDerivativeWindow,
                 polyorder=params.dcDerivativePoly,
                 deriv=params.dcDerivative, axis=1)
-            y = correction.nonnegative(y, 0, 0)
+            # y = correction.nonnegative(y, 0, 0)
+            nonneg[int(c_first)] = False
+
+        if c_first:
+            y = y.T
 
         if params.dcInitialValues == 'simplisma':
             initst, pureix = decomposition.simplisma(
@@ -137,28 +144,51 @@ class DecompWorker(QObject):
             initst = km.cluster_centers_
         else:
             raise ValueError('Unknown params.dcInitialValues')
-        self.emitProgress([])
-        data.add_decomposition_data(0, initst, None)
-        self.progressPlot.emit(0, initst, np.array(()), [])
 
-        update_interval = 1.5
-        def half_iter(it, errs, spectra, concentrations):
-            self.emitProgress(errs)
+        if params.dcAlgorithm == 'mcr-als':
+            acceleration = None
+        elif params.dcAlgorithm == 'mcr-als-anderson':
+            acceleration = 'Anderson'
+        elif params.dcAlgorithm == 'mcr-als-ao':
+            acceleration = 'AdaptiveOverstep'
+        else:
+            raise ValueError('Unknown params.dcAlgorithm')
+
+        self.emitProgress(0, 0.)
+        if c_first:
+            data.add_decomposition_data(0, None, initst)
+            self.progressPlot.emit(0, np.array(()), initst, [])
+        else:
+            data.add_decomposition_data(0, initst, None)
+            self.progressPlot.emit(0, initst, np.array(()), [])
+
+
+        base_error = np.linalg.norm(y - y.mean(0))**2 / y.size
+        update_interval = 3
+        def cb_iter(it, errs, spectra, concentrations):
+            self.emitProgress(len(errs), errs[-1] / base_error)
             t = time.monotonic()
-            if t - half_iter.iter_time > update_interval:
-                half_iter.iter_time = t
+            if t > cb_iter.iter_next:
+                cb_iter.iter_next = t + update_interval
+                if c_first:
+                    concentrations, spectra = (spectra, concentrations)
                 self.progressPlot.emit(it, spectra, concentrations, errs)
-        half_iter.iter_time = time.monotonic()
+        cb_iter.iter_next = time.monotonic()
 
-        iters, spectra, concentrations, errors  = decomposition.mcr_als(
+        spectra, concentrations, errors = decomposition.mcr_als(
             y, initst, maxiters=params.dcIterations,
-            tol_rel_error=params.dcTolerance,
-            tol_ups_after_best=50, callback=half_iter)
+            nonnegative=nonneg,
+            # tol_abs_error=params.dcTolerance * base_error,
+            tol_rel_improv=params.dcTolerance * .01,
+            tol_ups_after_best=30, callback=cb_iter,
+            acceleration=acceleration)
+        if c_first:
+            concentrations, spectra = (spectra, concentrations)
 
         errors = np.asarray(errors)
-        data.add_decomposition_data(iters, spectra, concentrations)
+        data.add_decomposition_data(len(errors), spectra, concentrations)
         data.set_decomposition_errors(errors)
-        self.done.emit(iters, spectra, concentrations, errors)
+        self.done.emit(spectra, concentrations, errors)
         return True
 
 
