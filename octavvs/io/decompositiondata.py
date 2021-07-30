@@ -11,6 +11,7 @@ import numpy as np
 import h5py
 import csv
 import traceback
+import time
 
 from .spectraldata import SpectralData
 
@@ -18,6 +19,7 @@ class DecompositionData(SpectralData):
     "SpectralData with addition of ROI/decomposition data"
     def __init__(self):
         super().__init__()
+        self.rdc_directory = None # None means dirname(curFile)
         self.clear_rdc()
 
     def clear_rdc(self):
@@ -39,9 +41,9 @@ class DecompositionData(SpectralData):
         self.clustering_roi = None # ROI actually used for clustering, or None
         self.clustering_labels = None # 1d int array of labels
         self.clustering_annotations = None # {str: [labels]}
-        self.rdc_directory = None # None means dirname(curFile)
 
     def set_rdc_directory(self, directory):
+        # print('set rdc',directory)
         self.rdc_directory = directory
 
     def get_duplicate_filenames(self):
@@ -83,7 +85,7 @@ class DecompositionData(SpectralData):
             raise ValueError("File type must be one of " + str(filetypes))
         if self.rdc_directory is None:
             return os.path.splitext(self.curFile)[0] + '.' + filetype
-        if not self.rdc_directory:
+        if self.rdc_directory == '':
             raise ValueError("Directory cannot be ''")
         fn = os.path.splitext(os.path.basename(self.curFile))[0]
         return os.path.join(self.rdc_directory, fn) + '.' + filetype
@@ -146,6 +148,8 @@ class DecompositionData(SpectralData):
             raise ValueError('Bad value for params.dcRoi')
 
         self.decomposition_settings = {k[2:]: v for k, v in dcs.items()}
+        self.decomposition_settings['DateTime'] = \
+            time.strftime('%Y-%m-%d %H:%M:%S %Z')
         self.decomposition_roi = roi
         self.decomposition_data = {}
 
@@ -189,6 +193,8 @@ class DecompositionData(SpectralData):
         """
         cas = params.filtered('ca')
         self.clustering_settings = {k[2:]: v for k, v in cas.items()}
+        self.clustering_settings['DateTime'] = \
+            time.strftime('%Y-%m-%d %H:%M:%S %Z')
         self.clustering_roi = roi.copy() if roi is not None else None
         self.clustering_labels = None
         self.clustering_label_set = None
@@ -363,7 +369,7 @@ class DecompositionData(SpectralData):
         """
         if filename is None:
             filename = self.rdc_filename()
-        print('load rdc',filename)
+        # print('load rdc',filename,what)
         with h5py.File(filename, mode='r') as f:
             return self.load_rdc_(f, what, 0)
 
@@ -440,7 +446,7 @@ class DecompositionData(SpectralData):
         """
         if filename is None:
             filename = self.rdc_filename()
-        print('save rdc',filename)
+        # print('save rdc',filename)
         with h5py.File(filename, mode='a') as f:
             return self.save_rdc_(f, what, 0)
 
@@ -521,3 +527,5 @@ class DecompositionData(SpectralData):
                 self.save_spectra_csv(csv.writer(f), average=average)
         else:
             raise ValueError('Invalid filetype %d' % filetype)
+
+

@@ -8,7 +8,8 @@ Created on Tue May 18 14:45:53 2021
 
 import numpy as np
 import scipy
-import sklearn
+import time
+from threadpoolctl import threadpool_limits
 
 def simplisma(d, nr, f):
     """
@@ -57,37 +58,42 @@ def simplisma(d, nr, f):
     #calculation of following weights
     dm = np.zeros((nr+1, nr+1))
     for i in range(1, nr):
-        dm[1:i+1,1:i+1] = c[imp[:i],:][:,imp[:i]]
+        dm[1:i+1, 1:i+1] = c[imp[:i], :][:, imp[:i]]
         for j in range(ncol):
-            dm[0,0] = c[j,j]
-            dm[0,1:i+1]=c[j,imp[:i]]
-            dm[1:i+1,0]=c[imp[:i],j]
+            dm[0, 0] = c[j, j]
+            dm[0, 1:i+1] = c[j, imp[:i]]
+            dm[1:i+1, 0] = c[imp[:i], j]
             w[j] = np.linalg.det(dm[0:i+1, 0:i+1])
-
         imp[i] = (p * w).argmax()
 
     ss = d[:,imp]
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
 
-# import pymcr
 
+def numpy_scipy_threading_fix_(func):
+    """
+    This decorator for mcr_als prevents threading in BLAS if scipy's NNLS
+    is used, because for some reason NNLS won't be parallelized if called
+    shortly after lstsq or @. This makes a *massive* difference to the
+    time needed for Anderson acceleration, where the BLAS calls themselves
+    take negligible time. For mixed NNLS/lstsq solving (of MCR-ALS on
+    derivatives) it's less obvious whether NNSL or lstsq should be allowed
+    to be parallelized.
+    """
+    def check(*args, **kwargs):
+        if np.any(kwargs['nonnegative']):
+            with threadpool_limits(1, 'blas'):
+                return func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
+    return check
 
-# def pymcr_als(sp, initial_components, maxiters, reltol,
-#             callback_iter):
-
-#     mcr = pymcr.mcr.McrAR(max_iter=maxiters,
-#                           tol_err_change=reltol,
-#                           tol_increase=1., tol_n_increase=10,
-#                           tol_n_above_min=30)
-#     mcr.fit(sp, ST=initial_components, post_iter_fcn=callback_iter)
-
-#     return mcr.n_iter, mcr.C_opt_.T, mcr.ST_opt_, np.asarray(mcr.err)
-
-
-
-def mcr_als(sp, initial_components, maxiters, tol_rel_error,
-            tol_ups_after_best=None, callback=None):
+@numpy_scipy_threading_fix_
+def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
+            tol_abs_error=0, tol_rel_improv=None, tol_ups_after_best=None,
+            maxtime=None, callback=None, acceleration=None, normalize=None,
+            return_time=False, **kwargs):
     """
     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
 
@@ -95,58 +101,220 @@ def mcr_als(sp, initial_components, maxiters, tol_rel_error,
     ----------
     sp : array(nsamples, nfeatures)
         Spectra to be decomposed.
-    initial_components : array(ncomponents, nfeatures)
-        Initial concentrations.
+    initial_A : array(ncomponents, nfeatures)
+        Initial spectra or concentrations.
     maxiters : int
         Maximum number of iterations.
-    tol_rel_error : float
-        Error target (relative to first iteration).
-    tol_ups_after_best : float, optional
+    nonnegative : pair of bool
+        True if (initial, other) components must be non-negative
+    tol_abs_error : float, optional
+        Error target (mean square error).
+    tol_rel_improv : float, optional
+        Stop when relative improvement is less than this over 10 iterations.
+    tol_ups_after_best : int, optional
         Stop after error going net up this many times since best error.
-    callback : func(it : int, err : array(float), A : array, B : array)
-        Callback for every half-iteration.
+    maxtime : float, optional
+        Stop after this many seconds of process time have elapsed
+    callback : func(it : int, err : float, A : array, B : array)
+        Callback for every iteration.
+    acceleration : str
+        None or 'Anderson'.
+        Anderson acceleration operates on whole iterations (A or B updates),
+        mixing earlier directions to step towards the fixed point. This
+        implementation restarts from basic updates when those would be
+        better.
+    normalize : None or str
+        Which matrix to l2 normalize: None, 'A' or 'B'
+    return_time : bool
+        Measure and return process_time at each iteration.
+
+    Anderson acceleration parameters in kwargs
+    -------
+    m : int, >1, default 2
+        The maximum number of earlier steps to consider.
+    alternate : bool, default True
+        Alternate between accelerating A and B, switching when restarting.
+    beta : float, default 1.
+        Scaling factor for accelerated step length.
+    betascale : float, default 1.
+        Reduction factor for beta after each restart.
+    bmode : bool, default False
+        Start with accelerating B instead of A.
 
     Returns
     -------
-    iterations : int
-    Number of iterations performed
     A : array(ncomponents, nfeatures)
-    Spectra (at lowest error)
+        Spectra (at lowest error)
     B : array(ncomponents, nsamples)
-    Concentrations at lowest error
+        Concentrations at lowest error
     error : list(float)
-    Errors at all half-iterations
+        Mean square error at every iteration
+    process_time : list(float)
+        Time relative start at each iteration, only if return_time is True.
     """
-    nrow, ncol = np.shape(sp)
-    nr = initial_components.shape[0]
-    # u, s, v = np.linalg.svd(sp)
-    # s = scipy.linalg.diagsvd(s, nrow, ncol)
-    # u = u[:, :nr]
-    # s = s[:nr, :nr]
-    # v = v[:nr, :]
-    # dauxt = sklearn.preprocessing.normalize((u @ s @ v).T)
-    # dauxt = sp.T
-    A = initial_components.T.copy()
+    if normalize not in [None, 'A', 'B']:
+        raise ValueError('Normalization must be None, A or B')
+    unknown_args = kwargs.keys() - {
+        'm', 'alternate', 'beta', 'betascale', 'bmode'}
+    if unknown_args:
+        raise TypeError('Unknown arguments: {}'.format(unknown_args))
+
+    nrow, ncol = sp.shape
+    nr = initial_A.shape[0]
+    if normalize == 'A':
+        norm = np.linalg.norm(initial_A, axis=1)
+        A = np.divide(initial_A.T, norm, where=norm!=0,
+                      out=np.zeros(initial_A.shape[::-1]))
+    else:
+        A = initial_A.T.copy()
     B = np.empty((nr, nrow))
     errors = []
     errorbest = None # Avoid spurious warning
+    # prevA, prevB = (None, None)
+    newA = newB = None
+    error = preverror = None
 
-    for it in range(maxiters * 2):
-        if it & 1:
-            for i in range(ncol):
-                A[i, :] = scipy.optimize.nnls(B.T, sp[:, i])[0]
-        else:
-            for i in range(nrow):
-                B[:, i] = scipy.optimize.nnls(A, sp[i, :])[0]
+    if acceleration == 'Anderson':
+        ason_Bmode = kwargs.get('bmode', False)
+        ason_alternate = kwargs.get('alternate', True)
+        ason_m = kwargs.get('m', 2)
+        ason_beta = kwargs.get('beta', 1.)
+        ason_betascale = kwargs.get('betascale', 1.)
+        ason_g = None
+        ason_G = []
+        ason_X = []
+    elif acceleration:
+        raise ValueError("acceleration must be None or 'Anderson'")
 
-        error = sklearn.metrics.mean_squared_error(sp.T, np.dot(A, B))
+    starttime = time.process_time()
+    if return_time:
+        times = []
+    tol_rel_iters = 10
+
+    for it in range(maxiters):
+        ba = 0
+        retry = False
+        while ba < 2:
+            if not retry:
+                preverror = error
+            if ba == 0:
+                if newA is None:
+                    newA = A
+                prevA = newA
+                if nonnegative[1]:
+                    error = 0
+                    if not retry:
+                        B = np.empty_like(B)
+                    for i in range(nrow):
+                        B[:, i], res = scipy.optimize.nnls(newA, sp[i, :])
+                        error = error + res * res
+                else:
+                    B, res, _, _ = np.linalg.lstsq(newA, sp.T, rcond=-1)
+                    error = res.sum()
+                if normalize == 'B':
+                    norm = np.linalg.norm(B, axis=1)
+                    B = np.divide(B.T, norm, where=norm!=0, out=B.T).T
+                newA = None
+            else:
+                if newB is None:
+                    newB = B
+                prevB = newB
+                if nonnegative[0]:
+                    error = 0
+                    if not retry:
+                        A = np.empty_like(A)
+                    for i in range(ncol):
+                        A[i, :], res = scipy.optimize.nnls(newB.T, sp[:, i])
+                        error = error + res * res
+                else:
+                    A, res, _, _ = np.linalg.lstsq(newB.T, sp, rcond=-1)
+                    A = A.T
+                    error = res.sum()
+                if normalize == 'A':
+                    norm = np.linalg.norm(A, axis=0)
+                    np.divide(A, norm, where=norm!=0, out=A)
+                newB = None
+
+            if acceleration is None:
+                pass
+            elif ba == ason_Bmode:
+                if retry:
+                    retry = False
+                    if ason_alternate:
+                        ason_Bmode = not ason_Bmode
+                    ason_beta = ason_beta * ason_betascale
+                elif len(ason_X) > 1 and error > preverror:
+                    ason_X = []
+                    ason_G = []
+                    retry = True
+                    ba = ba - 1
+                else:
+                    pass
+            elif ason_Bmode == 1 and it == 0:
+                pass
+            else:
+                prevg = ason_g
+                ason_g = ((A - prevA) if ba else (B - prevB)).flatten()
+                if len(ason_X) < 1:
+                    ason_X.append(ason_g)
+                else:
+                    ason_G.append(ason_g - prevg)
+                    while(len(ason_G) > ason_m):
+                        ason_G.pop(0)
+                        ason_X.pop(0)
+                    Garr = np.asarray(ason_G)
+                    try:
+                        gamma = scipy.linalg.lstsq(Garr.T, ason_g)[0]
+                    except scipy.linalg.LinAlgError:
+                        print('lstsq failed to converge; '
+                              'restart at iter %d' % it)
+                        print('nans', np.isnan(Garr).sum(),
+                              np.isnan(ason_g).sum())
+                        ason_X = []
+                        ason_G = []
+                    else:
+                        gamma = ason_beta * gamma
+                        dx = ason_g - gamma @ (np.asarray(ason_X) + Garr)
+                        ason_X.append(dx)
+                        if ba:
+                            newA = prevA + dx.reshape(A.shape)
+                            if nonnegative[0]:
+                                np.maximum(0, newA, out=newA)
+                        else:
+                            newB = prevB + dx.reshape(B.shape)
+                            if nonnegative[1]:
+                                np.maximum(0, newB, out=newB)
+            ba = ba + 1
+        # error = error / sp.size
+
+        # Anderson
+        # A0 -> B0   errb0
+        # B0 -> A1   erra1:E  A1-A0: X0,g0
+        # A1 -> B1   errb1
+        # B1 -> A2   erra2:E  A2-A1: g1  g1-g0: G0   g1=v0G: v0
+        #            g1-v0(X+G): X1   A1+X1: A'2
+        # A'2 -> B2  errb2  if errb2>erra2:  XG=[]  A2 -> B2   (seed??)
+        # B2 -> A3   erra3:E  A3-A2: g2  g2-g1: G1   g2=v1G: v1
+        #            g2-v1(X+G): X2   A2+X2: A'3
+        # A'3 -> B3  errb3  if errb3>erra3:  XG=[]  A3 -> B3   (seed??)
+
+        curtime = time.process_time() - starttime
+        if return_time:
+            times.append(curtime)
         errors.append(error)
         if not it or error < errorbest:
             errorbest = error
-            Abest = A.copy()
-            Bbest = B.copy()
+            Abest = A
+            Bbest = B
             netups = 0
-        elif it:
+        if it:
+            if error < tol_abs_error:
+                break
+            if tol_rel_improv and it > tol_rel_iters:
+                emax = max(errors[-tol_rel_iters-1:-2])
+                if (emax - errors[-1]) * tol_rel_iters <= \
+                    tol_rel_improv * emax:
+                    break
             if tol_ups_after_best is not None:
                 if error < errors[-2]:
                     netups = max(0, netups - 1)
@@ -154,10 +322,12 @@ def mcr_als(sp, initial_components, maxiters, tol_rel_error,
                     netups = netups + 1
                     if netups > tol_ups_after_best:
                         break
-            if np.abs(error - errors[0]) / error < tol_rel_error:
-                break
+        if it and maxtime and curtime >= maxtime:
+            break
         if callback is not None:
             callback(it, errors, A.T, B)
 
-    return it // 2, Abest.T, Bbest, errors
+    if return_time:
+        return Abest.T, Bbest, errors, times
+    return Abest.T, Bbest, errors
 
