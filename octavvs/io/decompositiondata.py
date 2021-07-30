@@ -43,7 +43,7 @@ class DecompositionData(SpectralData):
         self.clustering_annotations = None # {str: [labels]}
 
     def set_rdc_directory(self, directory):
-        print('set rdc',directory)
+        # print('set rdc',directory)
         self.rdc_directory = directory
 
     def get_duplicate_filenames(self):
@@ -369,7 +369,7 @@ class DecompositionData(SpectralData):
         """
         if filename is None:
             filename = self.rdc_filename()
-        print('load rdc',filename,what)
+        # print('load rdc',filename,what)
         with h5py.File(filename, mode='r') as f:
             return self.load_rdc_(f, what, 0)
 
@@ -446,7 +446,7 @@ class DecompositionData(SpectralData):
         """
         if filename is None:
             filename = self.rdc_filename()
-        print('save rdc',filename)
+        # print('save rdc',filename)
         with h5py.File(filename, mode='a') as f:
             return self.save_rdc_(f, what, 0)
 

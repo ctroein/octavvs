@@ -7,26 +7,16 @@ Created on Wed Feb 27 22:55:02 2019
 """
 
 import traceback
-import os.path
 import numpy as np
 import scipy.signal, scipy.io
 # from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import DecompositionData, Parameters
-from octavvs.algorithms import decomposition, correction
-import pymcr
+from octavvs.algorithms import decomposition
 import time
 import sklearn.cluster
 
-import sys
-import logging
-logger = logging.getLogger('pymcr')
-logger.setLevel(logging.DEBUG)
-stdout_handler = logging.StreamHandler(stream=sys.stdout)
-stdout_format = logging.Formatter('%(message)s')
-stdout_handler.setFormatter(stdout_format)
-logger.addHandler(stdout_handler)
 
 class DecompWorker(QObject):
     """
@@ -75,47 +65,9 @@ class DecompWorker(QObject):
         self.progress.emit(*pargs)
 
 
-    def decompPymcr(self, params, y, initst):
-        mcr = pymcr.mcr.McrAR(max_iter=params.dcIterations,
-                              tol_err_change=params.dcTolerance,
-                              tol_increase=1., tol_n_increase=10,
-                              tol_n_above_min=30)
-        update_interval = 1
-        def half_iter(C, ST, D, Dcalc):
-            self.emitProgress(mcr.err)
-            t = time.monotonic()
-            if t - half_iter.iter_time > update_interval:
-                half_iter.iter_time = t
-                self.progressPlot.emit(mcr.n_iter, ST, C.T, mcr.err)
-        half_iter.iter_time = time.monotonic()
-        mcr.fit(y, ST=initst, post_iter_fcn=half_iter)
-        return mcr.n_iter, mcr.ST_opt_, mcr.C_opt_.T, np.asarray(mcr.err)
-
-    def callDecompPymcr(self, data, params):
-        """
-        Run decomposition stuff
-        """
-        y = data.raw
-        if data.decomposition_roi is not None:
-            y = y[data.decomposition_roi, :]
-
-        initst, pureix = decomposition.simplisma(
-            y.T, params.dcComponents, params.dcSimplismaNoise)
-        self.emitProgress([])
-        data.add_decomposition_data(0, initst, None)
-        self.progressPlot.emit(0, initst, np.array(()))
-
-        iters, spectra, concentrations, errors = \
-            self.decompPymcr(params, y, initst)
-
-        data.add_decomposition_data(iters, spectra, concentrations)
-        data.set_decomposition_errors(errors)
-        self.done.emit(iters, spectra, concentrations, errors)
-        return True
-
     def callDecomp(self, data, params):
         """
-        Run decomposition stuff
+        Run decomposition stuff.
         """
         y = data.raw
         if data.decomposition_roi is not None:
@@ -129,15 +81,16 @@ class DecompWorker(QObject):
                 y, window_length=params.dcDerivativeWindow,
                 polyorder=params.dcDerivativePoly,
                 deriv=params.dcDerivative, axis=1)
-            # y = correction.nonnegative(y, 0, 0)
             nonneg[int(c_first)] = False
 
+        base_error = np.linalg.norm(y - y.mean(0))**2
         if c_first:
             y = y.T
 
         if params.dcInitialValues == 'simplisma':
-            initst, pureix = decomposition.simplisma(
-                y.T, params.dcComponents, params.dcSimplismaNoise)
+            simplisma_noise = 0.1
+            initst = decomposition.simplisma(
+                y.T, params.dcComponents, simplisma_noise)[0]
         elif params.dcInitialValues == 'kmeans':
             km = sklearn.cluster.MiniBatchKMeans(
                 n_clusters=params.dcComponents).fit(y)
@@ -145,12 +98,15 @@ class DecompWorker(QObject):
         else:
             raise ValueError('Unknown params.dcInitialValues')
 
+        if c_first and params.dcDerivative:
+            # If concentrations-first is combined with derivatives,
+            # the initial concentrations need to be made positive.
+            initst = np.abs(initst)
+
         if params.dcAlgorithm == 'mcr-als':
             acceleration = None
         elif params.dcAlgorithm == 'mcr-als-anderson':
             acceleration = 'Anderson'
-        elif params.dcAlgorithm == 'mcr-als-ao':
-            acceleration = 'AdaptiveOverstep'
         else:
             raise ValueError('Unknown params.dcAlgorithm')
 
@@ -162,8 +118,6 @@ class DecompWorker(QObject):
             data.add_decomposition_data(0, initst, None)
             self.progressPlot.emit(0, initst, np.array(()), [])
 
-
-        base_error = np.linalg.norm(y - y.mean(0))**2 / y.size
         update_interval = 3
         def cb_iter(it, errs, spectra, concentrations):
             self.emitProgress(len(errs), errs[-1] / base_error)
@@ -172,18 +126,20 @@ class DecompWorker(QObject):
                 cb_iter.iter_next = t + update_interval
                 if c_first:
                     concentrations, spectra = (spectra, concentrations)
-                self.progressPlot.emit(it, spectra, concentrations, errs)
+                self.progressPlot.emit(it + 1, spectra, concentrations, errs)
         cb_iter.iter_next = time.monotonic()
 
+        tt = time.monotonic()
         spectra, concentrations, errors = decomposition.mcr_als(
             y, initst, maxiters=params.dcIterations,
             nonnegative=nonneg,
             # tol_abs_error=params.dcTolerance * base_error,
             tol_rel_improv=params.dcTolerance * .01,
             tol_ups_after_best=30, callback=cb_iter,
-            acceleration=acceleration)
+            acceleration=acceleration, normalize='B' if c_first else 'A')
         if c_first:
             concentrations, spectra = (spectra, concentrations)
+        print('Time:', time.monotonic()-tt)
 
         errors = np.asarray(errors)
         data.add_decomposition_data(len(errors), spectra, concentrations)

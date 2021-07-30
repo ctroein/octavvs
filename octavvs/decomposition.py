@@ -151,8 +151,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.worker.batchDone.connect(self.dcBatchDone)
         self.workerThread.start()
 
-        self.lineEditSimplismaNoise.setFormat("%g")
-        self.lineEditSimplismaNoise.setRange(1e-6, 1)
         self.lineEditTolerance.setFormat("%g")
         self.lineEditTolerance.setRange(1e-10, 1)
         # self.lineEditRelError.setFormat("%.4g")
@@ -499,8 +497,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     #                      description='decomposition data')
 
     def dcInitialValuesChanged(self):
-        self.lineEditSimplismaNoise.setEnabled(
-            self.comboBoxInitialValues.currentIndex() == 0)
+        pass
 
     def dcSettingsUpdate(self):
         "Update the table of most recent dc settings"
@@ -774,7 +771,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     # Parameter handling
     useRoiNames = ['ignore', 'ifdef', 'require']
     dcInitialValuesNames = ['simplisma', 'kmeans']
-    dcAlgorithmNames = ['mcr-als-anderson', 'mcr-als-ao', 'mcr-als']
+    dcAlgorithmNames = ['mcr-als-anderson', 'mcr-als']
     caInputNames = ['raw-roi', 'raw', 'decomposition']
     caMethodNames = ['kmeans', 'strongest']
     caNormalizationNames = ['none', 'mean1', 'mean0', 'mean0var1']
@@ -801,7 +798,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.dcRoi = self.useRoiNames[self.comboBoxUseRoi.currentIndex()]
         p.dcInitialValues = self.dcInitialValuesNames[
             self.comboBoxInitialValues.currentIndex()]
-        p.dcSimplismaNoise = self.lineEditSimplismaNoise.value()
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
 
@@ -853,7 +849,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.comboBoxUseRoi.setCurrentIndex(self.useRoiNames.index(p.dcRoi))
         self.comboBoxInitialValues.setCurrentIndex(
             self.dcInitialValuesNames.index(p.dcInitialValues))
-        self.lineEditSimplismaNoise.setValue(p.dcSimplismaNoise)
         self.spinBoxIterations.setValue(p.dcIterations)
         self.lineEditTolerance.setValue(p.dcTolerance)
 

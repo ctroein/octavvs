@@ -495,9 +495,7 @@ class DecompositionPlotWidget(BasePlotWidget):
         ax.set_yscale('linear')
         if self.spectra is not None:
             for i, s in enumerate(self.spectra):
-                if s.any():
-                    ax.plot(self.wn, s / s.mean(),
-                            label='Component %d' % (i + 1))
+                ax.plot(self.wn, s, label='Component %d' % (i + 1))
             ax.legend()
 
     def draw_concentrations(self, ax):

@@ -398,12 +398,7 @@ margin: 5px;
              <widget class="QComboBox" name="comboBoxAlgorithm">
               <item>
                <property name="text">
-                <string>MCR-ALS + Anderson acceleration</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>MCR-ALS + AdaptiveOverstep</string>
+                <string>MCR-ALS Accelerated</string>
                </property>
               </item>
               <item>
@@ -475,9 +470,14 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,1,1,1,1,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,1,1,0">
             <item>
              <widget class="QLabel" name="label_6">
+              <property name="toolTip">
+               <string>The SIMPLISMA algorithm attempts to chooses maximally orthogonal components. The SIMPLISMA noise parameter is set to 0.1 here.
+
+K-means clustering performs a clustering on the unscaled data and chooses representative cluster centers as starting points.</string>
+              </property>
               <property name="text">
                <string>Initial values</string>
               </property>
@@ -503,26 +503,9 @@ margin: 5px;
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_17">
-              <property name="text">
-               <string>Noise</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="LineDouble" name="lineEditSimplismaNoise">
-              <property name="text">
-               <string>0.1</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QLabel" name="label_10">
               <property name="text">
-               <string>Iterations</string>
+               <string>Max iterations</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -544,7 +527,7 @@ margin: 5px;
                <number>9999</number>
               </property>
               <property name="value">
-               <number>100</number>
+               <number>500</number>
               </property>
              </widget>
             </item>
