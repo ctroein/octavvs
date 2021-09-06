@@ -129,7 +129,7 @@ class DecompWorker(QObject):
                 self.progressPlot.emit(it + 1, spectra, concentrations, errs)
         cb_iter.iter_next = time.monotonic()
 
-        tt = time.monotonic()
+        # tt = time.monotonic()
         spectra, concentrations, errors = decomposition.mcr_als(
             y, initst, maxiters=params.dcIterations,
             nonnegative=nonneg,
@@ -139,7 +139,7 @@ class DecompWorker(QObject):
             acceleration=acceleration, normalize='B' if c_first else 'A')
         if c_first:
             concentrations, spectra = (spectra, concentrations)
-        print('Time:', time.monotonic()-tt)
+        # print('Time:', time.monotonic()-tt)
 
         errors = np.asarray(errors)
         data.add_decomposition_data(len(errors), spectra, concentrations)
