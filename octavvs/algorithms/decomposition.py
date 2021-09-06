@@ -80,6 +80,7 @@ def numpy_scipy_threading_fix_(func):
     take negligible time. For mixed NNLS/lstsq solving (of MCR-ALS on
     derivatives) it's less obvious whether NNSL or lstsq should be allowed
     to be parallelized.
+    Note: This issue is seen on
     """
     def check(*args, **kwargs):
         if np.any(kwargs['nonnegative']):
@@ -268,8 +269,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                     except scipy.linalg.LinAlgError:
                         print('lstsq failed to converge; '
                               'restart at iter %d' % it)
-                        print('nans', np.isnan(Garr).sum(),
-                              np.isnan(ason_g).sum())
+                        # print('nans', np.isnan(Garr).sum(),
+                        #       np.isnan(ason_g).sum())
                         ason_X = []
                         ason_G = []
                     else:
@@ -286,17 +287,6 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                                 np.maximum(0, newB, out=newB)
             ba = ba + 1
         # error = error / sp.size
-
-        # Anderson
-        # A0 -> B0   errb0
-        # B0 -> A1   erra1:E  A1-A0: X0,g0
-        # A1 -> B1   errb1
-        # B1 -> A2   erra2:E  A2-A1: g1  g1-g0: G0   g1=v0G: v0
-        #            g1-v0(X+G): X1   A1+X1: A'2
-        # A'2 -> B2  errb2  if errb2>erra2:  XG=[]  A2 -> B2   (seed??)
-        # B2 -> A3   erra3:E  A3-A2: g2  g2-g1: G1   g2=v1G: v1
-        #            g2-v1(X+G): X2   A2+X2: A'3
-        # A'3 -> B3  errb3  if errb3>erra3:  XG=[]  A3 -> B3   (seed??)
 
         curtime = time.process_time() - starttime
         if return_time:
