@@ -5,10 +5,17 @@ analysis of vibrational spectroscopy data. Currently, the preprocessing is
 primarily geared towards images from infrared absorption spectroscopy with
 focal plane array detectors.
 
-There are three separate tools in the current version:
+There are two/three separate tools in the current version:
 
 **preprocessing** deals with atmospheric correction, resonant Mie scattering
 correction, baseline correction and normalization.
+
+**decomposition** decomposes observed spectra into nonnegative concentrations and
+spectra using the MCR-ALS algorithm, performs K-means clustering on the MCR-ALS
+concentrations (or on the input data), and allows the user to manually annotate
+clusters and export the annotated data.
+
+The decomposition tool supersedes two earlier tools:
 
 **mcr_als** decomposes observed spectra into nonnegative concentrations and
 spectra using the MCR-ALS algorithm.
@@ -21,7 +28,7 @@ MCR-ALS.
 OCCTAVS needs a working Python 3 environment with various packages. The
 easiest way to get this is through the Conda package management system.
 
-Download and install the Python 3.7 version of [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+Download and install the Python 3.7 (or later) version of [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 There are some platform-specific differences during installation:
 
 * On **Windows**: The default options are good (no need to have Conda modify your path).  
@@ -46,8 +53,8 @@ The easiest way to access the OCTAVVS tools is through desktop shortcuts
 which are created by running the ``oct_make_icons`` script from the command prompt.
 (We are not entirely sure if this works on all Mac OS X versions)
 
-Regardless of whether you created icons, the three scripts
-``oct_preprocessing``, ``oct_mcr_als`` and ``oct_clustering``
+Regardless of whether you created icons, the scripts
+``oct_preprocessing`` and ``oct_decomposition``
 can be run straight from the console (Conda console or terminal window, as described above).
 
 The location of the OCTAVVS scripts will depend on where you installed Conda.

@@ -30,8 +30,7 @@ setuptools.setup(
     entry_points={'console_scripts':
         ['octavvs = octavvs.launcher:main',
         'oct_preprocessing = octavvs.preprocessing:main',
-        'oct_mcr_als = octavvs.mcr_als:main',
-        'oct_clustering = octavvs.clustering:main',
+        'oct_decomposition = octavvs.decomposition:main',
         'oct_make_icons = octavvs.make_icons:main'],
     },
 

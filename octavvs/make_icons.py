@@ -17,8 +17,9 @@ def main():
     _ = parser.parse_args()
 
     executables = {'oct_preprocessing': 'Preprocessing',
-                   'oct_mcr_als': 'MCR-ALS',
-                   'oct_clustering': 'Clustering'}
+#                   'oct_mcr_als': 'MCR-ALS',
+#                   'oct_clustering': 'Clustering',}
+                   'oct_decomposition': 'Decomposition'}
     proj = 'OCTAVVS '
 
     for cmd, nom in executables.items():
