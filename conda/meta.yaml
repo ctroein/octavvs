@@ -51,6 +51,7 @@ requirements:
     - xlwt
     - dill
     - h5py
+    - threadpoolctl
 
 test:
   imports:

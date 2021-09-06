@@ -616,7 +616,7 @@ class ClusterPlotWidget(BasePlotWidget):
         self.ax.set_aspect('equal')
         self.ax.tick_params(bottom=False, labelbottom=False,
                             left=False, labelleft=False)
-        self.ax.set_facecolor('#eee')
+        self.ax.set_facecolor('#eeeeee')
 
 
     def set_basic_data(self, wh=None, pixelxy=None):
