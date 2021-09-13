@@ -73,7 +73,7 @@ class DecompWorker(QObject):
         if data.decomposition_roi is not None:
             y = y[data.decomposition_roi, :]
 
-        c_first = params.dcStartingPoint == 'Concentrations'
+        c_first = params.dcStartingPoint != 0
         nonneg = [True, True]
 
         if params.dcDerivative:
@@ -129,6 +129,11 @@ class DecompWorker(QObject):
                 self.progressPlot.emit(it + 1, spectra, concentrations, errs)
         cb_iter.iter_next = time.monotonic()
 
+        cweight = None
+        if params.dcContrast:
+            cweight = ('B' if params.dcContrastConcentrations == c_first \
+                       else 'A', params.dcContrastWeight)
+
         # tt = time.monotonic()
         spectra, concentrations, errors = decomposition.mcr_als(
             y, initst, maxiters=params.dcIterations,
@@ -136,7 +141,8 @@ class DecompWorker(QObject):
             # tol_abs_error=params.dcTolerance * base_error,
             tol_rel_improv=params.dcTolerance * .01,
             tol_ups_after_best=30, callback=cb_iter,
-            acceleration=acceleration, normalize='B' if c_first else 'A')
+            acceleration=acceleration, normalize='B' if c_first else 'A',
+            contrast_weight=cweight)
         if c_first:
             concentrations, spectra = (spectra, concentrations)
         # print('Time:', time.monotonic()-tt)

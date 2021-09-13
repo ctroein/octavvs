@@ -95,6 +95,14 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             self.dcSettingsClicked)
         self.comboBoxInitialValues.currentIndexChanged.connect(
             self.dcInitialValuesChanged)
+        self.comboBoxDerivative.currentIndexChanged.connect(
+            self.dcDerivativeChanged)
+        self.checkBoxContrast.toggled.connect(self.dcContrastChanged)
+        self.lineEditContrast.setFormat("%g")
+        self.lineEditContrast.setRange(0, .1)
+        self.lineEditContrast.editingFinished.connect(self.dcContrastEdit)
+        self.horizontalSliderContrast.valueChanged.connect(
+            self.dcContrastSlide)
 
         self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
             self.plot_decomp.set_cmap)
@@ -499,6 +507,25 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def dcInitialValuesChanged(self):
         pass
 
+    def dcDerivativeChanged(self):
+        en = self.comboBoxDerivative.currentIndex() > 0
+        self.spinBoxDerivativePoly.setEnabled(en)
+        self.spinBoxDerivativeWindow.setEnabled(en)
+
+    def dcContrastChanged(self):
+        en = self.checkBoxContrast.isChecked()
+        self.comboBoxContrast.setEnabled(en)
+        self.horizontalSliderContrast.setEnabled(en)
+        self.lineEditContrast.setEnabled(en)
+
+    def dcContrastSlide(self):
+        self.lineEditContrast.setValue(
+            self.horizontalSliderContrast.value() * .001)
+
+    def dcContrastEdit(self):
+        self.horizontalSliderContrast.setValue(
+            self.lineEditContrast.value() * 1000)
+
     def dcSettingsUpdate(self):
         "Update the table of most recent dc settings"
         dds = self.data.decomposition_settings
@@ -788,18 +815,22 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.directory = self.lineEditDirectory.text()
         p.autosave = self.checkBoxRdcAutosave.isChecked()
 
+        p.dcAlgorithm = self.dcAlgorithmNames[
+            self.comboBoxAlgorithm.currentIndex()]
         p.dcDerivative = self.comboBoxDerivative.currentIndex()
         p.dcDerivativeWindow = self.spinBoxDerivativeWindow.value()
         p.dcDerivativePoly = self.spinBoxDerivativePoly.value()
-        p.dcAlgorithm = self.dcAlgorithmNames[
-            self.comboBoxAlgorithm.currentIndex()]
         p.dcComponents = self.spinBoxComponents.value()
-        p.dcStartingPoint = self.comboBoxStartingPoint.currentText()
-        p.dcRoi = self.useRoiNames[self.comboBoxUseRoi.currentIndex()]
+        p.dcStartingPoint = self.comboBoxStartingPoint.currentIndex()
         p.dcInitialValues = self.dcInitialValuesNames[
             self.comboBoxInitialValues.currentIndex()]
+        p.dcRoi = self.useRoiNames[self.comboBoxUseRoi.currentIndex()]
+        p.dcContrast = self.checkBoxContrast.isChecked()
+        p.dcContrastConcentrations = self.comboBoxContrast.currentIndex()
+        p.dcContrastWeight = self.lineEditContrast.value()
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
+
 
         p.caInput = self.caInputNames[self.comboBoxClusterInput.currentIndex()]
         p.caNormalization = self.caNormalizationNames[
@@ -839,16 +870,19 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.checkBoxRdcAutosave.setChecked(p.autosave)
         # self.data.set_rdc_directory(self.dirCurrent())
 
+        self.comboBoxAlgorithm.setCurrentIndex(
+            self.dcAlgorithmNames.index(p.dcAlgorithm))
         self.comboBoxDerivative.setCurrentIndex(p.dcDerivative)
         self.spinBoxDerivativeWindow.setValue(p.dcDerivativeWindow)
         self.spinBoxDerivativePoly.setValue(p.dcDerivativePoly)
-        self.comboBoxAlgorithm.setCurrentIndex(
-            self.dcAlgorithmNames.index(p.dcAlgorithm))
         self.spinBoxComponents.setValue(p.dcComponents)
-        self.comboBoxStartingPoint.setCurrentText(p.dcStartingPoint)
-        self.comboBoxUseRoi.setCurrentIndex(self.useRoiNames.index(p.dcRoi))
+        self.comboBoxStartingPoint.setCurrentIndex(p.dcStartingPoint)
         self.comboBoxInitialValues.setCurrentIndex(
             self.dcInitialValuesNames.index(p.dcInitialValues))
+        self.comboBoxUseRoi.setCurrentIndex(self.useRoiNames.index(p.dcRoi))
+        self.checkBoxContrast.setChecked(p.dcContrast)
+        self.comboBoxContrast.setCurrentIndex(p.dcContrastConcentrations)
+        self.lineEditContrast.setValue(p.dcContrastWeight)
         self.spinBoxIterations.setValue(p.dcIterations)
         self.lineEditTolerance.setValue(p.dcTolerance)
 
