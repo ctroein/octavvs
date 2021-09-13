@@ -94,7 +94,7 @@ def numpy_scipy_threading_fix_(func):
 def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
             tol_abs_error=0, tol_rel_improv=None, tol_ups_after_best=None,
             maxtime=None, callback=None, acceleration=None, normalize=None,
-            return_time=False, **kwargs):
+            contrast_weight=None, return_time=False, **kwargs):
     """
     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
 
@@ -106,7 +106,7 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
         Initial spectra or concentrations.
     maxiters : int
         Maximum number of iterations.
-    nonnegative : pair of bool
+    nonnegative : pair of bool, default (True, True)
         True if (initial, other) components must be non-negative
     tol_abs_error : float, optional
         Error target (mean square error).
@@ -118,15 +118,20 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
         Stop after this many seconds of process time have elapsed
     callback : func(it : int, err : float, A : array, B : array)
         Callback for every iteration.
-    acceleration : str
+    acceleration : str, optional
         None or 'Anderson'.
         Anderson acceleration operates on whole iterations (A or B updates),
         mixing earlier directions to step towards the fixed point. This
         implementation restarts from basic updates when those would be
         better.
-    normalize : None or str
+    normalize : str, optional
         Which matrix to l2 normalize: None, 'A' or 'B'
-    return_time : bool
+    contrast_weight : (str, float), optional
+        Increase contrast in one matrix by mixing the other, named matrix
+        ('A' or 'B') with the mean of its vectors. If A is spectra,
+        try contrast_weight=('B', 0.05) to increase spectral contrast.
+        See Windig and Keenan, Applied Spectroscopy 65: 349 (2011).
+    return_time : bool, default False
         Measure and return process_time at each iteration.
 
     Anderson acceleration parameters in kwargs
@@ -175,6 +180,16 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
     newA = newB = None
     error = preverror = None
 
+    cw = 0
+    if contrast_weight is not None:
+        if contrast_weight[0] == 'A':
+            cw = contrast_weight[1]
+        elif contrast_weight[0] == 'B':
+            cw = -contrast_weight[1]
+        else:
+            raise ValueError("contrast_weight must be ('A'|'B', [0-1])")
+
+
     if acceleration == 'Anderson':
         ason_Bmode = kwargs.get('bmode', False)
         ason_alternate = kwargs.get('alternate', True)
@@ -202,6 +217,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                 if newA is None:
                     newA = A
                 prevA = newA
+                if cw > 0:
+                    newA = (1 - cw) * newA + cw * newA.mean(1)[:,None]
                 if nonnegative[1]:
                     error = 0
                     if not retry:
@@ -220,6 +237,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                 if newB is None:
                     newB = B
                 prevB = newB
+                if cw < 0:
+                    newB = (1 + cw) * newB - cw * newB.mean(1)[:,None]
                 if nonnegative[0]:
                     error = 0
                     if not retry:

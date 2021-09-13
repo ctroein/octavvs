@@ -327,7 +327,8 @@ class DecompositionData(SpectralData):
                     for ann in ca['Annotations'].values():
                         atxt = ann.attrs['Text']
                         avals = ann[:]
-                        if min(avals) < 0 or np.max(avals) >= maxclust:
+                        if len(avals) > 0 and (
+                                min(avals) < 0 or np.max(avals) >= maxclust):
                             raise ValueError('Annotation cluster range error')
                         if atxt in caannot:
                             caannot[atxt].update(set(avals))

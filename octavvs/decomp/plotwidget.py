@@ -353,9 +353,9 @@ class DecompositionPlotWidget(BasePlotWidget):
         "Create/update the list of display modes and signal the change"
         m = ['Error progress']
         if self.concentrations is not None:
-            m = m + [ 'Initial spectra', 'Spectra', 'Concentrations' ]
+            m = m + [ 'Initial spectra', 'Spectra', 'Contributions' ]
             for i in range(len(self.concentrations)):
-                m.append('Concentration %d' % (i+1))
+                m.append('Contribution %d' % (i+1))
             m = m + list(self.cluster_maps.keys())
         self.display_modes = m
         if self.display_mode <= len(m):
@@ -427,7 +427,7 @@ class DecompositionPlotWidget(BasePlotWidget):
             self.concentrations[...] = concentrations.min(1)[:,None]
             self.concentrations[:, self.roi] = concentrations
 
-        self.add_clustering('Strongest component',
+        self.add_clustering('Strongest contribution',
                             np.argmax(self.concentrations, axis=0))
         if udm:
             self.update_display_modes()
