@@ -132,12 +132,15 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         # self.pushButtonClusterSave.clicked.connect(self.caSave)
 
         exportMenu = QMenu()
-        for txt, a in [['Annotation averages', 'annotation'],
-                         ['Cluster averages', 'cluster'],
-                         ['Individual spectra', None]]:
+        for txt, a, b in [['Annotation averages', 'annotation', False],
+                         ['Cluster averages', 'cluster', False],
+                         ['Individual spectra', None, False],
+                         ['Batch, annotation averages', 'annotation', True],
+                         ['Batch, cluster averages', 'cluster', True],
+                         ['Batch, individual spectra', None, True]]:
             exportAction = QAction(txt, self)
             exportAction.triggered.connect(
-                functools.partial(self.caExport, average=a))
+                functools.partial(self.caExport, average=a, batch=b))
             exportAction.setIconVisibleInMenu(False)
             exportMenu.addAction(exportAction)
         self.toolButtonClusterExport.setMenu(exportMenu)
@@ -600,6 +603,10 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         inp = normalization.normalize_features(inp, p.caNormalization)
 
         if p.caMethod == 'kmeans':
+            clusterer = sklearn.cluster.KMeans(
+                n_clusters=p.caClusters, n_init=p.caRestarts)
+            labels = clusterer.fit_predict(inp)
+        elif p.caMethod == 'mbkmeans':
             clusterer = sklearn.cluster.MiniBatchKMeans(
                 n_clusters=p.caClusters, n_init=p.caRestarts)
             labels = clusterer.fit_predict(inp)
@@ -775,17 +782,36 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     # def caSave(self, auto=False):
     #     self.genericSave(auto, what='clustering', description='Clustering')
 
-    def caExport(self, average=None):
+    def caExport(self, average=None, batch=False):
         if not self.data.curFile:
             return
-        filename = os.path.split(os.path.basename(self.data.curFile))[0]
-        filename = self.getSaveFileName(
-                "Export annotated spectra",
-                filter="Comma-separated values (*.csv);;All files (*)",
-                settingname='exportDir',
-                suffix='csv',
-                defaultfilename=filename+'.csv')
-        if filename:
+        if batch:
+            dirname = self.getDirectoryName(
+                "Batch export annotated spectra",
+                settingname='exportDir')
+            for i in range(len(self.data.filenames)):
+                self.fileLoader.spinBoxFileNumber.setValue(i + 1)
+                filename = os.path.join(
+                    dirname, os.path.splitext(
+                        os.path.basename(self.data.curFile))[0]+'.csv')
+                try:
+                    self.data.save_annotated_spectra(
+                        filename, filetype='csv', average=average)
+                except Exception as e:
+                    self.showDetailedErrorMessage(
+                            "Error saving settings to "+filename+": "+repr(e),
+                            traceback.format_exc())
+                    return
+        else:
+            filename = os.path.splitext(self.data.curFile)[0]+'.csv'
+            filename = self.getSaveFileName(
+                    "Export annotated spectra",
+                    filter="Comma-separated values (*.csv);;All files (*)",
+                    settingname='exportDir',
+                    suffix='csv',
+                    defaultfilename=filename)
+            if not filename:
+                return
             try:
                 self.data.save_annotated_spectra(
                     filename, filetype='csv', average=average)
@@ -800,7 +826,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     dcInitialValuesNames = ['simplisma', 'kmeans']
     dcAlgorithmNames = ['mcr-als-anderson', 'mcr-als']
     caInputNames = ['raw-roi', 'raw', 'decomposition']
-    caMethodNames = ['kmeans', 'strongest']
+    caMethodNames = ['kmeans', 'mbkmeans', 'strongest']
     caNormalizationNames = ['none', 'mean1', 'mean0', 'mean0var1']
     # caMethodNames = ['kmeans', 'meanshift', 'spectral']
 

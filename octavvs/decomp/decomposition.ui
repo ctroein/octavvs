@@ -151,7 +151,7 @@ margin: 5px;
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -938,6 +938,11 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
               <item>
                <property name="text">
                 <string>K-means</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>K-Means (minibatch)</string>
                </property>
               </item>
               <item>
