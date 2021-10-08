@@ -95,6 +95,10 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             self.dcSettingsClicked)
         self.comboBoxInitialValues.currentIndexChanged.connect(
             self.dcInitialValuesChanged)
+        self.lineEditInitSkew.setFormat('%g')
+        self.lineEditInitSkew.setRange(1, 1000)
+        self.lineEditInitNoise.setFormat('%g')
+        self.lineEditInitNoise.setRange(.001, 1)
         self.comboBoxDerivative.currentIndexChanged.connect(
             self.dcDerivativeChanged)
         self.checkBoxContrast.toggled.connect(self.dcContrastChanged)
@@ -489,16 +493,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             self.plot_decomp.set_initial_spectra(spectra)
         self.plot_decomp.set_errors(errors)
 
-    # def clusterDC(self):
-    #     data = self.plot_decomp.get_concentrations().T
-    #     data = data / data.mean(axis=0)
-    #     kmeans = sklearn.cluster.MiniBatchKMeans(
-    #         self.spinBoxClusters.value())
-    #     labels = kmeans.fit_predict(data)
-    #     self.plot_decomp.add_clustering('K-means', labels)
-    #     self.comboBoxPlotMode.setCurrentText('K-means')
-    #     self.plot_decomp.draw_idle()
-
     # def dcLoad(self, auto=False):
     #     self.genericLoad(auto, what='decomposition',
     #                      description='decomposition data')
@@ -508,7 +502,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     #                      description='decomposition data')
 
     def dcInitialValuesChanged(self):
-        pass
+        self.stackedWidgetInit.setCurrentIndex(
+            self.comboBoxInitialValues.currentIndex())
 
     def dcDerivativeChanged(self):
         en = self.comboBoxDerivative.currentIndex() > 0
@@ -823,7 +818,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
 
     # Parameter handling
     useRoiNames = ['ignore', 'ifdef', 'require']
-    dcInitialValuesNames = ['simplisma', 'kmeans']
+    dcInitialValuesNames = ['simplisma', 'kmeans', 'clustersubtract']
     dcAlgorithmNames = ['mcr-als-anderson', 'mcr-als']
     caInputNames = ['raw-roi', 'raw', 'decomposition']
     caMethodNames = ['kmeans', 'mbkmeans', 'strongest']
@@ -850,6 +845,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.dcStartingPoint = self.comboBoxStartingPoint.currentIndex()
         p.dcInitialValues = self.dcInitialValuesNames[
             self.comboBoxInitialValues.currentIndex()]
+        p.dcInitialValuesSkew = self.lineEditInitSkew.value()
+        p.dcInitialValuesPower = self.spinBoxInitPower.value()
+        p.dcInitialValuesNoise = self.lineEditInitNoise.value()
         p.dcRoi = self.useRoiNames[self.comboBoxUseRoi.currentIndex()]
         p.dcContrast = self.checkBoxContrast.isChecked()
         p.dcContrastConcentrations = self.comboBoxContrast.currentIndex()
@@ -905,6 +903,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.comboBoxStartingPoint.setCurrentIndex(p.dcStartingPoint)
         self.comboBoxInitialValues.setCurrentIndex(
             self.dcInitialValuesNames.index(p.dcInitialValues))
+        self.lineEditInitSkew.setValue(p.dcInitialValuesSkew)
+        self.spinBoxInitPower.setValue(p.dcInitialValuesPower)
+        self.lineEditInitNoise.setValue(p.dcInitialValuesNoise)
         self.comboBoxUseRoi.setCurrentIndex(self.useRoiNames.index(p.dcRoi))
         self.checkBoxContrast.setChecked(p.dcContrast)
         self.comboBoxContrast.setCurrentIndex(p.dcContrastConcentrations)

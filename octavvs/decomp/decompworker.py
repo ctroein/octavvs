@@ -88,13 +88,18 @@ class DecompWorker(QObject):
             y = y.T
 
         if params.dcInitialValues == 'simplisma':
-            simplisma_noise = 0.1
+            # simplisma_noise = 0.1
             initst = decomposition.simplisma(
-                y.T, params.dcComponents, simplisma_noise)[0]
+                y.T, params.dcComponents, params.dcInitialValuesNoise)[0]
         elif params.dcInitialValues == 'kmeans':
             km = sklearn.cluster.MiniBatchKMeans(
                 n_clusters=params.dcComponents).fit(y)
             initst = km.cluster_centers_
+        elif params.dcInitialValues == 'clustersubtract':
+            initst = decomposition.clustersubtract(
+                y, components=params.dcComponents,
+                skewness=params.dcInitialValuesSkew,
+                power=params.dcInitialValuesPower)
         else:
             raise ValueError('Unknown params.dcInitialValues')
 

@@ -8,6 +8,7 @@ Created on Tue May 18 14:45:53 2021
 
 import numpy as np
 import scipy
+import math
 import time
 from threadpoolctl import threadpool_limits
 
@@ -70,6 +71,62 @@ def simplisma(d, nr, f):
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
 
+def clustersubtract(data, components, skewness=300, power=2):
+    """
+    Create initial spectra for MCR-ALS based on successively removing
+    what appears to be the strongest remaining component.
+
+    Parameters
+    ----------
+    data : array (nspectra, nfeatures)
+        Spectral data.
+    components : int
+        Number of components to return.
+    skewness : float, optional
+        Asymmetry between positive and negative residuals when computing
+        how much of the previous component to remove from the data.
+        The default is 100.
+    power : float, optional
+        The sum of residuals is raised to this power before summation to
+        determine the leading remaining component.
+
+    Returns
+    -------
+    initial_spectra : array (components, nfeatures)
+    """
+    def typical_cluster(data, first):
+        # draw sqrt(n) random, r
+        # find closest in r for each s
+        # for r with most s, return mean of s (or iterate?)
+        r = np.random.choice(len(data), math.floor(math.sqrt(len(data))))
+        rd = data[r]
+        nearest = scipy.spatial.distance.cdist(
+            rd, data, 'cosine').argmin(axis=0)
+        # Mean of those who are nearest the biggest cluster
+        if first:
+            selected = np.bincount(nearest).argmax()
+        else:
+            sums = data.sum(1)**power
+            selected = np.bincount(nearest, weights=sums).argmax()
+        return data[nearest == selected].mean(0)
+
+    comps = []
+    for c in range(components):
+        tc = typical_cluster(data, c == 0)
+        tc = np.maximum(tc, 0)
+        tc = tc / (tc * tc).sum() ** .5
+
+        comps.append(tc)
+        sgn = np.ones_like(data, dtype=bool)
+        for i in range(10):
+            ww = 1 * sgn + skewness * ~sgn
+            a = (data * ww * tc).sum(1) / (ww * tc * tc).sum(1)
+            oldsgn = sgn
+            sgn = data > a[:, None] @ tc[None, :]
+            if np.array_equal(sgn, oldsgn):
+                break
+        data = data - a[:, None] @ tc[None, :]
+    return np.array(comps)
 
 def numpy_scipy_threading_fix_(func):
     """

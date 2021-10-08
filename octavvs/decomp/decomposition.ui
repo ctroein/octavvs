@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1166</width>
+    <width>1220</width>
     <height>785</height>
    </rect>
   </property>
@@ -151,7 +151,7 @@ margin: 5px;
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -381,7 +381,7 @@ margin: 5px;
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,1,1,1,1,2">
             <item>
              <widget class="QLabel" name="label_3">
               <property name="text">
@@ -482,56 +482,112 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
               </item>
               <item>
                <property name="text">
-                <string>Load from file</string>
+                <string>Clustersubtract</string>
                </property>
               </item>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_25">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>How to treat the region of interest. If required, at least one spectrum must be selected in every image.</string>
-              </property>
-              <property name="text">
-               <string>Use ROI</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="comboBoxUseRoi">
+             <widget class="QStackedWidget" name="stackedWidgetInit">
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
-              <item>
-               <property name="text">
-                <string>Ignored</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>If defined</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Required</string>
-               </property>
-              </item>
+              <widget class="QWidget" name="page_2">
+               <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,0">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="label_22">
+                  <property name="text">
+                   <string>Noise</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="LineDouble" name="lineEditInitNoise">
+                  <property name="text">
+                   <string>0.1</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_3"/>
+              <widget class="QWidget" name="page">
+               <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,0,1,0">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="label_19">
+                  <property name="text">
+                   <string>Skew</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="LineDouble" name="lineEditInitSkew">
+                  <property name="text">
+                   <string>100</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_21">
+                  <property name="text">
+                   <string>P</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBoxInitPower">
+                  <property name="minimum">
+                   <number>0</number>
+                  </property>
+                  <property name="maximum">
+                   <number>3</number>
+                  </property>
+                  <property name="value">
+                   <number>2</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
              </widget>
             </item>
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1,0,1,1,1,1">
             <item>
              <widget class="QCheckBox" name="checkBoxContrast">
               <property name="toolTip">
@@ -605,6 +661,45 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
              </widget>
             </item>
             <item>
+             <widget class="QLabel" name="label_25">
+              <property name="toolTip">
+               <string>How to treat the region of interest. If required, at least one spectrum must be selected in every image.</string>
+              </property>
+              <property name="text">
+               <string>Use ROI</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxUseRoi">
+              <property name="currentIndex">
+               <number>1</number>
+              </property>
+              <item>
+               <property name="text">
+                <string>Ignored</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>If defined</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Required</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,0,0,1,0,1,5,1,1,0">
+            <item>
              <widget class="QLabel" name="label_10">
               <property name="sizePolicy">
                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -666,6 +761,12 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="minimumSize">
+               <size>
+                <width>40</width>
+                <height>0</height>
+               </size>
+              </property>
               <property name="text">
                <string>0.01</string>
               </property>
@@ -675,24 +776,6 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
              <widget class="QLabel" name="label_14">
               <property name="text">
                <string>%</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,0,1,5,1,1,0">
-            <item>
-             <widget class="QPushButton" name="pushButtonStart">
-              <property name="text">
-               <string>Run decomposition</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonStop">
-              <property name="text">
-               <string>Stop</string>
               </property>
              </widget>
             </item>
@@ -770,7 +853,21 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,6,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,0,0,6,0">
+            <item>
+             <widget class="QPushButton" name="pushButtonStart">
+              <property name="text">
+               <string>Run decomposition</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonStop">
+              <property name="text">
+               <string>Stop</string>
+              </property>
+             </widget>
+            </item>
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
