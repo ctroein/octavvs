@@ -80,7 +80,7 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5, extra_factor=0.2
     for i in range(corr_ranges):
         p, q = ranges[i]
         if q - p < 2: continue
-        atm[p:q] -= baseline.straight(wn[p:q], atm[p:q]);
+        atm[p:q] -= baseline.straight(wn[p:q], atm[p:q])
 
     savgolwin = 1 + 2 * int(smooth_win * (len(wn) - 1) / np.abs(wn[0] - wn[-1]))
 
