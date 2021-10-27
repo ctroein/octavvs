@@ -149,7 +149,7 @@ def numpy_scipy_threading_fix_(func):
 
 @numpy_scipy_threading_fix_
 def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
-            tol_abs_error=0, tol_rel_improv=None, tol_ups_after_best=None,
+            tol_abs_error=0, tol_rel_improv=None, tol_iters_after_best=None,
             maxtime=None, callback=None, acceleration=None, normalize=None,
             contrast_weight=None, return_time=False, **kwargs):
     """
@@ -169,8 +169,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
         Error target (mean square error).
     tol_rel_improv : float, optional
         Stop when relative improvement is less than this over 10 iterations.
-    tol_ups_after_best : int, optional
-        Stop after error going net up this many times since best error.
+    tol_iters_after_best : int, optional
+        Stop after this many iteratinos since last best error.
     maxtime : float, optional
         Stop after this many seconds of process time have elapsed
     callback : func(it : int, err : float, A : array, B : array)
@@ -372,7 +372,7 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
             errorbest = error
             Abest = A
             Bbest = B
-            netups = 0
+            iterbest = it
         if it:
             if error < tol_abs_error:
                 break
@@ -380,14 +380,10 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                 emax = max(errors[-tol_rel_iters-1:-2])
                 if (emax - errors[-1]) * tol_rel_iters <= \
                     tol_rel_improv * emax:
-                    break
-            if tol_ups_after_best is not None:
-                if error < errors[-2]:
-                    netups = max(0, netups - 1)
-                else:
-                    netups = netups + 1
-                    if netups > tol_ups_after_best:
                         break
+            if tol_iters_after_best is not None:
+                if iterbest + tol_iters_after_best < it:
+                    break
         if it and maxtime and curtime >= maxtime:
             break
         if callback is not None:
