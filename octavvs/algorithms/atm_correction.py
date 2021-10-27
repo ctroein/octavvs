@@ -16,10 +16,13 @@ from .util import load_reference, find_wn_ranges
 def cut_wn(wn, y, ranges):
     """
     Cut a set of spectra, leaving only the given wavenumber range(s).
-    Parameters:
+
+    Parameters
+    ----------
     wn: array of wavenumbers, sorted in either direction
     y: array of spectra, shape (..., wavenumber)
-    ranges: list or numpy array of shape (..., 2) with desired wavenumber ranges in pairs (low, high)
+    ranges: list or numpy array of shape (..., 2) with desired wavenumber
+    ranges in pairs (low, high)
     Returns: (wavenumbers, spectra) with data in the given wavenumber ranges
     """
     if isinstance(ranges, list):
@@ -28,14 +31,18 @@ def cut_wn(wn, y, ranges):
     ix = np.array([inrange(w) for w in wn])
     return wn[ix], y[...,ix]
 
-def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5, extra_factor=0.25,
-                       smooth_win=9, progressCallback = None):
+def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
+                extra_factor=0.25, smooth_win=9, progressCallback = None):
     """
-    Apply atmospheric correction to multiple spectra, subtracting as much of the atompsheric
-    spectrum as needed to minimize the sum of squares of differences between consecutive points
-    in the corrected spectra. Each supplied range of wavenumbers is corrected separately.
+    Correct for atmospheric gases.
 
-    Parameters:
+    Apply atmospheric correction to multiple spectra, subtracting as much
+    of the atompsheric spectrum as needed to minimize the sum of squares of
+    differences between consecutive points in the corrected spectra.
+    Each supplied range of wavenumbers is corrected separately.
+
+    Parameters
+    ----------
         wn: array of wavenumbers, sorted in either direction
         y: array of spectra in the order (pixel, wavenumber), or just one spectrum
         atm: atmospheric spectrum; if None, load the default
@@ -46,8 +53,11 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5, extra_factor=0.2
         smooth_win: window size (in cm-1) for smoothing of the spectrum in the atm regions
         progressCallback(int a, int b): callback function called to indicated that the processing
         is complete to a fraction a/b.
-    Returns:
-        tuple of (spectra after correction, array of correction factors; shape (spectra,ranges))
+
+    Returns
+    -------
+        Tuple of (spectra after correction, array of correction factors;
+                  shape (spectra,ranges))
     """
     squeeze = False
     yorig = y
