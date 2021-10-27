@@ -13,7 +13,7 @@ import scipy.signal, scipy.io
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import DecompositionData, Parameters
-from octavvs.algorithms import decomposition
+from octavvs.algorithms import decomposition, imputation
 import time
 import sklearn.cluster
 
@@ -59,7 +59,7 @@ class DecompWorker(QObject):
         return False
 
     def emitProgress(self, *pargs):
-        "Combined progress signal and check for user interruption"
+        """Signal progress and check for user interruption."""
         if self.halt:
             raise InterruptedError('interrupted by user')
         self.progress.emit(*pargs)
@@ -70,6 +70,8 @@ class DecompWorker(QObject):
         Run decomposition stuff.
         """
         y = data.raw
+        if params.dcImpute:
+            y = imputation.impute_from_neighbors(y)
         if data.decomposition_roi is not None:
             y = y[data.decomposition_roi, :]
 
@@ -145,7 +147,7 @@ class DecompWorker(QObject):
             nonnegative=nonneg,
             # tol_abs_error=params.dcTolerance * base_error,
             tol_rel_improv=params.dcTolerance * .01,
-            tol_ups_after_best=30, callback=cb_iter,
+            tol_iters_after_best=40, callback=cb_iter,
             acceleration=acceleration, normalize='B' if c_first else 'A',
             contrast_weight=cweight)
         if c_first:
