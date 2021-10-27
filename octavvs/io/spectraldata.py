@@ -71,18 +71,32 @@ class SpectralData:
                     s = scipy.io.loadmat(filename)
                 # Assume data are in the biggest matrix in the file
                 ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
-                if 'wh' in s:
-                    wh = s['wh'].flatten()
             else:
                 filetype = 'txt'
+                s = {}
                 ss = np.loadtxt(filename)
-
-            if ss.ndim != 2 or ss.shape[0] < 10 or ss.shape[1] < 2:
+            if 'ImR' in s and 'lambda' in s:
+                ss = s['ImR']
+                if ss.ndim == 2:
+                    raw = ss
+                else:
+                    assert ss.ndim == 3
+                    wh = [ss.shape[1], ss.shape[0]]
+                    raw = ss.reshape((-1, ss.shape[2]))
+                wn = s['lambda'].flatten()
+                if wn[0] < wn[-1]:
+                    wn = wn[::-1]
+                    raw = raw[:, ::-1]
+                assert len(wn) == raw.shape[1]
+            elif ss.ndim == 2 and ss.shape[0] >= 10 and ss.shape[1] > 1:
+                if 'wh' in s:
+                    wh = s['wh'].flatten()
+                d = -1 if ss[0,0] < ss[-1,0] else 1
+                raw = ss[::d,1:].T
+                wn = ss[::d,0]
+            else:
                 raise RuntimeError(
                     'file does not appear to describe an FTIR image matrix')
-            d = -1 if ss[0,0] < ss[-1,0] else 1
-            raw = ss[::d,1:].T
-            wn = ss[::d,0]
         else:
             if fext == '.ptir' or fext == '.hdf':
                 filetype = 'ptir'

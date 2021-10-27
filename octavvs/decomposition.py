@@ -1,6 +1,6 @@
 import os
 import traceback
-import functools
+from functools import partial
 from pkg_resources import resource_filename
 import argparse
 
@@ -59,40 +59,47 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.spinBoxComponents.setStyle(NoRepeatStyle())
         self.spinBoxIterations.setStyle(NoRepeatStyle())
 
-        self.comboBoxDirectory.currentIndexChanged.connect(
-            self.dirModeCheck)
-        self.pushButtonDirectory.clicked.connect(self.dirSelect)
-        self.lineEditDirectory.editingFinished.connect(self.dirEditCheck)
+        # Not really needed
         self.pushButtonSaveParameters.clicked.connect(self.saveParameters)
         self.pushButtonLoadParameters.clicked.connect(self.loadParameters)
-        self.pushButtonRdcLoad.clicked.connect(self.rdcLoad)
-        self.pushButtonRdcSave.clicked.connect(self.rdcSave)
 
         self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
             self.plot_roi.set_cmap)
         self.imageVisualizer.plot_raw.updatedProjection.connect(
             self.plot_roi.set_data)
         self.pushButtonRoiClear.clicked.connect(self.roiClear)
+        self.pushButtonRoiDraw.clicked.connect(self.roiDrawFree)
         self.pushButtonRoiAdd.clicked.connect(self.roiAddArea)
         self.pushButtonRoiRemove.clicked.connect(self.roiRemoveArea)
         self.pushButtonRoiErase.clicked.connect(
             self.plot_roi.erase_last_point)
         self.pushButtonRoiInvert.clicked.connect(self.plot_roi.invert_roi)
         self.plot_roi.updated.connect(self.roiUpdateSelected)
-        # self.pushButtonRoiLoad.clicked.connect(self.roiLoad)
-        # self.pushButtonRoiSave.clicked.connect(self.roiSave)
+
+        # Connect all the data loading/saving stuff
+        for att, what in {'Roi': 'roi', 'Dc': 'decomposition',
+                          'Ca': 'clustering'}.items():
+            getattr(self, 'pushButton%sDirectory' % att).clicked.connect(
+                partial(self.genericDirSelect, what=what))
+            getattr(self, 'lineEdit%sDirectory' % att).editingFinished.connect(
+                partial(self.reloadCheck, what=what))
+            getattr(self, 'pushButton%sLoad' % att).clicked.connect(
+                partial(self.genericLoad, what=what))
+            getattr(self, 'pushButton%sSave' % att).clicked.connect(
+                partial(self.genericSave, what=what))
 
         self.imageVisualizer.plot_spectra.updated.connect(self.updateDC)
         self.pushButtonStart.clicked.connect(self.startDC)
         self.pushButtonStop.clicked.connect(self.stopDC)
-        # self.pushButtonLoad.clicked.connect(self.dcLoad)
-        # self.pushButtonSave.clicked.connect(self.dcSave)
         self.pushButtonRun.clicked.connect(self.dcBatchRun)
         self.pushButtonRunStop.clicked.connect(self.stopDC)
+
         self.pushButtonSettingsInfo.clicked.connect(self.dcSettingsShow)
         self.dialogSettingsTable = DialogSettingsTable()
         self.dialogSettingsTable.buttonBox.clicked.connect(
             self.dcSettingsClicked)
+        # todo: Preset editing - save in application settings?
+
         self.comboBoxInitialValues.currentIndexChanged.connect(
             self.dcInitialValuesChanged)
         self.lineEditInitSkew.setFormat('%g')
@@ -131,9 +138,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.listWidgetClusterUnused.itemDoubleClicked.connect(
             self.caClickedUnused)
         self.plot_cluster.clicked.connect(self.caSelectCluster)
-        # self.toolButtonClusterExport.clicked.connect(self.caExport)
-        # self.pushButtonClusterLoad.clicked.connect(self.caLoad)
-        # self.pushButtonClusterSave.clicked.connect(self.caSave)
 
         exportMenu = QMenu()
         for txt, a, b in [['Annotation averages', 'annotation', False],
@@ -144,7 +148,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                          ['Batch, individual spectra', None, True]]:
             exportAction = QAction(txt, self)
             exportAction.triggered.connect(
-                functools.partial(self.caExport, average=a, batch=b))
+                partial(self.caExport, average=a, batch=b))
             exportAction.setIconVisibleInMenu(False)
             exportMenu.addAction(exportAction)
         self.toolButtonClusterExport.setMenu(exportMenu)
@@ -196,7 +200,16 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def updateFileList(self, *argv, **kwargs):
         ret = super().updateFileList(*argv, **kwargs)
         if ret:
-            self.dirModeCheck(42)
+            dups = self.data.get_duplicate_filenames()
+            if dups:
+                q = QMessageBox(self)
+                q.setIcon(QMessageBox.Warning)
+                q.setWindowTitle('Warning: identical filenames')
+                q.setText('Some input files have identical names, which '
+                          'will cause problems with overwritten output files.')
+                q.setTextFormat(Qt.PlainText)
+                q.setDetailedText('Examples:\n' + '\n'.join(list(dups)[:10]))
+                q.exec()
         return ret
 
     def loadFile(self, file):
@@ -233,7 +246,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             wh=self.data.wh, pixelxy=self.data.pixelxy)
         self.plot_cluster.set_basic_data(
             wh=self.data.wh, pixelxy=self.data.pixelxy)
-        # self.genericLoad(auto=True)
+        self.autoLoad()
         self.populatePlots()
         self.updatedFile()
 
@@ -262,127 +275,143 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         super().setPlotColors(cmap)
         self.plot_decomp.draw_idle()
 
-    # Common output directory handling
-    def dirCurrent(self):
-        if self.comboBoxDirectory.currentIndex():
-            return self.lineEditDirectory.text()
-        return None
+    # Loading and saving data
+    def suggestedFilename(self, what):
+        if not self.data.curFile:
+            return None
+        fn = os.path.splitext(os.path.basename(self.data.curFile))[0]
+        if what == 'roi':
+            return os.path.join(self.lineEditRoiDirectory.text(), fn) + '.roi'
+        if what == 'decomposition':
+            return os.path.join(self.lineEditDcDirectory.text(), fn) + '.dcn'
+        if what == 'clustering':
+            return os.path.join(self.lineEditCaDirectory.text(), fn) + '.can'
 
-    def dirModeCheck(self,qq=0):
-        other = self.comboBoxDirectory.currentIndex()
-        self.lineEditDirectory.setEnabled(other)
-        if other:
-            dups = self.data.get_duplicate_filenames()
-            if dups:
-                q = QMessageBox(self)
-                q.setIcon(QMessageBox.Warning)
-                q.setWindowTitle('Warning: identical filenames')
-                q.setText('Some input files have identical names so their '
-                          'regions of interest will attempt to use '
-                          'the same files.')
-                q.setTextFormat(Qt.PlainText)
-                q.setDetailedText('Examples:\n' + '\n'.join(list(dups)[:10]))
-                q.exec()
-            if not self.lineEditDirectory.text():
-                self.dirSelect()
-        self.data.set_rdc_directory(self.dirCurrent())
+    def fileFormats(self, what):
+        if what == 'roi':
+            ff = "ROI HDF5 files (*.roi);;ROI MATLAB files (*.mat);;"\
+                "ROI CVS files (*.csv);;"
+            descr = 'ROI'
+        elif what == 'decomposition':
+            ff = "Decomposition HDF5 files (*.dcn);;"
+            descr = 'decomposition data'
+        elif what == 'clustering':
+            ff = "Clustering/annotation HDF5 files (*.can);;"
+            descr = 'clustering/annotations'
+        else:
+            ff = ""
+            descr = 'data'
+        return ff + "Combined HDF5 files (*.odd);;All files (*)", descr
 
-    def dirSelect(self):
-        rdir = self.getDirectoryName(
-            "Select ROI directory", settingname='rdcDir')
-        if rdir is not None:
-            self.lineEditDirectory.setText(rdir)
-            # self.data.set_rdc_directory(self.dirCurrent())
-            self.comboBoxDirectory.setCurrentIndex(1)
-            self.dirEditCheck()
-
-    def dirEditCheck(self):
-        if not self.lineEditDirectory.text():
-            self.comboBoxDirectory.setCurrentIndex(0)
-        self.data.set_rdc_directory(self.dirCurrent())
-        if self.data.curFile:
-            filename = self.data.rdc_filename()
-            if os.path.exists(filename):
-                yn = QMessageBox.question(
-                    self, 'Directory changed',
-                    '(Re)load saved data from selected directory?')
-                if yn == QMessageBox.Yes:
-                    self.data.load_rdc()
-                    self.populatePlots()
-
-
-    # Loading and saving rdc data
-    def genericLoad(self, what='all', description='data'):
+    def genericLoad(self, what='all'):
         if not self.data.curFile:
             return
-        path = os.path.split(self.data.rdc_filename())
+        path = os.path.split(self.suggestedFilename(what))
+        filter, description = self.fileFormats(what)
         filename = self.getLoadFileName(
             "Load %s from file" % description,
-            filter="Decomposition HDF5 files (*.odd);;All files (*)",
+            filter=filter,
             directory=path[0], defaultfilename=path[1])
         if not filename:
             return
         self.data.load_rdc(filename, what=what)
         self.populatePlots()
 
-    def rdcLoad(self):
-        self.genericLoad()
+    def autoLoad(self):
+        for what in ['roi', 'decomposition', 'clustering']:
+            filename = self.suggestedFilename(what)
+            if filename and os.path.exists(filename):
+                self.data.load_rdc(filename, what=what)
 
-    def genericSave(self, what='all', description='data'):
+    def genericSave(self, what='all'):
         if not self.data.curFile:
             return
-
-        path = os.path.split(self.data.rdc_filename())
+        path = os.path.split(self.suggestedFilename(what))
+        filter, description = self.fileFormats(what)
         filename = self.getSaveFileName(
             "Save %s to file" % description,
-            filter="Decomposition HDF5 files (*.odd);;All files (*)",
+            filter=filter,
             directory=path[0], defaultfilename=path[1])
         if not filename:
             return
 
         # Make sure self.data is up-to-date
         if what in ['roi', 'all']:
-            print('save set ROI',self.plot_roi.get_roi())
             self.data.set_roi(self.plot_roi.get_roi())
         if what in ['decomposition', 'all']:
             ...
         if what in ['clustering', 'all']:
             self.caSelectAnnotation()
-        self.data.save_rdc(filename, what=what)
-
-    def rdcSave(self):
-        self.genericSave()
+        ext = os.path.splitext(filename)[1]
+        if what == 'roi':
+            self.data.save_roi(filename=filename, fmt=ext)
+        else:
+            self.data.save_rdc(filename=filename, what=what)
 
     def autosaveCheck(self):
-        if (self.data.curFile and self.checkBoxRdcAutosave.isChecked()
-            and not self.workerRunning):
-            self.data.set_roi(self.plot_roi.get_roi())
-            self.caSelectAnnotation()
-            self.data.save_rdc()
+        if self.data.curFile and not self.workerRunning:
+            save = []
+            if self.checkBoxRoiAutosave.isChecked():
+                self.data.set_roi(self.plot_roi.get_roi())
+                save.append('roi')
+            if self.checkBoxDcAutosave.isChecked():
+                save.append('decomposition')
+            if self.checkBoxCaAutosave.isChecked():
+                self.caSelectAnnotation()
+                save.append('clustering')
+            for what in save:
+                self.data.save_rdc(self.suggestedFilename(
+                    what=what), what=what)
+
+    def reloadCheck(self, what):
+        filename = self.suggestedFilename(what)
+        if filename:
+            descr = self.fileFormats(what)[1]
+            if os.path.exists(filename):
+                yn = QMessageBox.question(
+                    self, 'Directory changed',
+                    '(Re)load saved %s from selected directory?' % descr)
+                if yn == QMessageBox.Yes:
+                    self.data.load_rdc(filename=filename, what=what)
+                    self.populatePlots()
+
+    def genericDirSelect(self, what):
+        descr = self.fileFormats(what)[1]
+        short = {'roi': 'roi', 'decomposition': 'dc',
+                 'clustering': 'ca', 'all': 'rdc'}[what]
+        rdir = self.getDirectoryName(
+            'Select %s directory' % descr, settingname=short+'Dir',
+            default=os.path.dirname(self.data.curFile))
+        if rdir is not None:
+            Short = short[0].upper() + short[1:]
+            getattr(self, 'lineEdit%sDirectory' % Short).setText(rdir)
+            self.reloadCheck(what=what)
 
     # Roi, Region of interest
     def roiClear(self):
-        self.pushButtonRoiAdd.setChecked(False)
-        self.pushButtonRoiRemove.setChecked(False)
-        self.plot_roi.set_draw_mode('click')
+        self.roiDrawFree(True)
         self.plot_roi.clear()
 
+    def roiCheckButtons(self):
+        mode = self.plot_roi.get_draw_mode()
+        self.pushButtonRoiDraw.setChecked(mode == 'click')
+        self.pushButtonRoiAdd.setChecked(mode == 'add')
+        self.pushButtonRoiRemove.setChecked(mode == 'remove')
+
+    def roiDrawFree(self, checked):
+        self.plot_roi.set_draw_mode('click')
+        self.roiCheckButtons()
+
     def roiAddArea(self, checked):
-        self.pushButtonRoiRemove.setChecked(False)
         self.plot_roi.set_draw_mode('add' if checked else 'click')
+        self.roiCheckButtons()
 
     def roiRemoveArea(self, checked):
-        self.pushButtonRoiAdd.setChecked(False)
         self.plot_roi.set_draw_mode('remove' if checked else 'click')
+        self.roiCheckButtons()
 
     def roiUpdateSelected(self, n, m):
         self.labelRoiSelected.setText('Selected: %d / %d' % (n, m))
-
-    # def roiLoad(self, auto=False):
-    #     self.genericLoad(auto, what='roi', description='ROI')
-
-    # def roiSave(self, auto=False):
-    #     self.genericSave(auto, what='roi', description='ROI')
 
 
     # DC, Decomposition
@@ -408,12 +437,16 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         "Move between states: 0=idle, 1=run one, 2=run batch"
         onoff = not newstate
         self.fileLoader.setEnabled(onoff)
-        self.pushButtonRdcLoad.setEnabled(onoff)
-        self.pushButtonRdcSave.setEnabled(onoff)
+        self.pushButtonRoiLoad.setEnabled(onoff)
+        self.pushButtonRoiSave.setEnabled(onoff)
+        self.pushButtonDcLoad.setEnabled(onoff)
+        self.pushButtonDcSave.setEnabled(onoff)
+        self.pushButtonCaLoad.setEnabled(onoff)
+        self.pushButtonCaSave.setEnabled(onoff)
         self.pushButtonRun.setEnabled(onoff)
         self.pushButtonStart.setEnabled(onoff)
-        if newstate:
-            self.progressBarIteration.setValue(0)
+        # if newstate:
+        #     self.progressBarIteration.setValue(0)
         self.pushButtonStop.setEnabled(newstate == 1)
         self.pushButtonRunStop.setEnabled(newstate == 2)
         self.workerRunning = newstate
@@ -436,16 +469,18 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.data.set_decomposition_settings(params)
         self.dcSettingsUpdate()
         self.plot_decomp.clear_and_set_roi(self.data.decomposition_roi)
-        self.progressBarIteration.setMaximum(params.dcIterations)
-        self.progressBarIteration.setFormat('initializing')
+        # self.progressBarIteration.setMaximum(params.dcIterations)
+        # self.progressBarIteration.setFormat('initializing')
+        self.lineEditIteration.setText('init')
         self.toggleRunning(1)
         self.startDecomp.emit(self.data, params)
 
     def clearDC(self):
         if self.workerRunning == 1:
             return
-        self.progressBarIteration.setValue(0)
-        self.progressBarIteration.setFormat('idle')
+        self.lineEditIteration.setText('idle')
+        # self.progressBarIteration.setValue(0)
+        # self.progressBarIteration.setFormat('idle')
 
     def stopDC(self):
         self.worker.halt = True
@@ -470,17 +505,14 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.plot_decomp.set_spectra(spectra)
         self.plot_decomp.set_concentrations(concentrations)
         self.plot_decomp.set_errors(errors)
-        self.progressBarIteration.setFormat('done')
-        self.progressBarIteration.setValue(0)
+        self.lineEditIteration.setText('%d/done' % len(errors))
         self.dcStopped()
         self.caClear()
 
     @pyqtSlot(int, float)
     def dcProgress(self, iteration, error):
-        if not iteration:
-            self.progressBarIteration.setFormat('%v / %m')
-        else:
-            self.progressBarIteration.setValue(iteration)
+        if iteration:
+            self.lineEditIteration.setText('%d' % iteration)
             self.lineEditRelError.setText('%.4f' % (error * 100))
 
     @pyqtSlot(int, np.ndarray, np.ndarray, list)
@@ -492,14 +524,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             # self.data.add_decomposition_data(0, spectra, None)
             self.plot_decomp.set_initial_spectra(spectra)
         self.plot_decomp.set_errors(errors)
-
-    # def dcLoad(self, auto=False):
-    #     self.genericLoad(auto, what='decomposition',
-    #                      description='decomposition data')
-
-    # def dcSave(self, auto=False):
-    #     self.genericSave(auto, what='decomposition',
-    #                      description='decomposition data')
 
     def dcInitialValuesChanged(self):
         self.stackedWidgetInit.setCurrentIndex(
@@ -562,7 +586,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.toggleRunning(2)
         self.startBatch.emit(self.data, params)
 
-
     @pyqtSlot(int, int)
     def dcBatchProgress(self, a, b):
         self.progressBarRun.setValue(a)
@@ -571,8 +594,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     @pyqtSlot(bool)
     def dcBatchDone(self, success):
         self.worker.halt = False
-        self.progressBarIteration.setValue(0)
-        self.progressBarIteration.setFormat('done' if success else 'failed')
+        self.lineEditIteration.setText('done' if success else 'fail')
         self.toggleRunning(0)
 
 
@@ -771,12 +793,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             while l.count():
                 l.takeItem(0)
 
-    # def caLoad(self, auto=False):
-    #     self.genericLoad(auto, what='clustering', description='Clustering')
-
-    # def caSave(self, auto=False):
-    #     self.genericSave(auto, what='clustering', description='Clustering')
-
     def caExport(self, average=None, batch=False):
         if not self.data.curFile:
             return
@@ -827,17 +843,18 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
 
     # Loading and saving parameters
     def getParameters(self):
-        "Copy from UI to some kind of parameters object"
+        """Copy from UI to some kind of parameters object."""
         p = Parameters()
         self.fileLoader.saveParameters(p)
         self.imageVisualizer.saveParameters(p)
 
-        p.dirMode = self.comboBoxDirectory.currentIndex()
-        p.directory = self.lineEditDirectory.text()
-        p.autosave = self.checkBoxRdcAutosave.isChecked()
+        # p.dirMode = self.comboBoxDirectory.currentIndex()
+        # p.directory = self.lineEditDirectory.text()
+        # p.autosave = self.checkBoxRdcAutosave.isChecked()
 
         p.dcAlgorithm = self.dcAlgorithmNames[
             self.comboBoxAlgorithm.currentIndex()]
+        p.dcImpute = self.checkBoxImpute.isChecked()
         p.dcDerivative = self.comboBoxDerivative.currentIndex()
         p.dcDerivativeWindow = self.spinBoxDerivativeWindow.value()
         p.dcDerivativePoly = self.spinBoxDerivativePoly.value()
@@ -854,7 +871,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.dcContrastWeight = self.lineEditContrast.value()
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
-
 
         p.caInput = self.caInputNames[self.comboBoxClusterInput.currentIndex()]
         p.caNormalization = self.caNormalizationNames[
@@ -885,17 +901,17 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                         traceback.format_exc())
 
     def setParameters(self, p):
-        "Copy from some kind of parameters object to UI"
+        """Copy from some kind of parameters object to UI."""
         self.fileLoader.loadParameters(p)
         self.imageVisualizer.loadParameters(p)
 
-        self.lineEditDirectory.setText(p.directory)
-        self.comboBoxDirectory.setCurrentIndex(p.dirMode)
-        self.checkBoxRdcAutosave.setChecked(p.autosave)
-        # self.data.set_rdc_directory(self.dirCurrent())
+        # self.lineEditDirectory.setText(p.directory)
+        # self.comboBoxDirectory.setCurrentIndex(p.dirMode)
+        # self.checkBoxRdcAutosave.setChecked(p.autosave)
 
         self.comboBoxAlgorithm.setCurrentIndex(
             self.dcAlgorithmNames.index(p.dcAlgorithm))
+        self.checkBoxImpute.setChecked(p.dcImpute)
         self.comboBoxDerivative.setCurrentIndex(p.dcDerivative)
         self.spinBoxDerivativeWindow.setValue(p.dcDerivativeWindow)
         self.spinBoxDerivativePoly.setValue(p.dcDerivativePoly)

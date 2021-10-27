@@ -106,7 +106,8 @@ class OctavvsMainWindow(QMainWindow):
 
     def getSaveFileName(self, title, suffix='', **kwargs):
         "Show a file dialog and select an output file"
-        return self.getLoadSaveFileName(title=title, savesuffix=suffix, **kwargs)
+        return self.getLoadSaveFileName(
+            title=title, savesuffix=suffix, **kwargs)
 
     def getLoadFileName(self, title, **kwargs):
         "Show a file dialog and select an input file"
@@ -119,12 +120,14 @@ class OctavvsMainWindow(QMainWindow):
     def getImageFileName(self, title, **kwargs):
         "Show a file dialog and select a single image file"
         return self.getLoadSaveFileName(title=title,
-                filter="Image files (*.jpg *.jpeg *.png *.tif *.tiff *.bmp *.gif);;All files (*)",
+                filter="Image files (*.jpg *.jpeg *.png *.tif "
+                    "*.tiff *.bmp *.gif);;All files (*)",
                 **kwargs)
 
-    def getDirectoryName(self, title, settingname=None, savesetting=True):
+    def getDirectoryName(self, title, settingname=None, savesetting=True,
+                         default=None):
         "Show a file dialog and select a directory"
-        directory = self.settings.value(settingname, None) if \
+        directory = self.settings.value(settingname, default) if \
             settingname is not None else None
         dialog = QFileDialog(parent=self, caption=title,
                              directory=directory)

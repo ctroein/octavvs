@@ -12,6 +12,7 @@ import h5py
 import csv
 import traceback
 import time
+import scipy.io
 
 from .spectraldata import SpectralData
 
@@ -19,7 +20,7 @@ class DecompositionData(SpectralData):
     "SpectralData with addition of ROI/decomposition data"
     def __init__(self):
         super().__init__()
-        self.rdc_directory = None # None means dirname(curFile)
+        # self.rdc_directory = None # None means dirname(curFile)
         self.clear_rdc()
 
     def clear_rdc(self):
@@ -42,9 +43,8 @@ class DecompositionData(SpectralData):
         self.clustering_labels = None # 1d int array of labels
         self.clustering_annotations = None # {str: [labels]}
 
-    def set_rdc_directory(self, directory):
-        # print('set rdc',directory)
-        self.rdc_directory = directory
+    # def set_rdc_directory(self, directory):
+    #     self.rdc_directory = directory
 
     def get_duplicate_filenames(self):
         """
@@ -59,47 +59,47 @@ class DecompositionData(SpectralData):
         for i, f in enumerate([os.path.splitext(os.path.basename(f))[0]
                                for f in self.filenames]):
             if f in seen:
-                dups.add(self.data.filenames[i])
-                dups.add(self.data.filenames[seen[f]])
+                dups.add(self.filenames[i])
+                dups.add(self.filenames[seen[f]])
             else:
                 seen[f] = i
         return list(dups)
 
-    def rdc_filename(self, filetype='odd'):
-        """
-        Get the default name of the file where the current file's
-        ROI, decomposition and clustering is stored.
+    # def rdc_filename(self, filetype='odd'):
+    #     """
+    #     Get the default name of the file where the current file's
+    #     ROI, decomposition and clustering is stored.
 
-        Parameters
-        ----------
-        filedir : str, optional
-            The directory the file will be in, or None to use the input dir.
+    #     Parameters
+    #     ----------
+    #     filedir : str, optional
+    #         The directory the file will be in, or None to use the input dir.
 
-        Returns
-        -------
-        str
-            Filename.
-        """
-        filetypes = ['odd']
-        if filetype not in filetypes:
-            raise ValueError("File type must be one of " + str(filetypes))
-        if self.rdc_directory is None:
-            return os.path.splitext(self.curFile)[0] + '.' + filetype
-        if self.rdc_directory == '':
-            raise ValueError("Directory cannot be ''")
-        fn = os.path.splitext(os.path.basename(self.curFile))[0]
-        return os.path.join(self.rdc_directory, fn) + '.' + filetype
+    #     Returns
+    #     -------
+    #     str
+    #         Filename.
+    #     """
+    #     filetypes = ['odd']
+    #     if filetype not in filetypes:
+    #         raise ValueError("File type must be one of " + str(filetypes))
+    #     if self.rdc_directory is None:
+    #         return os.path.splitext(self.curFile)[0] + '.' + filetype
+    #     if self.rdc_directory == '':
+    #         raise ValueError("Directory cannot be ''")
+    #     fn = os.path.splitext(os.path.basename(self.curFile))[0]
+    #     return os.path.join(self.rdc_directory, fn) + '.' + filetype
 
     def read_matrix(self, filename):
         self.clear_rdc()
         super().read_matrix(filename)
-        try:
-            self.load_rdc()
-        except OSError:
-            pass
-        except Exception:
-            traceback.print_exc()
-            print('Warning: rdc auto-load failed')
+        # try:
+        #     self.load_rdc()
+        # except OSError:
+        #     pass
+        # except Exception:
+        #     traceback.print_exc()
+        #     print('Warning: rdc auto-load failed')
 
 
     # ROI stuff
@@ -236,7 +236,7 @@ class DecompositionData(SpectralData):
 
     def del_annotation(self, annotation):
         if self.clustering_annotations is not None and \
-            annotation in self.clustering_annotations:
+                annotation in self.clustering_annotations:
                 del self.clustering_annotations[annotation]
 
     # Loading and saving
@@ -353,14 +353,16 @@ class DecompositionData(SpectralData):
             #         caannot[k] = list(v)
             self.clustering_annotations = caannot
 
-    def load_rdc(self, filename=None, what='all'):
+    def load_rdc(self, *, filename, what='all'):
         """
         Load ROI/decomp/clust from a named file.
 
         Parameters
         ----------
         filename : str
-            A named file; possibly from rdc_filename
+            A named file
+        what : str
+            One of 'all', 'roi', 'decomposition', 'clustering'
 
         Returns
         -------
@@ -368,9 +370,8 @@ class DecompositionData(SpectralData):
             Whether data was loaded
 
         """
-        if filename is None:
-            filename = self.rdc_filename()
-        # print('load rdc',filename,what)
+        # if filename is None:
+        #     filename = self.rdc_filename()
         with h5py.File(filename, mode='r') as f:
             return self.load_rdc_(f, what, 0)
 
@@ -428,10 +429,9 @@ class DecompositionData(SpectralData):
                     ds.attrs['Text'] = ann
 
 
-    def save_rdc(self, filename=None, what='all'):
+    def save_rdc(self, *, filename, what='all'):
         """
-        Save data to a named file or a file in the input/output directory.
-        The default is based on curFile.
+        Save data to a named file.
 
         Parameters
         ----------
@@ -445,11 +445,41 @@ class DecompositionData(SpectralData):
         None.
 
         """
-        if filename is None:
-            filename = self.rdc_filename()
-        # print('save rdc',filename)
         with h5py.File(filename, mode='a') as f:
             return self.save_rdc_(f, what, 0)
+
+    def save_roi(self, *, filename, fmt='mat'):
+        """
+        Save ROI mask to a named file.
+
+        Parameters
+        ----------
+        filename : str
+            A named file
+        fmt : str
+            One of 'rdc', 'mat', 'csv'
+
+        Returns
+        -------
+        None.
+
+        """
+        if fmt == 'rdc':
+            self.save_rdc(filename=filename, what='roi')
+            return
+        if self.roi is None:
+            roi = np.zeros(self.wh, dtype=int)
+        else:
+            roi = self.roi.reshape(self.wh).astype(int)
+        if fmt == 'mat':
+            scipy.io.savemat(filename, mdict={'ROI': roi},
+                             appendmat=False, do_compression=True)
+        elif fmt == 'csv':
+            with open(filename, 'w') as f:
+                writer = csv.writer(f)
+                writer.writerows(roi)
+        else:
+            raise ValueError('Unknown ROI save format %s' % fmt)
 
     def get_headers_as_lists(self):
         headers = []

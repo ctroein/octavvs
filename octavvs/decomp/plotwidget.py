@@ -208,6 +208,9 @@ class RoiPlotWidget(BasePlotWidget):
         self.emit_updated()
         self.draw_idle()
 
+    def get_draw_mode(self):
+        return self.drawmode
+
     def set_draw_mode(self, mode):
         assert mode in ['click', 'add', 'remove']
         if mode == 'click' and self.drawmode != mode:
