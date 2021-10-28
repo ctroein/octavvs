@@ -5,6 +5,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
+import math
 import skimage.draw
 
 
@@ -135,16 +136,17 @@ class RoiPlotWidget(BasePlotWidget):
             if self.data is None:
                 im = self.ax.imshow(data2d, cmap=self.cmap, zorder=-1,
                                     origin='lower')
-                im.set_extent((0, self.wh[0]-1, 0, self.wh[1]-1))
+                im.set_extent((0, self.wh[0], 0, self.wh[1]))
                 # Turn roi into rgba
                 roi2d = np.outer(self.roi, self.roi_alpha).reshape(
                     self.wh[1], self.wh[0], 4)
-                self.ax.imshow(roi2d, zorder=0, origin='lower')
+                rim = self.ax.imshow(roi2d, zorder=0, origin='lower')
+                rim.set_extent((0, self.wh[0], 0, self.wh[1]))
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(data2d)
                 im.set_clim(data.min(), data.max())
-                im.set_extent((0, self.wh[0]-1, 0, self.wh[1]-1))
+                im.set_extent((0, self.wh[0], 0, self.wh[1]))
             self.ax.autoscale()
             self.pixel_radius = 1.5
             m = 2 * self.pixel_radius
@@ -289,7 +291,7 @@ class RoiPlotWidget(BasePlotWidget):
                         self.select_pixel(i, self.drawsign)
                         upd = True
         else:
-            x, y = (int(event.xdata), int(event.ydata))
+            x, y = (math.floor(event.xdata), math.floor(event.ydata))
             if (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
                 i = x + y * self.wh[0]
                 if not self.drawing:
