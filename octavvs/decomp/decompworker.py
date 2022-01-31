@@ -71,9 +71,25 @@ class DecompWorker(QObject):
         """
         y = data.raw
         if params.dcImpute:
-            y = imputation.impute_from_neighbors(y)
+            sh = [data.wh[1], data.wh[0], y.shape[-1]]
+            y = imputation.impute_from_neighbors(y.reshape(sh))
+            y = y.reshape([-1, sh[-1]])
         if data.decomposition_roi is not None:
             y = y[data.decomposition_roi, :]
+
+        okwn = np.isfinite(y.sum(axis=0))
+        if okwn.sum() == len(y):
+            okwn = None
+        else:
+            y = y[:, okwn]
+
+        # Restore hidden wavenumbers (replace with 0)
+        def restore_hidden_wn(spectra):
+            if okwn is not None:
+                stmp = spectra
+                spectra = np.zeros((len(spectra), len(okwn)))
+                spectra[:, okwn] = stmp
+            return spectra
 
         c_first = params.dcStartingPoint != 0
         nonneg = [True, True]
@@ -122,8 +138,9 @@ class DecompWorker(QObject):
             data.add_decomposition_data(0, None, initst)
             self.progressPlot.emit(0, np.array(()), initst, [])
         else:
-            data.add_decomposition_data(0, initst, None)
-            self.progressPlot.emit(0, initst, np.array(()), [])
+            rist = restore_hidden_wn(initst)
+            data.add_decomposition_data(0, rist, None)
+            self.progressPlot.emit(0, rist, np.array(()), [])
 
         update_interval = 3
         def cb_iter(it, errs, spectra, concentrations):
@@ -133,6 +150,7 @@ class DecompWorker(QObject):
                 cb_iter.iter_next = t + update_interval
                 if c_first:
                     concentrations, spectra = (spectra, concentrations)
+                spectra = restore_hidden_wn(spectra)
                 self.progressPlot.emit(it + 1, spectra, concentrations, errs)
         cb_iter.iter_next = time.monotonic()
 
@@ -153,6 +171,8 @@ class DecompWorker(QObject):
         if c_first:
             concentrations, spectra = (spectra, concentrations)
         # print('Time:', time.monotonic()-tt)
+
+        spectra = restore_hidden_wn(spectra)
 
         errors = np.asarray(errors)
         data.add_decomposition_data(len(errors), spectra, concentrations)
