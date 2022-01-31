@@ -141,10 +141,12 @@ class ProjectionWidget(FigureCanvas):
         if method == 0:
             assert self.wavenumber is not None
             data = np.trapz(self.raw, self.wavenumber, axis=1)
+            if not np.isfinite(data.sum()):
+                data = np.trapz(np.nan_to_num(self.raw), self.wavenumber, axis=1)
             if self.wavenumber[0] > self.wavenumber[-1]:
                 data = -data
         elif method == 1:
-            data = self.raw.max(axis=1)
+            data = np.nanmax(self.raw, axis=1)
         elif method == 2:
             data = self.raw[:, wavenumix]
         self.pixel_levels = data
