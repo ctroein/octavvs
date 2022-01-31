@@ -145,13 +145,14 @@ class RoiPlotWidget(BasePlotWidget):
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(data2d)
-                im.set_clim(data.min(), data.max())
+                # im.set_clim(data.min(), data.max())
                 im.set_extent((0, self.wh[0], 0, self.wh[1]))
+                im.autoscale()
             self.ax.autoscale()
             self.pixel_radius = 1.5
-            m = 2 * self.pixel_radius
-            self.ax.set_xlim(-m, self.wh[0]-1 + m)
-            self.ax.set_ylim(-m, self.wh[1]-1 + m)
+            m = 1.5 * self.pixel_radius
+            self.ax.set_xlim(-m, self.wh[0] + m)
+            self.ax.set_ylim(-m, self.wh[1] + m)
 
         self.data = data
         self.draw_idle()
