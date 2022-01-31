@@ -48,7 +48,7 @@ def impute_from_neighbors(data, spatial=True, spectral=False):
         raise ValueError('Imputation must use spatial and/or spectral neighbors')
 
     while len(todo):
-        print('todo:', len(todo))
+        # print('todo:', len(todo))
         done = []
         donev = []
         stilltodo = []
