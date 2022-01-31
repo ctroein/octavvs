@@ -71,7 +71,7 @@ def simplisma(d, nr, f):
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
 
-def clustersubtract(data, components, skewness=300, power=2):
+def clustersubtract(data, components, skewness=100, power=2):
     """
     Create initial spectra for MCR-ALS based on successively removing
     what appears to be the strongest remaining component.
@@ -95,9 +95,9 @@ def clustersubtract(data, components, skewness=300, power=2):
     initial_spectra : array (components, nfeatures)
     """
     def typical_cluster(data, first):
-        # draw sqrt(n) random, r
-        # find closest in r for each s
-        # for r with most s, return mean of s (or iterate?)
+        # draw sqrt(n) random data points, r
+        # find closest in r for each s in data
+        # for r with most s, return mean of those s
         r = np.random.choice(len(data), math.floor(math.sqrt(len(data))))
         rd = data[r]
         nearest = scipy.spatial.distance.cdist(
@@ -106,7 +106,7 @@ def clustersubtract(data, components, skewness=300, power=2):
         if first:
             selected = np.bincount(nearest).argmax()
         else:
-            sums = data.sum(1)**power
+            sums = data.sum(1) ** power
             selected = np.bincount(nearest, weights=sums).argmax()
         return data[nearest == selected].mean(0)
 
@@ -137,10 +137,11 @@ def numpy_scipy_threading_fix_(func):
     take negligible time. For mixed NNLS/lstsq solving (of MCR-ALS on
     derivatives) it's less obvious whether NNSL or lstsq should be allowed
     to be parallelized.
-    Note: This issue is seen on
+    Note: This issue is seen on my Linux setup and might be highly version-
+    dependent. More investigation is needed.
     """
     def check(*args, **kwargs):
-        if np.any(kwargs['nonnegative']):
+        if 'nonnegative' not in kwargs or np.any(kwargs['nonnegative']):
             with threadpool_limits(1, 'blas'):
                 return func(*args, **kwargs)
         else:
@@ -170,7 +171,7 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
     tol_rel_improv : float, optional
         Stop when relative improvement is less than this over 10 iterations.
     tol_iters_after_best : int, optional
-        Stop after this many iteratinos since last best error.
+        Stop after this many iterations since last best error.
     maxtime : float, optional
         Stop after this many seconds of process time have elapsed
     callback : func(it : int, err : float, A : array, B : array)
@@ -378,8 +379,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                 break
             if tol_rel_improv and it > tol_rel_iters:
                 emax = max(errors[-tol_rel_iters-1:-2])
-                if (emax - errors[-1]) * tol_rel_iters <= \
-                    tol_rel_improv * emax:
+                if (emax - errors[-1]) <= \
+                    tol_rel_improv * tol_rel_iters * emax:
                         break
             if tol_iters_after_best is not None:
                 if iterbest + tol_iters_after_best < it:
