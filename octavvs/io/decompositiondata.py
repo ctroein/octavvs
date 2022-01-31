@@ -353,7 +353,7 @@ class DecompositionData(SpectralData):
             #         caannot[k] = list(v)
             self.clustering_annotations = caannot
 
-    def load_rdc(self, *, filename, what='all'):
+    def load_rdc(self, filename, *, what='all'):
         """
         Load ROI/decomp/clust from a named file.
 
@@ -448,7 +448,7 @@ class DecompositionData(SpectralData):
         with h5py.File(filename, mode='a') as f:
             return self.save_rdc_(f, what, 0)
 
-    def save_roi(self, *, filename, fmt='mat'):
+    def save_roi(self, *, filename, fmt='.mat'):
         """
         Save ROI mask to a named file.
 
@@ -457,24 +457,25 @@ class DecompositionData(SpectralData):
         filename : str
             A named file
         fmt : str
-            One of 'rdc', 'mat', 'csv'
+            One of '.rdc', '.roi', '.mat', '.csv'
 
         Returns
         -------
         None.
 
         """
-        if fmt == 'rdc':
+        print(f'save "{fmt}"')
+        if fmt == '.rdc' or fmt == '.roi':
             self.save_rdc(filename=filename, what='roi')
             return
         if self.roi is None:
             roi = np.zeros(self.wh, dtype=int)
         else:
             roi = self.roi.reshape(self.wh).astype(int)
-        if fmt == 'mat':
+        if fmt == '.mat':
             scipy.io.savemat(filename, mdict={'ROI': roi},
                              appendmat=False, do_compression=True)
-        elif fmt == 'csv':
+        elif fmt == '.csv':
             with open(filename, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows(roi)
