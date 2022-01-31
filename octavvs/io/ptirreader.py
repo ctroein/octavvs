@@ -14,13 +14,14 @@ from .image import Image
 class PtirReader:
     """
     A simple class to extract data from a PTIR Studio HDF5 file. This is meant
-        as an alternative to .mat export and will only load the spectra from
-        the scanned points, not the whole image in some specific wavenumber.
+        as an alternative to .mat export and will load the spectra from
+        the scanned points plus whole images in specific wavenumbers.
 
     Member variables:
         wh: image dimensions (w, h)
+        xy: points coordinates [(x,y)]
         wavenum: array of wavenumbers
-        AB: data matrix, array(w*h, len(wn))
+        AB: data matrix, array(points, len(wn))
         image: tuple (img_data_bytes, img_type_str)
     """
 
@@ -42,6 +43,7 @@ class PtirReader:
         wns = []
         raw = []
         xy = []
+        wh = None
         for k, v in f.items():
             if 'MirageDC' in v.attrs:
                 wn = v['Spectroscopic_Values'][0,:]
@@ -50,17 +52,38 @@ class PtirReader:
                     try:
                         r = vv['Raw_Data']
                     except (AttributeError, ValueError):
+                        print('skipping unknown',kk)
                         continue
-                    d = r[0,:]
-                    if d.shape != wn.shape:
-                        # print('incompatible shapes', d.shape, wn.shape)
+                    d = r[:,:]
+                    if d.shape[1] != len(wn):
+                        print('incompatible shapes', d.shape, wn.shape)
                         continue
-                    raw.append(d)
-                    try:
-                        xy.append([v.attrs['LocationX'][0],
-                                  v.attrs['LocationY'][0]])
-                    except AttributeError:
-                        xy.append([0, 0])
+                    if len(d) == 1:
+                        try:
+                            xy.append([v.attrs['LocationX'][0],
+                                      v.attrs['LocationY'][0]])
+                        except AttributeError:
+                            xy.append([0, 0])
+                            print('no LocationX/Y')
+                    else:
+                        try:
+                            rxy = v['Position_Values']
+                        except AttributeError:
+                            print('no position values')
+                            continue
+                        if rxy.shape != (len(d), 2):
+                            print('position shape error', rxy.shape, d.shape)
+                            continue
+                        xy.extend(rxy)
+                        if wh is None:
+                            try:
+                                wh = [v.attrs['RangeXPoints'][0],
+                                      v.attrs['RangeYPoints'][0]]
+                            except AttributeError:
+                                wh = [0, 0]
+                        else:
+                            wh = [0, 0]
+                    raw.extend(d)
         if not wns:
             raise RuntimeError('No spectra in input file')
         if not all([len(w) == len(wns[0]) for w in wns]):
@@ -96,12 +119,18 @@ class PtirReader:
                     self.images.append(img)
 
         if clip_to_images:
-            # Remove pixel outside imaging area (always the first one?)
-            imgxy = np.array([img.xy for img in self.images])
-            imgwh = np.array([img.wh for img in self.images])
-            minxy = (imgxy - imgwh / 2).min(0)
-            maxxy = (imgxy + imgwh / 2).max(0)
-            inside = (minxy <= self.xy).all(1) & (self.xy <= maxxy).all(1)
-            self.xy = self.xy[inside,:]
-            self.AB = self.AB[inside,:]
+            if self.images:
+                # Remove pixel(s) outside imaging area (always the first one?)
+                imgxy = np.array([img.xy for img in self.images])
+                imgwh = np.array([img.wh for img in self.images])
+                minxy = (imgxy - imgwh / 2).min(0)
+                maxxy = (imgxy + imgwh / 2).max(0)
+                inside = (minxy <= self.xy).all(1) & (self.xy <= maxxy).all(1)
+                self.xy = self.xy[inside,:]
+                self.AB = self.AB[inside,:]
             self.wh = (len(self.AB), 1)
+
+        # Switch to rectangle mode if appropriate
+        if not self.images and wh is not None and wh[0] * wh[1] == len(raw):
+            self.wh = wh
+            self.xy = None
