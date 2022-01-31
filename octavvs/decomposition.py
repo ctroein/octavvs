@@ -372,7 +372,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                     self, 'Directory changed',
                     '(Re)load saved %s from selected directory?' % descr)
                 if yn == QMessageBox.Yes:
-                    self.data.load_rdc(filename=filename, what=what)
+                    self.data.load_rdc(filename, what=what)
                     self.populatePlots()
 
     def genericDirSelect(self, what):
