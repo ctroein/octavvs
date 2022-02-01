@@ -71,7 +71,7 @@ def simplisma(d, nr, f):
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
 
-def clustersubtract(data, components, skewness=100, power=2):
+def clustersubtract(data, components, skewness=100, power=2, verbose=False):
     """
     Create initial spectra for MCR-ALS based on successively removing
     what appears to be the strongest remaining component.
@@ -123,6 +123,9 @@ def clustersubtract(data, components, skewness=100, power=2):
             a = (data * ww * tc).sum(1) / (ww * tc * tc).sum(1)
             oldsgn = sgn
             sgn = data > a[:, None] @ tc[None, :]
+            if verbose:
+                chg = (sgn != oldsgn).sum()
+                print(f'clsub iter {c:.3d}-{i:.2d} changed {chg}')
             if np.array_equal(sgn, oldsgn):
                 break
         data = data - a[:, None] @ tc[None, :]
