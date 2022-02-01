@@ -98,7 +98,7 @@ def clustersubtract(data, components, skewness=100, power=2, verbose=False):
         # draw sqrt(n) random data points, r
         # find closest in r for each s in data
         # for r with most s, return mean of those s
-        r = np.random.choice(len(data), math.floor(math.sqrt(len(data))))
+        r = np.random.choice(len(data), min(200, math.floor(math.sqrt(len(data)))))
         rd = data[r]
         nearest = scipy.spatial.distance.cdist(
             rd, data, 'cosine').argmin(axis=0)
@@ -111,13 +111,13 @@ def clustersubtract(data, components, skewness=100, power=2, verbose=False):
         return data[nearest == selected].mean(0)
 
     comps = []
+    sgn = np.ones_like(data, dtype=bool)
     for c in range(components):
         tc = typical_cluster(data, c == 0)
         tc = np.maximum(tc, 0)
         tc = tc / (tc * tc).sum() ** .5
 
         comps.append(tc)
-        sgn = np.ones_like(data, dtype=bool)
         for i in range(10):
             ww = 1 * sgn + skewness * ~sgn
             a = (data * ww * tc).sum(1) / (ww * tc * tc).sum(1)
@@ -125,7 +125,7 @@ def clustersubtract(data, components, skewness=100, power=2, verbose=False):
             sgn = data > a[:, None] @ tc[None, :]
             if verbose:
                 chg = (sgn != oldsgn).sum()
-                print(f'clsub iter {c:3d}-{i:2d} changed {chg}')
+                print(f'clsub iter {c:3d} {i:2d} changed {chg}')
             if np.array_equal(sgn, oldsgn):
                 break
         data = data - a[:, None] @ tc[None, :]
