@@ -47,7 +47,7 @@ class ProjectionWidget(FigureCanvas):
         self.patches = {}       # Patch objects indexed by pixel number
         self.pop_patches = {}   # Ditto in pop-out plot
         # self.white_patches = {} # Ditto in white light subplot
-        self.rect_size = 4      # Size of rectancles in µm
+        self.rect_size = 2      # Size of rectancles in µm
         self.rect_color = 'b'   # Default patch edge color
         self.pixel_visible = None # None, or True for pixels within image
         self.image = None       # ..io.Image object
@@ -132,6 +132,17 @@ class ProjectionWidget(FigureCanvas):
                 (np.abs(image.xy - xy) < (hwh + self.rect_size / 2)).all()
                 for xy in self.pixelxy ]
             self.update_patch_fill()
+        self.trigger_redraw()
+
+    def setRectSize(self, size):
+        if size <= 0:
+            raise ValueError("Rectangle size must be positive")
+        dpos = (self.rect_size - size) / 2
+        self.rect_size = size
+        for patches in [self.patches, self.pop_patches]:
+            for p in patches.values():
+                x, y = p.get_xy()
+                p.set_bounds(x + dpos, y + dpos, size, size)
         self.trigger_redraw()
 
     def setProjection(self, method, wavenumix):

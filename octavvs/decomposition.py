@@ -63,8 +63,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.pushButtonSaveParameters.clicked.connect(self.saveParameters)
         self.pushButtonLoadParameters.clicked.connect(self.loadParameters)
 
-        self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
-            self.plot_roi.set_cmap)
         self.imageVisualizer.plot_raw.updatedProjection.connect(
             self.plot_roi.set_data)
         self.pushButtonRoiClear.clicked.connect(self.roiClear)
@@ -115,12 +113,17 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.horizontalSliderContrast.valueChanged.connect(
             self.dcContrastSlide)
 
-        self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
-            self.plot_decomp.set_cmap)
         self.comboBoxPlotMode.currentIndexChanged.connect(
             self.plot_decomp.set_display_mode)
         self.plot_decomp.displayModesUpdated.connect(
             self.updateDCPlotModes)
+
+        for plot in [self.plot_roi, self.plot_decomp, self.plot_cluster]:
+            self.imageVisualizer.updatePixelSize.connect(
+                plot.set_pixel_size)
+            self.imageVisualizer.comboBoxCmaps.currentTextChanged.connect(
+                plot.set_cmap)
+        self.imageVisualizer.pixelSizeEdit()
 
         self.pushButtonCluster.clicked.connect(self.caStartClustering)
         # self.toolButtonAnnotationPlus.setIcon(

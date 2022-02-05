@@ -7,6 +7,7 @@ from pkg_resources import resource_filename
 #from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal
 from . import constants, uitools
 from octavvs.ui import NoRepeatStyle
 # from ..io import Image
@@ -18,6 +19,8 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
     """
     Widget with a bunch of graphical components
     """
+    updatePixelSize = pyqtSignal(float)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
@@ -29,16 +32,23 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
         self.comboBoxMethod.currentIndexChanged.connect(
             self.updateSpectralImage)
         self.checkBoxPixelFill.toggled.connect(self.plot_raw.setFill)
+        self.lineEditPixelSize.setRange(1e-2, 1e3)
+        self.lineEditPixelSize.setFormat('%g')
+        self.lineEditPixelSize.editingFinished.connect(self.pixelSizeEdit)
         self.horizontalSliderWavenumber.valueChanged.connect(
             self.wavenumberSlide)
         self.lineEditWavenumber.editingFinished.connect(self.wavenumberEdit)
         self.comboBoxPlotCmap.currentTextChanged.connect(
             self.plot_raw.updatePlotColors)
 
+        self.updatePixelSize.connect(self.plot_raw.setRectSize)
         self.plot_raw.changedSelected.connect(self.selectedSpectraUpdated)
         self.plot_spectra.clicked.connect(self.plot_spectra.popOut)
         self.spinBoxSpectra.valueChanged.connect(self.selectSpectra)
         self.checkBoxAutopick.toggled.connect(self.selectSpectra)
+
+    def pixelSizeEdit(self):
+        self.updatePixelSize.emit(self.lineEditPixelSize.value())
 
     def wavenumberEdit(self):
         uitools.box_to_slider(
@@ -77,11 +87,11 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
     def setImageCount(self, n):
         if n:
             self.horizontalSliderImage.setMaximum(n-1)
-            self.horizontalSliderImage.setEnabled(True)
         else:
-            self.horizontalSliderImage.setEnabled(False)
             self.horizontalSliderImage.setValue(0)
             self.lineEditImageInfo.setText('')
+        self.horizontalSliderImage.setEnabled(n > 0)
+        self.lineEditImageInfo.setEnabled(n > 0)
 
     def saveParameters(self, p):
         "Copy from UI to some kind of parameters object"
@@ -171,6 +181,8 @@ class ImageVisualizer():
             self.imageVisualizer.plot_whitelight.load(filename=fname)
             self.imageVisualizer.plot_whitelight.setHidden(
                 not self.imageVisualizer.plot_whitelight.is_loaded())
+        self.imageVisualizer.labelPixelSize.setHidden(not self.spatialMode)
+        self.imageVisualizer.lineEditPixelSize.setHidden(not self.spatialMode)
 
     # White light image stuff
     def loadWhite(self):

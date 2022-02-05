@@ -25,7 +25,7 @@ class BasePlotWidget(FigureCanvas):
         self.pixels = 0
         # What/how to plot
         self.cmap = plt.get_cmap().name
-        self.pixel_radius = 3
+        self.pixel_size = 2
 
 
 class RoiPlotWidget(BasePlotWidget):
@@ -115,19 +115,18 @@ class RoiPlotWidget(BasePlotWidget):
             if self.data is None:
                 minxy = np.min(self.pixelxy, axis=0)
                 maxxy = np.max(self.pixelxy, axis=0)
-                self.pixel_radius = (maxxy - minxy).max() * .02
-
+                ps = self.pixel_size / 2
                 for i in range(self.pixels):
-                    p = matplotlib.patches.Circle(
-                        self.pixelxy[i], radius=self.pixel_radius,
+                    p = matplotlib.patches.Rectangle(
+                        self.pixelxy[i] - ps, ps, ps,
                         facecolor=cmap(norm(data[i])),
                         linewidth=2, zorder=0)
                     self.ax.add_patch(p)
                     self.patches.append(p)
                     self.select_pixel(i, self.roi[i])
-                m = 8 * self.pixel_radius
+                m = .05 * ((maxxy - minxy).max()) + ps
                 self.ax.set_xlim(minxy[0] - m, maxxy[0] + m)
-                self.ax.set_ylim(maxxy[1] + m, minxy[1] - m)
+                self.ax.set_ylim(minxy[1] - m, maxxy[1] + m)
             else:
                 for i in range(self.pixels):
                     self.patches[i].set_facecolor(cmap(norm(data[i])))
@@ -149,12 +148,24 @@ class RoiPlotWidget(BasePlotWidget):
                 im.set_extent((0, self.wh[0], 0, self.wh[1]))
                 im.autoscale()
             self.ax.autoscale()
-            self.pixel_radius = 1.5
-            m = 1.5 * self.pixel_radius
+            m = .05 * np.max(self.wh) + self.pixel_size
             self.ax.set_xlim(-m, self.wh[0] + m)
             self.ax.set_ylim(-m, self.wh[1] + m)
 
         self.data = data
+        self.draw_idle()
+
+    @pyqtSlot(float)
+    def set_pixel_size(self, s):
+        "Set the size of patches and redraw"
+        dpos = (self.pixel_size - s) / 2
+        self.pixel_size = s
+        if self.patches is not None:
+            for p in self.patches:
+                x, y = p.get_xy()
+                p.set_bounds(x + dpos, y + dpos, s, s)
+        if self.polystart:
+            self.polystart.set_radius(s)
         self.draw_idle()
 
     @pyqtSlot(str)
@@ -245,7 +256,7 @@ class RoiPlotWidget(BasePlotWidget):
             self.polyline = self.ax.plot(
                 [exy[0]], [exy[1]], lw=1, color='k', zorder=1)[0]
             self.polystart = matplotlib.patches.RegularPolygon(
-                exy, numVertices=5, radius=self.pixel_radius, lw=2,
+                exy, numVertices=5, radius=self.pixel_size, lw=2,
                 ec='black', fc='yellow', fill=True, zorder=2)
             self.ax.add_patch(self.polystart)
             self.drawing = True
@@ -272,7 +283,7 @@ class RoiPlotWidget(BasePlotWidget):
         else:
             xy = self.polyline.get_data(orig=True)
             d2 = (xy[0][-1] - exy[0]) ** 2 + (xy[1][-1] - exy[1]) ** 2
-            if not self.drawing or d2 > self.pixel_radius ** 2:
+            if not self.drawing or d2 > self.pixel_size ** 2:
                 self.polyline.set_data(np.append(xy[0], exy[0]),
                                        np.append(xy[1], exy[1]))
                 self.drawing = True
@@ -460,6 +471,16 @@ class DecompositionPlotWidget(BasePlotWidget):
         if self.display_mode == 0:
             self.draw_idle()
 
+    @pyqtSlot(float)
+    def set_pixel_size(self, s):
+        "Set the size of patches and redraw"
+        dpos = (self.pixel_size - s) / 2
+        self.pixel_size = s
+        for p in self.ax.patches:
+            x, y = p.get_xy()
+            p.set_bounds(x + dpos, y + dpos, s, s)
+        self.draw_idle()
+
     @pyqtSlot('QString')
     def set_cmap(self, s):
         "Set colors for heatmaps"
@@ -535,15 +556,15 @@ class DecompositionPlotWidget(BasePlotWidget):
             else:
                 minxy = np.min(self.pixelxy, axis=0)
                 maxxy = np.max(self.pixelxy, axis=0)
-                r = 3
+                r = self.pixel_size
                 ax.clear()
                 ax.set_aspect('equal')
                 for i in range(len(self.pixelxy)):
                     xy = self.pixelxy[i]
-                    p = matplotlib.patches.Circle(
-                        xy, radius=r, facecolor=cmap(norm(data[i])))
+                    p = matplotlib.patches.Rectangle(
+                        xy - r / 2, r, r, facecolor=cmap(norm(data[i])))
                     ax.add_patch(p)
-                m = 3 * r
+                m = .05 * np.max(maxxy - minxy) + r / 2
                 ax.set_xlim(minxy[0] - m, maxxy[0] + m)
                 ax.set_ylim(minxy[1] - m, maxxy[1] + m)
                 # ax.set_extent((minxy[1], maxxy[1], maxxy[0], minxy[0]))
@@ -647,6 +668,12 @@ class ClusterPlotWidget(BasePlotWidget):
         self.wh = wh
         self.update_image()
 
+    @pyqtSlot(float)
+    def set_pixel_size(self, s):
+        "Set the size of patches and redraw"
+        self.pixel_size = s
+        self.draw_idle()
+
     @pyqtSlot('QString')
     def set_cmap(self, s):
         "Set colors for clustering etc"
@@ -698,13 +725,13 @@ class ClusterPlotWidget(BasePlotWidget):
             if setup_axes:
                 minxy = np.min(self.pixelxy, axis=0)
                 maxxy = np.max(self.pixelxy, axis=0)
-                r = (maxxy - minxy).max() * .02
+                r = self.pixel_size
                 for i, xy in enumerate(self.pixelxy):
                     c = self.clusters_of_all[i]
                     fc = self.cluster_color(c - 1) if c else unroi
-                    p = matplotlib.patches.Circle(xy, radius=r, facecolor=fc)
+                    p = matplotlib.patches.Rectangle(xy - r / 2, r, r, facecolor=fc)
                     self.ax.add_patch(p)
-                m = 3 * r
+                m = .05 * np.max(maxxy - minxy) + r / 2
                 self.ax.set_xlim(minxy[0] - m, maxxy[0] + m)
                 self.ax.set_ylim(minxy[1] - m, maxxy[1] + m)
             else:
