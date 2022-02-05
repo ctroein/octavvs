@@ -9,6 +9,7 @@ Created on Thu Jan  9 16:16:44 2020
 # from struct import unpack
 import h5py
 import numpy as np
+import re
 from .image import Image
 
 class PtirReader:
@@ -46,13 +47,17 @@ class PtirReader:
         wh = None
         for k, v in f.items():
             if 'MirageDC' in v.attrs:
+                if re.match(r'^Measurement_0+$', k):
+                    continue
                 wn = v['Spectroscopic_Values'][0,:]
                 wns.append(wn)
                 for kk, vv in v.items():
                     try:
                         r = vv['Raw_Data']
                     except (AttributeError, ValueError):
-                        print('skipping unknown',kk)
+                        if kk not in ['Spectroscopic_Values',
+                                      'Spectroscopic_Indices']:
+                            print('skipping unknown', kk)
                         continue
                     d = r[:,:]
                     if d.shape[1] != len(wn):
