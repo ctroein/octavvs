@@ -229,7 +229,10 @@ class PrepWorker(QObject):
             scipy.io.savemat(outfile, out)
         else:
             ab = np.hstack((wn[:, None], y.T))
-            scipy.io.savemat(outfile, {'AB': ab, 'wh': data.wh } )
+            abdata = {'AB': ab, 'wh': data.wh }
+            if data.pixelxy is not None:
+                abdata['xy'] = data.pixelxy
+            scipy.io.savemat(outfile, abdata)
 
     @pyqtSlot(SpectralData, PrepParameters, str, bool)
     def bigBatch(self, data, params, folder, preservepath):
