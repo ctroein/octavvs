@@ -88,12 +88,24 @@ class SpectralData:
                     wn = wn[::-1]
                     raw = raw[:, ::-1]
                 assert len(wn) == raw.shape[1]
-            elif ss.ndim == 2 and ss.shape[0] >= 10 and ss.shape[1] > 1:
+            elif ss.ndim == 2 and ss.shape[0] > 1 and ss.shape[1] > 1:
                 if 'wh' in s:
                     wh = s['wh'].flatten()
-                d = -1 if ss[0,0] < ss[-1,0] else 1
-                raw = ss[::d,1:].T
-                wn = ss[::d,0]
+                # Assume wavenumbers are a) first column or b) first row
+                deltac = np.diff(ss[:, 0])
+                deltar = np.diff(ss[0, :])
+                if np.all(deltac > 0) or np.all(deltac < 0):
+                    d = 1
+                    print('column order')
+                    raw = ss[::d, 1:].T
+                    wn = ss[::d, 0]
+                elif np.all(deltar > 0) or np.all(deltar < 0):
+                    print('row order')
+                    raw = ss[1:, :]
+                    wn = ss[0, :]
+                else:
+                    raise RuntimeError(
+                        'first column or row must contain sorted wavenumbers')
             else:
                 raise RuntimeError(
                     'file does not appear to describe an FTIR image matrix')
@@ -110,7 +122,8 @@ class SpectralData:
             wh = reader.wh
             images = reader.images
 
-        if (np.diff(wn) >= 0).any():
+        diffsign = np.sign(np.diff(wn))
+        if (diffsign >= 0).any() and (diffsign <= 0).any():
             raise RuntimeError('wavenumbers must be sorted')
         npix = raw.shape[0]
         if wh is not None:
