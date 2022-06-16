@@ -48,6 +48,7 @@ requirements:
     - scipy
     - scikit-learn
     - scikit-image
+    - statsmodels
     - xlwt
     - dill
     - h5py
