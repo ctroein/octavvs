@@ -26,11 +26,18 @@ Ui_MainWindow = uic.loadUiType(resource_filename(
     __name__, "prep/preprocessing_ui.ui"))[0]
 Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(
     __name__, "prep/scadvanced.ui"))[0]
+Ui_DialogMCAdvanced = uic.loadUiType(resource_filename(
+    __name__, "prep/mcadvanced.ui"))[0]
 Ui_DialogCreateReference = uic.loadUiType(resource_filename(
     __name__, "prep/create_reference.ui"))[0]
 
 
 class DialogSCAdvanced(QDialog, Ui_DialogSCAdvanced):
+    def __init__(self, parent=None):
+        QDialog.__init__(self, parent)
+        self.setupUi(self)
+
+class DialogMCAdvanced(QDialog, Ui_DialogMCAdvanced):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
@@ -51,6 +58,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
     bcLambdaRange = np.array([0, 8])
     bcPRange = np.array([-5, 0])
+    mcChips = 4 # mIRage chips
 
     @classmethod
     def program_name(cls):
@@ -78,8 +86,32 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.imageVisualizer.plot_spectra.updated.connect(self.updateMC)
         self.plot_MC.clicked.connect(self.plot_MC.popOut)
         self.checkBoxMC.toggled.connect(self.updateMC)
-        self.spinBoxMCEndpoints.valueChanged.connect(self.updateMC)
-        self.lineEditMCSlopefactor.editingFinished.connect(self.updateMC)
+        dma = DialogMCAdvanced()
+        self.dialogMCAdvanced = dma
+        self.pushButtonMCAdvanced.clicked.connect(dma.show)
+        self.pushButtonMCAdvanced.clicked.connect(dma.raise_)
+        for b in range(1, self.mcChips):
+            for be in ['b', 'e']:
+                lemc = getattr(dma, 'lineEditMCBreak%d%s' % (b, be))
+                lemc.editingFinished.connect(self.updateMC)
+                lemc.setFormat("%g")
+                lemc.setRange(0, 9999)
+                getattr(dma, 'spinBoxMCEndpoints%d%s' % (b, be)
+                        ).valueChanged.connect(self.updateMC)
+                getattr(dma, 'spinBoxMCSlopefactor%d%s' % (b, be)
+                        ).valueChanged.connect(self.updateMC)
+            getattr(dma, 'spinBoxMCPCA%d' % b
+                    ).valueChanged.connect(self.updateMC)
+            getattr(dma, 'spinBoxMCLimitLevel%d' % b
+                    ).valueChanged.connect(self.updateMC)
+        for c in range(self.mcChips):
+            getattr(dma, 'spinBoxMCChipWeight%d' % c
+                    ).valueChanged.connect(self.updateMC)
+        dma.checkBoxMCPCA.toggled.connect(self.updateMC)
+        dma.checkBoxMCPCA.toggled.connect(self.toggleMC)
+        dma.checkBoxMCLimit.toggled.connect(self.updateMC)
+        dma.checkBoxMCLimit.toggled.connect(self.toggleMC)
+        dma.checkBoxMCAccuratePreview.toggled.connect(self.updateMC)
 
         self.plot_MC.updated.connect(self.updateAC)
         self.plot_AC.clicked.connect(self.plot_AC.popOut)
@@ -214,9 +246,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.lineEditMaxwn.setFormat("%.2f")
         self.lineEditBCThresh.setRange(1e-6, 1e6)
 
-        self.lineEditMCSlopefactor.setFormat("%g")
-        self.lineEditMCSlopefactor.setRange(-1, 2)
-
         self.lineEditSCRefPercentile.setFormat("%g")
         self.lineEditSCRefPercentile.setRange(0., 100.)
         self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
@@ -232,11 +261,11 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.bcMethod()
 
         self.post_setup()
-        if files is not None and files != []:
-            self.updateFileList(files, False) # Load files passed as arguments
-
         if paramFile is not None: # Loads the parameter file passed as argument
             self.loadParameters(filename=paramFile)
+
+        if files is not None and files != []:
+            self.updateFileList(files, False) # Load files passed as arguments
 
         if savePath is not None:
             if paramFile is None:
@@ -253,6 +282,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.workerThread.wait()
         self.abcWorkerThread.wait()
         self.deleteLater()
+        self.dialogMCAdvanced.close()
         self.dialogSCAdvanced.close()
         self.dialogCreateReference.close()
 #        qApp.quit()
@@ -314,15 +344,43 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
 
     # MC, mIRage correction
+    def toggleMC(self):
+        c = self.dialogMCAdvanced.checkBoxMCPCA.isChecked()
+        l = self.dialogMCAdvanced.checkBoxMCLimit.isChecked()
+        for b in range(1, self.mcChips):
+            getattr(self.dialogMCAdvanced, 'spinBoxMCPCA%d' % b).setEnabled(c)
+            getattr(self.dialogMCAdvanced,
+                    'spinBoxMCLimitLevel%d' % b).setEnabled(l)
+
     def updateMC(self):
+        params = self.getParameters()
+        p = params.filtered('mc')
+        ncomp = p['mcPCAComponents'] if p['mcPCA'] else 0
         wn = self.imageVisualizer.plot_spectra.getWavenumbers()
-        indata = self.imageVisualizer.plot_spectra.getSpectra()
+        if (np.any(np.array(ncomp)) or p['mcSoftLimit']
+            ) and p['mcAccuratePreview']:
+            sel = self.imageVisualizer.plot_raw.getSelected()
+            indata = self.data.raw;
+        else:
+            sel = None
+            indata = self.imageVisualizer.plot_spectra.getSpectra()
+        if indata is None:
+            self.plot_MC.setData(wn, None, None)
+            return
         corr = None
-        if self.ptirMode and self.checkBoxMC.isChecked() and indata is not None:
-            corr = ptir.normalize_mirage(
+        if self.ptirMode and p['mcDo']:
+            corr = ptir.correct_mirage(
                 wn, indata,
-                endpoints=self.spinBoxMCEndpoints.value(),
-                slopefactor=self.lineEditMCSlopefactor.value())[0]
+                breaks=p['mcBreaks'], endpoints=p['mcEndpoints'],
+                slopefactor=p['mcSlopefactor'],
+                pca_ncomp=ncomp,
+                soft_limits=p['mcSoftLimit'],
+                sl_level=p['mcSoftLimitLevel'],
+                chipweight=p['mcChipWeight'])[0]
+            if sel is not None:
+                corr = corr[sel]
+        if sel is not None:
+            indata = indata[sel]
         self.plot_MC.setData(wn, indata, corr)
 
     # AC, Atmospheric correction
@@ -750,8 +808,38 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         p.scAutoIters = self.dialogSCAdvanced.checkBoxSCAutoIters.isChecked()
         p.scMinImprov = self.dialogSCAdvanced.lineEditSCMinImprov.value()
         p.mcDo = self.checkBoxMC.isChecked()
-        p.mcEndpoints = self.spinBoxMCEndpoints.value()
-        p.mcSlopefactor = self.lineEditMCSlopefactor.value()
+        dma = self.dialogMCAdvanced
+        p.mcBreaks = []
+        p.mcEndpoints = []
+        p.mcSlopefactor = []
+        p.mcPCAComponents = []
+        p.mcSoftLimitLevel = []
+        p.mcChipWeight = []
+        for b in range(1, self.mcChips):
+            bb = []
+            ep = []
+            sf = []
+            for be in ['b', 'e']:
+                bb.append(
+                    getattr(dma, 'lineEditMCBreak%d%s' % (b, be)).value())
+                ep.append(
+                    getattr(dma, 'spinBoxMCEndpoints%d%s' % (b, be)).value())
+                sf.append(
+                    getattr(dma, 'spinBoxMCSlopefactor%d%s' % (b, be)).value())
+            p.mcBreaks.append(bb)
+            p.mcEndpoints.append(ep)
+            p.mcSlopefactor.append(sf)
+            p.mcPCAComponents.append(
+                getattr(dma, 'spinBoxMCPCA%d' % b).value())
+            p.mcSoftLimitLevel.append(
+                getattr(dma, 'spinBoxMCLimitLevel%d' % b).value())
+        for c in range(self.mcChips):
+            p.mcChipWeight.append(
+                getattr(dma, 'spinBoxMCChipWeight%d' % c).value())
+        p.mcPCA = dma.checkBoxMCPCA.isChecked()
+        p.mcSoftLimit = dma.checkBoxMCLimit.isChecked()
+        p.mcAccuratePreview = dma.checkBoxMCAccuratePreview.isChecked()
+
         p.sgfDo = self.checkBoxSGF.isChecked()
         p.sgfWindow = self.spinBoxWindowLength.value()
         p.sgfOrder = self.spinBoxPolyOrder.value()
@@ -787,7 +875,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
     def setParameters(self, p):
         "Copy from some kind of parameters object to UI"
-        self.spinBoxSpectra.setValue(0)
+        # self.spinBoxSpectra.setValue(0)
         self.fileLoader.loadParameters(p)
         self.imageVisualizer.loadParameters(p)
 
@@ -828,9 +916,27 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.dialogSCAdvanced.lineEditSCPCAVariance.setValue(p.scPCAVariance)
         self.dialogSCAdvanced.checkBoxSCAutoIters.setChecked(p.scAutoIters)
         self.dialogSCAdvanced.lineEditSCMinImprov.setValue(p.scMinImprov)
+
         self.checkBoxMC.setChecked(p.mcDo)
-        self.spinBoxMCEndpoints.setValue(p.mcEndpoints)
-        self.lineEditMCSlopefactor.setValue(p.mcSlopefactor)
+        dma = self.dialogMCAdvanced
+        for i, b in enumerate(range(1, self.mcChips)):
+            for j, be in enumerate(['b', 'e']):
+                getattr(dma, 'lineEditMCBreak%d%s' % (b, be)).setValue(
+                    p.mcBreaks[i][j])
+                getattr(dma, 'spinBoxMCEndpoints%d%s' % (b, be)).setValue(
+                    p.mcEndpoints[i][j])
+                getattr(dma, 'spinBoxMCSlopefactor%d%s' % (b, be)).setValue(
+                    p.mcSlopefactor[i][j])
+            getattr(dma, 'spinBoxMCPCA%d' % b).setValue(
+                p.mcPCAComponents[i])
+            getattr(dma, 'spinBoxMCLimitLevel%d' % b).setValue(
+                p.mcSoftLimitLevel[i])
+        for c in range(self.mcChips):
+            getattr(dma, 'spinBoxMCChipWeight%d' % c).setValue(
+                p.mcChipWeight[c])
+        dma.checkBoxMCPCA.setChecked(p.mcPCA)
+        dma.checkBoxMCLimit.setChecked(p.mcSoftLimit)
+        dma.checkBoxMCAccuratePreview.setChecked(p.mcAccuratePreview)
 
         self.checkBoxSGF.setChecked(p.sgfDo)
         self.spinBoxWindowLength.setValue(p.sgfWindow)
@@ -855,8 +961,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         self.srMinEdit()
         self.srMaxEdit()
-        self.wavenumberEdit()
-
+        # self.wavenumberEdit()
         self.updateSGF()
 
     def loadParameters(self, checked=False, filename=None):

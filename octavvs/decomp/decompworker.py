@@ -14,6 +14,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from octavvs.io import DecompositionData, Parameters
 from octavvs.algorithms import decomposition, imputation
+import os.path
 import time
 import sklearn.cluster
 
@@ -216,7 +217,9 @@ class DecompWorker(QObject):
 
                 data.set_decomposition_settings(params)
                 self.callDecomp(data, params)
-                data.save_rdc()
+                fn = os.path.splitext(os.path.basename(data.curFile))[0]
+                filename = os.path.join(params.dcDirectory, fn) + '.dcn'
+                data.save_rdc(filename=filename)
 
             self.batchDone.emit(True)
             return

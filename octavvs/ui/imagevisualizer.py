@@ -92,6 +92,7 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
             self.lineEditImageInfo.setText('')
         self.horizontalSliderImage.setEnabled(n > 0)
         self.lineEditImageInfo.setEnabled(n > 0)
+        self.horizontalSliderImage.setHidden(n < 2)
 
     def saveParameters(self, p):
         "Copy from UI to some kind of parameters object"
@@ -108,7 +109,7 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
         self.lineEditWavenumber.setValue(p.plotWavenum)
         self.checkBoxAutopick.setChecked(p.spectraAuto)
         self.spinBoxSpectra.setValue(p.spectraCount)
-
+        self.wavenumberEdit()
 
 class ImageVisualizer():
     """
@@ -136,8 +137,6 @@ class ImageVisualizer():
         super().updateFile(num)
 
         self.spatialMode = self.data.pixelxy is not None
-        self.imageVisualizer.layoutSpatial.setHidden(not self.spatialMode)
-        self.imageVisualizer.pushButtonWhitelight.setHidden(self.spatialMode)
 
         self.imageVisualizer.plot_raw.setData(
             self.data.wavenumber, self.data.raw,
@@ -170,10 +169,12 @@ class ImageVisualizer():
         self.imageVisualizer.updateSpectralImage()
 
     def updateWhiteLightImages(self):
-        if self.spatialMode:
+        imgcnt = len(self.data.images) if self.data.images else 0
+        intern = self.spatialMode or imgcnt
+        if intern:
             self.imageVisualizer.setImageCount(len(self.data.images))
             self.selectImage(self.imageVisualizer.horizontalSliderImage.value())
-            self.imageVisualizer.plot_whitelight.setHidden(True)
+            self.imageVisualizer.plot_whitelight.setHidden(self.spatialMode)
         else:
             fname = self.whiteLightNames[self.data.curFile] if \
                 self.data.curFile in self.whiteLightNames else \
@@ -181,6 +182,9 @@ class ImageVisualizer():
             self.imageVisualizer.plot_whitelight.load(filename=fname)
             self.imageVisualizer.plot_whitelight.setHidden(
                 not self.imageVisualizer.plot_whitelight.is_loaded())
+        self.imageVisualizer.layoutSpatial.setHidden(not self.spatialMode
+                                                     and imgcnt < 2)
+        self.imageVisualizer.pushButtonWhitelight.setHidden(intern)
         self.imageVisualizer.labelPixelSize.setHidden(not self.spatialMode)
         self.imageVisualizer.lineEditPixelSize.setHidden(not self.spatialMode)
 
@@ -198,7 +202,10 @@ class ImageVisualizer():
 
     def selectImage(self, num):
         if self.data.images and len(self.data.images):
-            self.imageVisualizer.plot_raw.setImage(self.data.images[num])
+            if self.spatialMode:
+                self.imageVisualizer.plot_raw.setImage(self.data.images[num])
+            else:
+                self.imageVisualizer.plot_whitelight.load(image=self.data.images[num])
             self.imageVisualizer.lineEditImageInfo.setText(
                 self.data.images[num].name)
 

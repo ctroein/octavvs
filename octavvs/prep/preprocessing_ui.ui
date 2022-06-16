@@ -77,7 +77,7 @@ margin: 5px;
           <number>0</number>
          </property>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="4,2,1,2,1">
+          <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="1,4,1">
            <property name="topMargin">
             <number>0</number>
            </property>
@@ -101,48 +101,25 @@ margin: 5px;
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="label_6">
+            <widget class="QLabel" name="labelMCInfo">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Estimated mean magnitude of the corrections, relative to the level in the corrected regions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
              <property name="text">
-              <string>Endpoints</string>
+              <string/>
+             </property>
+             <property name="textFormat">
+              <enum>Qt::AutoText</enum>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
-             <property name="buddy">
-              <cstring>spinBoxMCEndpoints</cstring>
-             </property>
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="spinBoxMCEndpoints">
-             <property name="minimum">
-              <number>2</number>
-             </property>
-             <property name="maximum">
-              <number>40</number>
-             </property>
-             <property name="value">
-              <number>6</number>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_7">
+            <widget class="QPushButton" name="pushButtonMCAdvanced">
              <property name="text">
-              <string>Slopefactor</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-             <property name="buddy">
-              <cstring>lineEditMCSlopefactor</cstring>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="LineDouble" name="lineEditMCSlopefactor">
-             <property name="text">
-              <string>.5</string>
+              <string>Advanced</string>
              </property>
             </widget>
            </item>
@@ -1088,14 +1065,14 @@ margin: 5px;
         <item>
          <widget class="QPushButton" name="pushButtonSaveParameters">
           <property name="text">
-           <string>Save parameters</string>
+           <string>Save settings</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="pushButtonLoadParameters">
           <property name="text">
-           <string>Load parameters</string>
+           <string>Load settings</string>
           </property>
          </widget>
         </item>
@@ -1248,32 +1225,55 @@ margin: 5px;
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>checkBoxMC</tabstop>
+  <tabstop>pushButtonMCAdvanced</tabstop>
   <tabstop>checkBoxAC</tabstop>
   <tabstop>checkBoxSpline</tabstop>
   <tabstop>checkBoxLocalPeak</tabstop>
   <tabstop>checkBoxSmoothCorrected</tabstop>
+  <tabstop>pushButtonACLoadReference</tabstop>
+  <tabstop>lineEditACReference</tabstop>
   <tabstop>checkBoxSC</tabstop>
   <tabstop>pushButtonSCRefresh</tabstop>
   <tabstop>pushButtonSCStop</tabstop>
   <tabstop>comboBoxReference</tabstop>
+  <tabstop>lineEditSCRefPercentile</tabstop>
+  <tabstop>pushButtonCreateReference</tabstop>
   <tabstop>spinBoxNIteration</tabstop>
   <tabstop>checkBoxClusters</tabstop>
   <tabstop>spinBoxNclusScat</tabstop>
   <tabstop>checkBoxStabilize</tabstop>
   <tabstop>pushButtonSCAdvanced</tabstop>
+  <tabstop>checkBoxSGF</tabstop>
   <tabstop>spinBoxWindowLength</tabstop>
   <tabstop>spinBoxPolyOrder</tabstop>
+  <tabstop>checkBoxSR</tabstop>
   <tabstop>lineEditMinwn</tabstop>
   <tabstop>horizontalSliderMin</tabstop>
   <tabstop>horizontalSliderMax</tabstop>
   <tabstop>lineEditMaxwn</tabstop>
+  <tabstop>checkBoxBC</tabstop>
   <tabstop>comboBoxBaseline</tabstop>
+  <tabstop>horizontalSliderLambda</tabstop>
+  <tabstop>lineEditLambda</tabstop>
+  <tabstop>horizontalSliderP</tabstop>
+  <tabstop>lineEditP</tabstop>
+  <tabstop>checkBoxNorm</tabstop>
   <tabstop>comboBoxNormMethod</tabstop>
   <tabstop>lineEditNormWavenum</tabstop>
   <tabstop>pushButtonSaveParameters</tabstop>
   <tabstop>pushButtonLoadParameters</tabstop>
   <tabstop>pushButtonRun</tabstop>
   <tabstop>pushButtonRunStop</tabstop>
+  <tabstop>lineEditSaveExt</tabstop>
+  <tabstop>comboBoxSaveFormat</tabstop>
+  <tabstop>horizontalSliderLambdaArpls</tabstop>
+  <tabstop>lineEditLambdaArpls</tabstop>
+  <tabstop>spinBoxBCPoly</tabstop>
+  <tabstop>lineEditBCThresh</tabstop>
+  <tabstop>lineEditReferenceName</tabstop>
+  <tabstop>spinBoxItersBC</tabstop>
+  <tabstop>pushButtonLoadOther</tabstop>
  </tabstops>
  <resources/>
  <connections/>

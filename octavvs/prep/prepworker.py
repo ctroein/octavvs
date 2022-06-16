@@ -104,17 +104,24 @@ class PrepWorker(QObject):
         """
         if params.mcDo:
             self.emitProgress(-5, 100)
-            y = ptir.normalize_mirage(wn, y,
-                                      endpoints=params.mcEndpoints,
-                                      slopefactor=params.mcSlopefactor)[0]
+            y = ptir.correct_mirage(
+                wn, y,
+                breaks=params.mcBreaks,
+                endpoints=params.mcEndpoints,
+                slopefactor=params.mcSlopefactor,
+                pca_ncomp=params.mcPCAComponents if params.mcPCA else 0,
+                soft_limits=params.mcSoftLimit,
+                sl_level=params.mcSoftLimitLevel,
+                chipweight=params.mcChipWeight)[0]
 
         if params.acDo:
             self.emitProgress(-1, 100)
-            y = correction.atmospheric(wn, y, cut_co2=params.acSpline,
-                                       extra_iters=5 if params.acLocal else 0,
-                                       smooth_win=9 if params.acSmooth else 0,
-                                       atm=params.acReference,
-                                       progressCallback=self.emitProgress)[0]
+            y = correction.atmospheric(
+                wn, y, cut_co2=params.acSpline,
+                extra_iters=5 if params.acLocal else 0,
+                smooth_win=9 if params.acSmooth else 0,
+                atm=params.acReference,
+                progressCallback=self.emitProgress)[0]
 
         if params.scDo:
             self.emitProgress(-2, 100)

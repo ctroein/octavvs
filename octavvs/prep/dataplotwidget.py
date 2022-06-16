@@ -19,7 +19,8 @@ class DataPlotWidget(FigureCanvas):
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
 #        self.fig.canvas.mpl_connect('button_press_event', self.onclick)
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding,
+                                   QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
         self.wavenumber = None
         self.inspectra = None
@@ -249,10 +250,14 @@ class MCPlotWidget(DataPlotWidget):
         self.window_title = 'mIRage correction'
 
     def draw_ax(self, ax):
-        for s in range(len(self.spectra)):
-            ax.plot(self.wavenumber, self.inspectra[s],
-                    color='black', linewidth=1, label='Input' if not s else None)
-            ax.plot(self.wavenumber, self.spectra[s],
-                    linewidth=1, label='Corrected' if not s else None)
-        if len(self.spectra):
-            ax.legend()
+        if not len(self.spectra):
+            return
+        ss = self.inspectra / self.inspectra.max(1)[:, None]
+        for i, s in enumerate(ss):
+            ax.plot(self.wavenumber, s, color='b', linewidth=1,
+                    label='Input' if not i else None)
+        ss = self.spectra / self.spectra.max(1)[:, None]
+        for i, s in enumerate(ss):
+            ax.plot(self.wavenumber, s, color='r', linewidth=1,
+                    label='Corrected' if not i else None)
+        ax.legend()

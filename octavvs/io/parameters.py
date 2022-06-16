@@ -27,4 +27,5 @@ class Parameters:
             self.__dict__.update(data)
 
     def filtered(self, prefix):
+        "Returns a dict of parameters that start with the given prexix"
         return { k: v for k, v in vars(self).items() if k.startswith(prefix)}

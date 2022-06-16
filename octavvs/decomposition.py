@@ -875,6 +875,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
 
+        # For batch job, not for load/save of settings
+        p.dcDirectory = self.lineEditDcDirectory.text()
+
         p.caInput = self.caInputNames[self.comboBoxClusterInput.currentIndex()]
         p.caNormalization = self.caNormalizationNames[
             self.comboBoxClusterNormalization.currentIndex()]

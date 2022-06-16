@@ -444,6 +444,21 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>comboBoxMethod</tabstop>
+  <tabstop>lineEditWavenumber</tabstop>
+  <tabstop>comboBoxCmaps</tabstop>
+  <tabstop>horizontalSliderWavenumber</tabstop>
+  <tabstop>horizontalSliderImage</tabstop>
+  <tabstop>lineEditImageInfo</tabstop>
+  <tabstop>pushButtonWhitelight</tabstop>
+  <tabstop>pushButtonExpandProjection</tabstop>
+  <tabstop>lineEditPixelSize</tabstop>
+  <tabstop>checkBoxPixelFill</tabstop>
+  <tabstop>spinBoxSpectra</tabstop>
+  <tabstop>checkBoxAutopick</tabstop>
+  <tabstop>comboBoxPlotCmap</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

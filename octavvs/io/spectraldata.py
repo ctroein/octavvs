@@ -96,11 +96,11 @@ class SpectralData:
                 deltar = np.diff(ss[0, :])
                 if np.all(deltac > 0) or np.all(deltac < 0):
                     d = 1
-                    print('column order')
+                    # print('column order')
                     raw = ss[::d, 1:].T
                     wn = ss[::d, 0]
                 elif np.all(deltar > 0) or np.all(deltar < 0):
-                    print('row order')
+                    # print('row order')
                     raw = ss[1:, :]
                     wn = ss[0, :]
                 else:
