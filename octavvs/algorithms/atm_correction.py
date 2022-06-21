@@ -74,11 +74,13 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
     else:
         atm = atm.copy()
 
-    # ranges: numpy array (n, 2) of n non-overlapping wavenumber ranges (typically for H2O only), or None
-    # extra_winwidth: width of the window (in cm-1) used to locally reshape the atm spectrum
-    ranges = [[1300, 2100], [3410, 3850], [2190, 2480]]
-    extra_winwidth = [30, 150, 40]
-    corr_ranges = 2 if cut_co2 else 3
+    # ranges: numpy array (n, 2) of n non-overlapping wavenumber ranges
+    # (typically for H2O only), or None
+    # extra_winwidth: width of the window (in cm-1) used to locally
+    # reshape the atm spectrum
+    ranges = [[400, 750], [1300, 2100], [3410, 3960], [2190, 2480]]
+    extra_winwidth = [100, 30, 150, 40]
+    corr_ranges = 3 if cut_co2 else 4
 #        ranges = ranges[:2]
 #        extra_winwidth = extra_winwidth[:2]
 
