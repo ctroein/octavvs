@@ -179,20 +179,20 @@ class PrepWorker(QObject):
         if params.bcDo:
             self.emitProgress(-4, 100)
             if params.bcMethod == 'rubberband':
-                y -= baseline.rubberband(
-                        wn, y, progressCallback=self.emitProgress)
+                y = y - baseline.rubberband(
+                    wn, y, progressCallback=self.emitProgress)
             elif params.bcMethod == 'concaverubberband':
-                y -= baseline.concaverubberband(
-                        wn, y, iters=params.bcIters,
-                        progressCallback=self.emitProgress)
+                y = y - baseline.concaverubberband(
+                    wn, y, iters=params.bcIters,
+                    progressCallback=self.emitProgress)
             elif params.bcMethod == 'asls':
-                y -= baseline.asls(
-                        y, lam=params.bcLambda, p=params.bcP,
-                        progressCallback=self.emitProgress)
+                y = y - baseline.asls(
+                    y, lam=params.bcLambda, p=params.bcP,
+                    progressCallback=self.emitProgress)
             elif params.bcMethod == 'arpls':
-                y -= baseline.arpls(
-                        y, lam=params.bcLambdaArpls,
-                        progressCallback=self.emitProgress)
+                y = y - baseline.arpls(
+                    y, lam=params.bcLambdaArpls,
+                    progressCallback=self.emitProgress)
             else:
                 raise ValueError('unknown baseline correction method '+str(params.bcMethod))
 
