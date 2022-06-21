@@ -90,11 +90,26 @@ class OpusReader:
             elif dt == 0 and db == 0 and dtt == 160:
                 im = self.parse_image(self.read_chunk(f, dcsize, dcoffs))
                 self.images.append(Image(data=im[0], fmt=im[1]))
-        # Assume the data were read ok
-        start, pad = 16006, 38
-        wns, w, h, wn1, wn2 = [abparams[k] for k in ['NPT', 'NPX', 'NPY', 'FXV', 'LXV']]
-        n = w * h * (wns + pad)
+        # Assume the data were read ok.
+        # Some files have only a single spectrum and no start/pad.
+        # Example file 1 {'NPT': 1530 (points), 'FXV': 3847.55 (wn1),
+        # 'LXV': 898.72 (wn2), 'CSF': 1.0, 'MXY': 0.7652,
+        # 'MNY': -0.05269, 'DPF': 1, 'AOX': 34254.5 (origin-x?),
+        # 'AOY': 6906.9 (origin-y?), 'NPX': 64 (w), 'DDX': 2.61079 (xres),
+        # 'NPY': 64 (h), 'DDY': 2.61078 (yres) }
+        # Example file 2: {'DPF': 1, 'NPT': 3734, 'FXV': 3998.983,
+        # 'LXV': 399.223, 'CSF': 1.0, 'MXY': 0.030427, 'MNY': -0.1112276}
         raw = np.frombuffer(abmatrix, dtype=np.float32)
+        wns, wn1, wn2 = [abparams[k] for k in ['NPT', 'FXV', 'LXV']]
+        start, pad = 16006, 38
+        try:
+            w, h = abparams['NPX'], abparams['NPY']
+        except KeyError:
+            w, h = 1, 1
+            pad = 0
+            if len(raw) < start + wns:
+                start = 0
+        n = w * h * (wns + pad)
         self.AB = raw[start:start+n].reshape((w * h, wns + pad))[:, :wns]
         self.wavenum = np.linspace(wn1, wn2, wns)
         self.wh = (w, h)
