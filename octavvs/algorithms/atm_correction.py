@@ -78,24 +78,31 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
     # (typically for H2O only), or None
     # extra_winwidth: width of the window (in cm-1) used to locally
     # reshape the atm spectrum
-    ranges = [[400, 750], [1300, 2100], [3410, 3960], [2190, 2480]]
+    ranges = [[399, 776], [1300, 2100], [3410, 3960], [2190, 2480]]
+    do_ranges = np.ones(len(ranges), dtype=bool)
+    n_gas = np.array([0, 0, 0, 1])
     extra_winwidth = [100, 30, 150, 40]
-    corr_ranges = 3 if cut_co2 else 4
-#        ranges = ranges[:2]
-#        extra_winwidth = extra_winwidth[:2]
+    if cut_co2:
+        do_ranges[n_gas == 1] = False
 
     if ranges is None:
         ranges = np.array([0, len(wn)])
     else:
         ranges = find_wn_ranges(wn, ranges)
 
-    for i in range(corr_ranges):
-        p, q = ranges[i]
-        if q - p < 2: continue
-        atm[p:q] -= baseline.straight(wn[p:q], atm[p:q])
+    for i, (p, q) in enumerate(ranges):
+        if not do_ranges[i]:
+            continue
+        if q - p < 2:
+            do_ranges[i] = False
+            continue
+        # atm[p:q] -= baseline.straight(wn[p:q], atm[p:q])
+        if np.abs(atm[p:q]).sum() == 0:
+            do_ranges[i] = False
 
     savgolwin = 1 + 2 * int(smooth_win * (len(wn) - 1) / np.abs(wn[0] - wn[-1]))
 
+    corr_ranges = do_ranges.sum()
     if progressCallback:
         progressA = 0
         progressB = 1 + corr_ranges * (extra_iters + (1 if savgolwin > 1 else 0))
@@ -105,22 +112,18 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
     dy = y[:,:-1] - y[:,1:]
     dh2 = np.cumsum(dh * dh)
     dhdy = np.cumsum(dy * dh, 1)
-    az = np.zeros((len(y), corr_ranges))
-    for i in range(corr_ranges):
-        p, q = ranges[i]
-        if q - p < 2: continue
+    for i, (p, q) in enumerate(ranges[do_ranges]):
         r = q-2 if q <= len(wn) else q-1
-        az[:, i] = ((dhdy[:,r] - dhdy[:,p-1]) / (dh2[r] - dh2[p-1])) if p > 0 else (dhdy[:,r] / dh2[r])
-        y[:, p:q] -= az[:, i, None] @ atm[None, p:q]
+        az = ((dhdy[:,r] - dhdy[:,p-1]) / (dh2[r] - dh2[p-1])
+                    ) if p > 0 else (dhdy[:,r] / dh2[r])
+        y[:, p:q] -= az[..., None] @ atm[None, p:q]
 
     if progressCallback:
         progressA += 1
         progressCallback(progressA, progressB)
 
     for pss in range(extra_iters):
-        for i in range(corr_ranges):
-            p, q = ranges[i]
-            if q - p < 2: continue
+        for i, (p, q) in enumerate(ranges[do_ranges]):
             window = 2 * int(extra_winwidth[i] * (len(wn) - 1) / np.abs(wn[0] - wn[-1]))
             winh = (window+1)//2
             dy = y[:,:-1] - y[:,1:]
@@ -140,8 +143,7 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
                 progressCallback(progressA, progressB)
 
     if savgolwin > 1:
-        for i in range(corr_ranges):
-            p, q = ranges[i]
+        for i, (p, q) in enumerate(ranges[do_ranges]):
             if q - p < savgolwin: continue
             y[:, p:q] = savgol_filter(y[:, p:q], savgolwin, 3, axis=1)
             if progressCallback:
@@ -165,14 +167,14 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
 
     corrs = np.zeros(2)
     ncorrs = np.zeros_like(corrs)
-    for i in range(len(ranges)):
-        p, q = ranges[i]
-        if q - p < 2: continue
-        corr = np.abs(yorig[:, p:q] - y[:, p:q]).sum(1) / np.maximum(np.abs(yorig[:, p:q]), np.abs(y[:, p:q])).sum(1)
-        gas = int(i > 1)
-        corrs[gas] += corr.mean()
-        ncorrs[gas] += 1
-    if ncorrs[0] > 1:
-        corrs[0] = corrs[0] / ncorrs[0]
+    if cut_co2:
+        do_ranges[n_gas == 1] = True
+    for i, (p, q) in enumerate(ranges[do_ranges]):
+        corr = np.abs(yorig[:, p:q] - y[:, p:q]).sum(1) / np.maximum(
+            np.abs(yorig[:, p:q]), np.abs(y[:, p:q])).sum(1)
+        g = n_gas[do_ranges][i]
+        corrs[g] += corr.mean()
+        ncorrs[g] += 1
+    corrs[ncorrs > 1] = corrs[ncorrs > 1] / ncorrs[ncorrs > 1]
 
     return (y.squeeze() if squeeze else y), corrs
