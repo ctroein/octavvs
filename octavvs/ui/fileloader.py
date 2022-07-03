@@ -76,6 +76,8 @@ class FileLoader():
         self.fileLoader.pushButtonAdd.clicked.connect(self.addFolder)
         self.fileLoader.spinBoxFileNumber.valueChanged.connect(self.selectFile)
         self.fileLoader.pushButtonShowFiles.clicked.connect(self.showFileList)
+        self.fileLoader.comboBoxUnits.currentIndexChanged.connect(
+            self.updateUnits)
 
         self.fileLoader.lineEditWidth.editingFinished.connect(
             lambda: self._updateDimension(0))
@@ -245,4 +247,5 @@ class FileLoader():
         if self.data.wavenumber is not None:
             self.fileLoader.lineEditLength.setText(str(len(self.data.wavenumber)))
 
-
+    def updateUnits(self, ix):
+        self.updateUnitsAndOrder('cm-1' if ix < 2 else 'nm', ix % 2 == 0)

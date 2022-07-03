@@ -168,6 +168,13 @@ class ImageVisualizer():
             pass
         self.imageVisualizer.updateSpectralImage()
 
+    def updateUnitsAndOrder(self, units, ltr):
+        super().updateUnitsAndOrder(units, ltr)
+        self.imageVisualizer.labelUnits1.setText(self.unitsRichText())
+        self.imageVisualizer.plot_spectra.setOrder(ltr)
+        self.imageVisualizer.horizontalSliderWavenumber.setInvertedAppearance(
+            not ltr)
+
     def updateWhiteLightImages(self):
         imgcnt = len(self.data.images) if self.data.images else 0
         intern = self.spatialMode or imgcnt

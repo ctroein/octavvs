@@ -7,7 +7,7 @@ import matplotlib
 import numpy as np
 import math
 import skimage.draw
-
+from ..algorithms.util import pixels_fit
 
 class BasePlotWidget(FigureCanvas):
     def __init__(self, parent=None):
@@ -27,6 +27,35 @@ class BasePlotWidget(FigureCanvas):
         self.cmap = plt.get_cmap().name
         self.pixel_size = 2
 
+    def set_basic_data(self, pixels=None, wh=None, pixelxy=None):
+        "Set shape/points and clears ROI etc"
+        if wh is None and pixelxy is None:
+            raise ValueError('Either wh or pixelxy must be specified')
+        if pixelxy is not None:
+            pixels = len(pixelxy)
+        elif pixels is None:
+            pixels = wh[0] * wh[1]
+        else:
+            assert pixels_fit(pixels, wh)
+        self.wh = wh
+        self.pixelxy = pixelxy
+        self.pixels = pixels
+
+    def rebox_data(self, data):
+        "Make a reshaped data array that fits in w*h(*a)"
+        nbox = self.wh[1] * self.wh[0]
+        if nbox > self.pixels:
+            shape = list(data.shape)
+            shape[0] = nbox
+            data2d = np.zeros(shape=shape, dtype=data.dtype)
+            data2d[:self.pixels, ...] = data
+            if len(shape) == 1:
+                data2d[self.pixels:, ...] = data.min()
+        else:
+            data2d = data
+        shape = [self.wh[1], self.wh[0]] + list(data.shape[1:])
+        return data2d.reshape(shape)
+
 
 class RoiPlotWidget(BasePlotWidget):
     updated = pyqtSignal(int, int)  # N out of M selected
@@ -38,7 +67,7 @@ class RoiPlotWidget(BasePlotWidget):
         # Data to plot
         self.data = None
         self.roi = None
-        self.roi_alpha = np.array([200, 200, 200, 128], np.uint8) # RGBA
+        self.roi_alpha = np.array([130, 140, 180, 120], np.uint8) # RGBA
         self.polystart = None   # Patch created when starting polygon
         self.polyline = None    # Line2D for lines in polygon
         self.drawmode = 'click' # click, add, remove
@@ -52,17 +81,9 @@ class RoiPlotWidget(BasePlotWidget):
         n = 0 if self.roi is None else self.roi.sum()
         self.updated.emit(n, self.pixels)
 
-    def set_basic_data(self, wh=None, pixelxy=None):
+    def set_basic_data(self, pixels=None, wh=None, pixelxy=None):
         "Set shape/points and clears ROI etc"
-        if wh is None and pixelxy is None:
-            raise ValueError('Either wh or pixelxy must be specified')
-        if pixelxy is not None:
-            pixels = len(pixelxy)
-        else:
-            pixels = wh[0] * wh[1]
-        self.wh = wh
-        self.pixelxy = pixelxy
-        self.pixels = pixels
+        super().set_basic_data(pixels=pixels, wh=wh, pixelxy=pixelxy)
         self.data = None
         self.roi = np.zeros((self.pixels), dtype=bool)
         self.polyline = None
@@ -74,8 +95,7 @@ class RoiPlotWidget(BasePlotWidget):
 
     def adjust_geometry(self, wh):
         "Update the plot geometry, keeping the pixel count"
-        pixels = wh[0] * wh[1]
-        assert pixels == self.pixels
+        assert pixels_fit(self.pixels, wh)
         self.wh = wh
         self.set_data(self.data)
 
@@ -131,20 +151,22 @@ class RoiPlotWidget(BasePlotWidget):
                 for i in range(self.pixels):
                     self.patches[i].set_facecolor(cmap(norm(data[i])))
         else:
-            data2d = data.reshape((self.wh[1], self.wh[0]))
+            data2d = self.rebox_data(data)
             if self.data is None:
-                im = self.ax.imshow(data2d, cmap=self.cmap, zorder=-1,
+                im = self.ax.imshow(data2d, cmap=self.cmap, zorder=0,
                                     origin='lower')
                 im.set_extent((0, self.wh[0], 0, self.wh[1]))
                 # Turn roi into rgba
-                roi2d = np.outer(self.roi, self.roi_alpha).reshape(
-                    self.wh[1], self.wh[0], 4)
-                rim = self.ax.imshow(roi2d, zorder=0, origin='lower')
+                roi2d = np.outer(self.roi, self.roi_alpha)
+                roi2d = self.rebox_data(roi2d)
+                rim = self.ax.imshow(roi2d, zorder=2, origin='lower')
                 rim.set_extent((0, self.wh[0], 0, self.wh[1]))
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(data2d)
-                # im.set_clim(data.min(), data.max())
+                # im.set_clim(data2d.min(), data2d.max()) # test
+                im.set_extent((0, self.wh[0], 0, self.wh[1]))
+                im = self.ax.get_images()[1]
                 im.set_extent((0, self.wh[0], 0, self.wh[1]))
                 im.autoscale()
             self.ax.autoscale()
@@ -196,8 +218,8 @@ class RoiPlotWidget(BasePlotWidget):
             for i in range(self.pixels):
                 self.select_pixel(i, self.roi[i])
         else:
-            roi2d = np.outer(self.roi, self.roi_alpha).reshape(
-                self.wh[1], self.wh[0], 4)
+            roi2d = np.outer(self.roi, self.roi_alpha)
+            roi2d = self.rebox_data(roi2d)
             self.ax.get_images()[1].set_data(roi2d)
 
     def invert_roi(self):
@@ -268,7 +290,7 @@ class RoiPlotWidget(BasePlotWidget):
                     ppx, ppy = skimage.draw.polygon(
                         pxy[:,0], pxy[:,1], shape=self.wh)
                     pp = ppx + ppy * self.wh[0]
-                    self.roi[pp] = sign
+                    self.roi[pp[pp < len(self.roi)]] = sign
                     self.update_roi_image()
                 else:
                     pg = matplotlib.patches.Polygon(pxy)
@@ -306,13 +328,14 @@ class RoiPlotWidget(BasePlotWidget):
             x, y = (math.floor(event.xdata), math.floor(event.ydata))
             if (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
                 i = x + y * self.wh[0]
-                if not self.drawing:
-                    self.drawsign = not self.roi[i]
-                    self.drawing = True
-                if self.roi[i] != self.drawsign:
-                    self.roi[i] = self.drawsign
-                    upd = True
-                    self.update_roi_image()
+                if i < len(self.roi):
+                    if not self.drawing:
+                        self.drawsign = not self.roi[i]
+                        self.drawing = True
+                    if self.roi[i] != self.drawsign:
+                        self.roi[i] = self.drawsign
+                        upd = True
+                        self.update_roi_image()
         if upd:
             self.emit_updated()
             self.draw_idle()
@@ -385,24 +408,15 @@ class DecompositionPlotWidget(BasePlotWidget):
         self.display_mode = m
         self.draw_idle()
 
-    def set_basic_data(self, wn, wh, pixelxy):
+    def set_basic_data(self, wn, pixels=None, wh=None, pixelxy=None):
         "Set wavenumbers and geometric data that won't change for this file"
-        if wh is None and pixelxy is None:
-            raise ValueError('Either wh or pixelxy must be specified')
-        if pixelxy is not None:
-            pixels = len(pixelxy)
-        else:
-            pixels = wh[0] * wh[1]
-        self.wh = wh
-        self.pixelxy = pixelxy
-        self.pixels = pixels
+        super().set_basic_data(pixels=pixels, wh=wh, pixelxy=pixelxy)
         self.wn = wn
         self.clear_and_set_roi()
 
     def adjust_geometry(self, wh):
         "Change shape without altering pixel count"
-        pixels = wh[0] * wh[1]
-        assert pixels == self.pixels
+        assert pixels_fit(self.pixels, wh)
         self.wh = wh
         self.draw_idle()
 
@@ -569,7 +583,7 @@ class DecompositionPlotWidget(BasePlotWidget):
                 ax.set_ylim(minxy[1] - m, maxxy[1] + m)
                 # ax.set_extent((minxy[1], maxxy[1], maxxy[0], minxy[0]))
         else:
-            data = data.reshape((self.wh[1], self.wh[0]))
+            data = self.rebox_data(data)
             imgs = ax.get_images()
             if imgs:
                 im = imgs[0]
@@ -646,27 +660,18 @@ class ClusterPlotWidget(BasePlotWidget):
         self.ax.set_facecolor('#eeeeee')
 
 
-    def set_basic_data(self, wh=None, pixelxy=None):
+    def set_basic_data(self, pixels=None, wh=None, pixelxy=None):
         "Set shape/points and clears clusters"
-        if wh is None and pixelxy is None:
-            raise ValueError('Either wh or pixelxy must be specified')
-        if pixelxy is not None:
-            pixels = len(pixelxy)
-        else:
-            pixels = wh[0] * wh[1]
-        self.wh = wh
-        self.pixelxy = pixelxy
-        self.pixels = pixels
+        super().set_basic_data(pixels=pixels, wh=wh, pixelxy=pixelxy)
         # clusters_of_all: 0 or cluster+1 for all pixels
         self.clusters_of_all = np.zeros((self.pixels), dtype=np.uint8)
         self.set_roi_and_clusters(None, None)
 
     def adjust_geometry(self, wh):
         "Update the plot geometry, keeping the pixel count"
-        pixels = wh[0] * wh[1]
-        assert pixels == self.pixels
+        assert pixels_fit(self.pixels, wh)
         self.wh = wh
-        self.update_image()
+        self.set_roi_and_clusters(self.roi, self.clusters)
 
     @pyqtSlot(float)
     def set_pixel_size(self, s):
@@ -729,7 +734,8 @@ class ClusterPlotWidget(BasePlotWidget):
                 for i, xy in enumerate(self.pixelxy):
                     c = self.clusters_of_all[i]
                     fc = self.cluster_color(c - 1) if c else unroi
-                    p = matplotlib.patches.Rectangle(xy - r / 2, r, r, facecolor=fc)
+                    p = matplotlib.patches.Rectangle(
+                        xy - r / 2, r, r, facecolor=fc)
                     self.ax.add_patch(p)
                 m = .05 * np.max(maxxy - minxy) + r / 2
                 self.ax.set_xlim(minxy[0] - m, maxxy[0] + m)
@@ -739,14 +745,15 @@ class ClusterPlotWidget(BasePlotWidget):
                     c = self.clusters_of_all[i]
                     p.set_facecolor(self.cluster_color(c - 1) if c else unroi)
         else:
-            i2d = np.zeros((self.wh[1] * self.wh[0], 4))
+            i2d = np.zeros((self.pixels, 4))
             i2d[roi, :] = self.cluster_color(clusters)
-            i2d = i2d.reshape((self.wh[1], self.wh[0], 4))
+            i2d = self.rebox_data(i2d)
             if setup_axes:
                 self.ax.imshow(i2d, zorder=0, origin='lower')
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(i2d)
+                im.set_extent((-.5, self.wh[0]-.5, -.5, self.wh[1]-.5))
         self.draw_idle()
 
     def on_click(self, event):
@@ -761,7 +768,8 @@ class ClusterPlotWidget(BasePlotWidget):
             x, y = (int(event.xdata + .5), int(event.ydata + .5))
             if (0 <= x < self.wh[0] and 0 <= y < self.wh[1]):
                 i = x + y * self.wh[0]
-                c = self.clusters_of_all[i]
-                if c:
-                    self.clicked.emit(c - 1)
+                if i < len(self.clusters_of_all):
+                    c = self.clusters_of_all[i]
+                    if c:
+                        self.clicked.emit(c - 1)
 

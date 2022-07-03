@@ -113,3 +113,7 @@ def find_wn_ranges(wn, ranges):
     return len(wn) - np.stack((np.searchsorted(wn[::-1], ranges[:,1], 'right'),
                               np.searchsorted(wn[::-1], ranges[:,0])), 1)
 
+def pixels_fit(npixels, wh):
+    "Check that n pixels fit snugly within w * h"
+    return wh[0] * (wh[1] - 1) < npixels <= wh[0] * wh[1]
+

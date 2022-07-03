@@ -37,6 +37,9 @@ class OctavvsMainWindow(QMainWindow):
         self.errorMsg = QErrorMessage(self)
         self.errorMsg.setWindowModality(Qt.WindowModal)
 
+        self.units = 'cm-1'
+        self.plot_ltr = True
+
     def post_setup(self):
         "Called by children after setting up UI but before loading data etc"
         self.setWindowTitle('OCTAVVS %s %s' % (self.program_name(), self.octavvs_version))
@@ -152,6 +155,15 @@ class OctavvsMainWindow(QMainWindow):
         "For derived classes, when image width/height is updated"
         pass
 
+    def updateUnitsAndOrder(self, units, ltr):
+        "Update the units (cm^-1 or nm) and direction of plots"
+        self.units = units
+        self.plot_ltr = ltr
+
+    def unitsRichText(self):
+        if self.units == 'cm-1':
+            return 'cm<sup>-1</sup>'
+        return self.units
 
     @classmethod
     def run_octavvs_application(windowclass, parser=None, parameters=[],

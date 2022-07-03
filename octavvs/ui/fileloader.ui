@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>547</width>
-    <height>131</height>
+    <width>643</width>
+    <height>147</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -181,19 +181,36 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1,1,1,0,1,0">
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>Wavenumbers</string>
-       </property>
-      </widget>
-     </item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,1,1,0,1,0">
      <item>
       <widget class="QLineEdit" name="lineEditLength">
        <property name="readOnly">
         <bool>true</bool>
        </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBoxUnits">
+       <item>
+        <property name="text">
+         <string>Wavenumbers →</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Wavenumbers ←</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Wavelengths →</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Wavelengths ←</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item>
@@ -230,6 +247,21 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>comboBoxSingMult</tabstop>
+  <tabstop>pushButtonLoad</tabstop>
+  <tabstop>pushButtonAdd</tabstop>
+  <tabstop>pushButtonShowFiles</tabstop>
+  <tabstop>lineEditLoadFilter</tabstop>
+  <tabstop>spinBoxFileNumber</tabstop>
+  <tabstop>pushButtonFilePrev</tabstop>
+  <tabstop>pushButtonFileNext</tabstop>
+  <tabstop>lineEditFilename</tabstop>
+  <tabstop>lineEditLength</tabstop>
+  <tabstop>comboBoxUnits</tabstop>
+  <tabstop>lineEditWidth</tabstop>
+  <tabstop>lineEditHeight</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

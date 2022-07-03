@@ -13,6 +13,7 @@ from pymatreader import read_mat
 
 from .opusreader import OpusReader
 from .ptirreader import PtirReader
+from ..algorithms.util import pixels_fit
 
 class SpectralData:
     """
@@ -39,9 +40,9 @@ class SpectralData:
             w = 0
         if w <= 0:
             return False
-        h = int(self.raw.shape[0] / w)
-        if w * h != self.raw.shape[0]:
-            return False
+        h = (self.raw.shape[0] + w - 1) // w
+        # if w * h != self.raw.shape[0]:
+        #     return False
         self.wh = (w, h)
         return True
 
@@ -130,7 +131,7 @@ class SpectralData:
             if len(wh) != 2:
                 raise RuntimeError('Image size in "wh" must have length 2')
             wh = (int(wh[0]), int(wh[1]))
-            if wh[0] * wh[1] != npix:
+            if not pixels_fit(npix, wh):
                 raise RuntimeError('Image size in "wh" does not match data size')
             self.wh = wh
         elif npix != self.wh[0] * self.wh[1]:

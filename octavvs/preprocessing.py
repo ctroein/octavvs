@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from .prep.prepworker import PrepWorker, ABCWorker, PrepParameters
 import octavvs.io
-from octavvs.algorithms import normalization, ptir
+from octavvs.algorithms import normalization
 from octavvs.io import SpectralData
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
                         NoRepeatStyle, uitools)
@@ -52,6 +52,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
     closing = pyqtSignal()
     startRmiesc = pyqtSignal(SpectralData, dict)
     startAC = pyqtSignal(np.ndarray, np.ndarray, dict)
+    startMC = pyqtSignal(np.ndarray, np.ndarray, dict, dict)
+    startMCOptimize = pyqtSignal(np.ndarray, np.ndarray, dict, str)
     startBC = pyqtSignal(np.ndarray, np.ndarray, str, dict)
     startBatch = pyqtSignal(SpectralData, PrepParameters, str, bool)
     startCreateReference = pyqtSignal(SpectralData, PrepParameters, str)
@@ -112,12 +114,15 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         dma.checkBoxMCLimit.toggled.connect(self.updateMC)
         dma.checkBoxMCLimit.toggled.connect(self.toggleMC)
         dma.checkBoxMCAccuratePreview.toggled.connect(self.updateMC)
+        dma.checkBoxMCAccuratePreview.toggled.connect(self.toggleMC)
+        dma.pushButtonMCOptimizePCA.clicked.connect(self.optimizeMCPCA)
+        dma.pushButtonMCOptimizeSL.clicked.connect(self.optimizeMCSL)
+        dma.pushButtonMCDefaults.clicked.connect(self.resetMC)
 
         self.plot_MC.updated.connect(self.updateAC)
         self.plot_AC.clicked.connect(self.plot_AC.popOut)
         self.checkBoxAC.toggled.connect(self.updateAC)
         self.checkBoxSpline.toggled.connect(self.updateAC)
-        self.checkBoxLocalPeak.toggled.connect(self.updateAC)
         self.checkBoxSmoothCorrected.toggled.connect(self.updateAC)
         self.pushButtonACLoadReference.clicked.connect(self.loadACReference)
         self.lineEditACReference.editingFinished.connect(self.updateAC)
@@ -144,33 +149,34 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.dialogCreateReference.pushButtonCreateReference.clicked.connect(self.createReference)
         self.dialogCreateReference.pushButtonStop.clicked.connect(self.scStop)
 
-        self.dialogSCAdvanced = DialogSCAdvanced()
-        self.pushButtonSCAdvanced.clicked.connect(self.dialogSCAdvanced.show)
-        self.pushButtonSCAdvanced.clicked.connect(self.dialogSCAdvanced.raise_)
-        self.dialogSCAdvanced.comboBoxSCAlgo.currentIndexChanged.connect(self.updateSC)
-        self.dialogSCAdvanced.spinBoxSCResolution.valueChanged.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCamin.editingFinished.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCamax.editingFinished.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCdmin.editingFinished.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCdmax.editingFinished.connect(self.updateSC)
-        self.dialogSCAdvanced.checkBoxSCConstant.toggled.connect(self.updateSC)
-        self.dialogSCAdvanced.checkBoxSCLinear.toggled.connect(self.updateSC)
-        self.dialogSCAdvanced.checkBoxSCPrefitReference.toggled.connect(self.updateSC)
-        self.dialogSCAdvanced.checkBoxSCPenalize.toggled.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCPenalizeLambda.setRange(1e-3, 1e3)
-        self.dialogSCAdvanced.lineEditSCPenalizeLambda.setFormat("%g")
-        self.dialogSCAdvanced.lineEditSCPenalizeLambda.editingFinished.connect(self.updateSC)
-        self.dialogSCAdvanced.spinBoxSCPCA.valueChanged.connect(self.updateSC)
-        self.dialogSCAdvanced.radioButtonSCPCAFixed.toggled.connect(self.toggleSCPCA)
-        self.dialogSCAdvanced.radioButtonSCPCADynamic.toggled.connect(self.toggleSCPCA)
-        self.dialogSCAdvanced.spinBoxSCPCAMax.valueChanged.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCPCAVariance.setFormat("%.8g")
-        self.dialogSCAdvanced.lineEditSCPCAVariance.setRange(50, 99.999999)
-        self.dialogSCAdvanced.lineEditSCPCAVariance.editingFinished.connect(self.updateSC)
-        self.dialogSCAdvanced.checkBoxSCAutoIters.toggled.connect(self.updateSC)
-        self.dialogSCAdvanced.lineEditSCMinImprov.setRange(0, 99)
-        self.dialogSCAdvanced.lineEditSCMinImprov.setFormat("%g")
-        self.dialogSCAdvanced.lineEditSCMinImprov.editingFinished.connect(self.updateSC)
+        dsa = DialogSCAdvanced()
+        self.dialogSCAdvanced = dsa
+        self.pushButtonSCAdvanced.clicked.connect(dsa.show)
+        self.pushButtonSCAdvanced.clicked.connect(dsa.raise_)
+        dsa.comboBoxSCAlgo.currentIndexChanged.connect(self.updateSC)
+        dsa.spinBoxSCResolution.valueChanged.connect(self.updateSC)
+        dsa.lineEditSCamin.editingFinished.connect(self.updateSC)
+        dsa.lineEditSCamax.editingFinished.connect(self.updateSC)
+        dsa.lineEditSCdmin.editingFinished.connect(self.updateSC)
+        dsa.lineEditSCdmax.editingFinished.connect(self.updateSC)
+        dsa.checkBoxSCConstant.toggled.connect(self.updateSC)
+        dsa.checkBoxSCLinear.toggled.connect(self.updateSC)
+        dsa.checkBoxSCPrefitReference.toggled.connect(self.updateSC)
+        dsa.checkBoxSCPenalize.toggled.connect(self.updateSC)
+        dsa.lineEditSCPenalizeLambda.setRange(1e-3, 1e3)
+        dsa.lineEditSCPenalizeLambda.setFormat("%g")
+        dsa.lineEditSCPenalizeLambda.editingFinished.connect(self.updateSC)
+        dsa.spinBoxSCPCA.valueChanged.connect(self.updateSC)
+        dsa.radioButtonSCPCAFixed.toggled.connect(self.toggleSCPCA)
+        dsa.radioButtonSCPCADynamic.toggled.connect(self.toggleSCPCA)
+        dsa.spinBoxSCPCAMax.valueChanged.connect(self.updateSC)
+        dsa.lineEditSCPCAVariance.setFormat("%.8g")
+        dsa.lineEditSCPCAVariance.setRange(50, 99.999999)
+        dsa.lineEditSCPCAVariance.editingFinished.connect(self.updateSC)
+        dsa.checkBoxSCAutoIters.toggled.connect(self.updateSC)
+        dsa.lineEditSCMinImprov.setRange(0, 99)
+        dsa.lineEditSCMinImprov.setFormat("%g")
+        dsa.lineEditSCMinImprov.editingFinished.connect(self.updateSC)
 
         self.plot_AC.updated.connect(self.updateSGF)
         self.plot_SGF.clicked.connect(self.plot_SGF.popOut)
@@ -229,6 +235,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         self.bcNext = None
         self.acNext = None
+        self.mcNext = None
+        self.mcOptimizeNext = None
 
         self.abcWorker = ABCWorker()
         self.abcWorkerThread = QThread()
@@ -236,9 +244,15 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.closing.connect(self.abcWorkerThread.quit)
         self.startBC.connect(self.abcWorker.bc)
         self.startAC.connect(self.abcWorker.ac)
+        self.startMC.connect(self.abcWorker.mc)
+        self.startMCOptimize.connect(self.abcWorker.mcOptimize)
         self.abcWorker.acDone.connect(self.acDone)
+        self.abcWorker.mcDone.connect(self.mcDone)
+        self.abcWorker.mcOptimizeDone.connect(self.mcOptimizeDone)
         self.abcWorker.bcDone.connect(self.bcDone)
         self.abcWorker.acFailed.connect(self.acFailed)
+        self.abcWorker.mcFailed.connect(self.mcFailed)
+        self.abcWorker.mcOptimizeFailed.connect(self.mcOptimizeFailed)
         self.abcWorker.bcFailed.connect(self.bcFailed)
         self.abcWorkerThread.start()
 
@@ -248,17 +262,19 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         self.lineEditSCRefPercentile.setFormat("%g")
         self.lineEditSCRefPercentile.setRange(0., 100.)
-        self.dialogSCAdvanced.lineEditSCamin.setFormat("%.4g")
-        self.dialogSCAdvanced.lineEditSCamax.setFormat("%.4g")
-        self.dialogSCAdvanced.lineEditSCdmin.setFormat("%.4g")
-        self.dialogSCAdvanced.lineEditSCdmax.setFormat("%.4g")
-        self.dialogSCAdvanced.lineEditSCamin.setRange(1., 4.)
-        self.dialogSCAdvanced.lineEditSCamax.setRange(1., 4.)
-        self.dialogSCAdvanced.lineEditSCdmin.setRange(.1, 100.)
-        self.dialogSCAdvanced.lineEditSCdmax.setRange(.1, 100.)
+        dsa.lineEditSCamin.setFormat("%.4g")
+        dsa.lineEditSCamax.setFormat("%.4g")
+        dsa.lineEditSCdmin.setFormat("%.4g")
+        dsa.lineEditSCdmax.setFormat("%.4g")
+        dsa.lineEditSCamin.setRange(1., 4.)
+        dsa.lineEditSCamax.setRange(1., 4.)
+        dsa.lineEditSCdmin.setRange(.1, 100.)
+        dsa.lineEditSCdmax.setRange(.1, 100.)
 
         self.updateWavenumberRange()
         self.bcMethod()
+
+        self.defaultParameters = self.getParameters()
 
         self.post_setup()
         if paramFile is not None: # Loads the parameter file passed as argument
@@ -277,6 +293,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
     def closeEvent(self, event):
         self.worker.halt = True
         self.abcWorker.haltBC = True
+        self.abcWorker.haltMC = True
         self.closing.emit()
         plt.close('all')
         self.workerThread.wait()
@@ -325,8 +342,12 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
             self.abcWorker.haltBC = True
             self.bcNext = True
         if self.acNext:
-            self.abcWorker.haltBC = True
             self.acNext = True
+        if self.mcNext:
+            self.mcNext = True
+        if self.mcOptimizeNext:
+            self.abcWorker.haltMCOptimize = True
+            self.mcOptimizeNext = True
         self.clearSC()
 
         self.updateWavenumberRange()
@@ -342,46 +363,151 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         if q.exec():
             self.scStop()
 
+    def updateUnitsAndOrder(self, units, ltr):
+        super().updateUnitsAndOrder(units, ltr)
+        self.labelUnits1.setText(self.unitsRichText())
+        self.plot_MC.setOrder(ltr)
+        self.plot_AC.setOrder(ltr)
+        self.plot_SC.setOrder(ltr)
+        self.plot_SGF.setOrder(ltr)
+        self.plot_SR.setOrder(ltr)
+        self.plot_BC.setOrder(ltr)
+        self.plot_norm.setOrder(ltr)
+
 
     # MC, mIRage correction
     def toggleMC(self):
-        c = self.dialogMCAdvanced.checkBoxMCPCA.isChecked()
-        l = self.dialogMCAdvanced.checkBoxMCLimit.isChecked()
+        dma = self.dialogMCAdvanced
+        c = dma.checkBoxMCPCA.isChecked()
+        l = dma.checkBoxMCLimit.isChecked()
         for b in range(1, self.mcChips):
-            getattr(self.dialogMCAdvanced, 'spinBoxMCPCA%d' % b).setEnabled(c)
-            getattr(self.dialogMCAdvanced,
-                    'spinBoxMCLimitLevel%d' % b).setEnabled(l)
+            getattr(dma, 'spinBoxMCPCA%d' % b).setEnabled(c)
+            getattr(dma, 'spinBoxMCLimitLevel%d' % b).setEnabled(l)
+
+    def mcParams(self, p):
+        return dict(
+            breaks=p.mcBreaks,
+            endpoints=p.mcEndpoints,
+            slopefactor=p.mcSlopefactor,
+            pca=p.mcPCA,
+            pca_ncomp=p.mcPCAComponents,
+            soft_limits=p.mcSoftLimit,
+            sl_level=p.mcSoftLimitLevel,
+            chipweight=p.mcChipWeight)
+
+    def queueMC(self, args):
+        if self.mcNext:
+            self.mcNext = args
+        else:
+            self.startMC.emit(*args)
+            self.mcNext = True
 
     def updateMC(self):
-        params = self.getParameters()
-        p = params.filtered('mc')
-        ncomp = p['mcPCAComponents'] if p['mcPCA'] else 0
+        p = self.getParameters()
         wn = self.imageVisualizer.plot_spectra.getWavenumbers()
-        if (np.any(np.array(ncomp)) or p['mcSoftLimit']
-            ) and p['mcAccuratePreview']:
-            sel = self.imageVisualizer.plot_raw.getSelected()
-            indata = self.data.raw;
-        else:
-            sel = None
-            indata = self.imageVisualizer.plot_spectra.getSpectra()
-        if indata is None:
-            self.plot_MC.setData(wn, None, None)
+        indata = self.imageVisualizer.plot_spectra.getSpectra()
+        if wn is None or not self.ptirMode or not p.mcDo:
+            self.plot_MC.setData(wn, indata, None)
+            self.dialogMCAdvanced.plot_MCInfo.setData(None, None)
+            self.labelMCInfo.setText('')
             return
-        corr = None
-        if self.ptirMode and p['mcDo']:
-            corr = ptir.correct_mirage(
-                wn, indata,
-                breaks=p['mcBreaks'], endpoints=p['mcEndpoints'],
-                slopefactor=p['mcSlopefactor'],
-                pca_ncomp=ncomp,
-                soft_limits=p['mcSoftLimit'],
-                sl_level=p['mcSoftLimitLevel'],
-                chipweight=p['mcChipWeight'])[0]
-            if sel is not None:
-                corr = corr[sel]
+
+        sel = None
+        if p.mcAccuratePreview:
+            sel = self.imageVisualizer.plot_raw.getSelected()
+            indata = self.data.raw
+        args = [wn, indata, self.mcParams(p),
+            dict(breaks=p.mcBreaks, sel=sel)]
+        self.queueMC(args)
+
+    @pyqtSlot(np.ndarray, np.ndarray, np.ndarray, dict)
+    def mcDone(self, wn, indata, corr, runinfo):
+        if self.mcNext and self.mcNext is not True:
+            self.startMC.emit(*self.mcNext)
+            self.mcNext = True
+        else:
+            self.mcNext = None
+
+        if runinfo is None:
+            self.dialogMCAdvanced.plot_MCInfo.setData(None, None)
+            self.labelMCInfo.setText('Error')
+            self.plot_MC.setData(None, None, None)
+            return
+
+        self.dialogMCAdvanced.plot_MCInfo.setData(
+            runinfo['breaks'], runinfo['mcinfo'])
+        normsd = np.std(corr / corr.mean(1)[:, None], 0).mean()
+        self.labelMCInfo.setText('Spread: %.05g%%' % (normsd * 100))
+        sel = runinfo['sel']
         if sel is not None:
+            corr = corr[sel]
             indata = indata[sel]
         self.plot_MC.setData(wn, indata, corr)
+
+    @pyqtSlot(str)
+    def mcFailed(self, err):
+        if err != '':
+            self.errorMsg.showMessage(
+                'mIRage correction failed:<pre>\n' + err + '</pre>')
+        self.mcDone(None, None, None, None)
+
+    def resetMC(self):
+        if self.mcOptimizeNext:
+            self.abcWorker.haltMCOptimize = True
+        self.setParametersMC(self.defaultParameters)
+
+    def queueMCOptimize(self, args):
+        if self.mcOptimizeNext:
+            self.abcWorker.haltMCOptimize = True
+            self.mcOptimizeNext = args
+        else:
+            self.startMCOptimize.emit(*args)
+            self.mcOptimizeNext = True
+
+    def optimizeMC(self, what):
+        p = self.getParameters()
+        wn = self.imageVisualizer.plot_spectra.getWavenumbers()
+        if wn is None or not self.ptirMode or not p.mcDo:
+            return False
+        indata = self.data.raw
+        args = [wn, indata, self.mcParams(p), what]
+        self.queueMCOptimize(args)
+        return True
+
+    def optimizeMCPCA(self):
+        if self.optimizeMC('pca'):
+            self.dialogMCAdvanced.pushButtonMCOptimizePCA.setText('Running')
+
+    def optimizeMCSL(self):
+        if self.optimizeMC('sl'):
+            self.dialogMCAdvanced.pushButtonMCOptimizeSL.setText('Running')
+
+    @pyqtSlot(str, np.ndarray)
+    def mcOptimizeDone(self, what, best):
+        self.abcWorker.haltMCOptimize = False
+        if self.mcOptimizeNext and self.mcOptimizeNext is not True:
+            self.startMCOptimize.emit(*self.mcOptimizeNext)
+            self.mcOptimizeNext = True
+        else:
+            self.mcOptimizeNext = None
+
+        dma = self.dialogMCAdvanced
+        if what == 'pca':
+            for i, v in enumerate(best):
+                getattr(dma, 'spinBoxMCPCA%d' % (i + 1)).setValue(v)
+        elif what == 'sl':
+            for i, v in enumerate(best):
+                getattr(dma, 'spinBoxMCLimitLevel%d' % (i + 1)).setValue(v)
+        if not self.mcOptimizeNext:
+            dma.pushButtonMCOptimizePCA.setText('Optimize')
+            dma.pushButtonMCOptimizeSL.setText('Optimize')
+
+    @pyqtSlot(str)
+    def mcOptimizeFailed(self, err):
+        if err != '':
+            self.errorMsg.showMessage(
+                'mIRage optimization failed:<pre>\n' + err + '</pre>')
+        self.mcOptimizeDone(None, None)
 
     # AC, Atmospheric correction
     def loadACReference(self):
@@ -405,7 +531,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
             self.labelACInfo.setText('')
             return
         opt = dict(cut_co2=self.checkBoxSpline.isChecked(),
-                   extra=self.checkBoxLocalPeak.isChecked(),
                    smooth=self.checkBoxSmoothCorrected.isChecked(),
                    ref=self.lineEditACReference.text())
         args = [ wn, indata, opt ]
@@ -779,7 +904,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         p.saveFormat = self.comboBoxSaveFormat.currentText()
         p.acDo = self.checkBoxAC.isChecked()
         p.acSpline = self.checkBoxSpline.isChecked()
-        p.acLocal = self.checkBoxLocalPeak.isChecked()
         p.acSmooth = self.checkBoxSmoothCorrected.isChecked()
         p.acReference = self.lineEditACReference.text()
         p.scDo = self.checkBoxSC.isChecked()
@@ -790,23 +914,24 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         p.scClustering = self.checkBoxClusters.isChecked()
         p.scClusters = self.spinBoxNclusScat.value()
         p.scStable = self.checkBoxStabilize.isChecked()
-        p.setAlgorithm(self.dialogSCAdvanced.comboBoxSCAlgo.currentText())
-        p.scResolution = self.dialogSCAdvanced.spinBoxSCResolution.value()
-        p.scAmin = self.dialogSCAdvanced.lineEditSCamin.value()
-        p.scAmax = self.dialogSCAdvanced.lineEditSCamax.value()
-        p.scDmin = self.dialogSCAdvanced.lineEditSCdmin.value()
-        p.scDmax = self.dialogSCAdvanced.lineEditSCdmax.value()
-        p.scConstant = self.dialogSCAdvanced.checkBoxSCConstant.isChecked()
-        p.scLinear = self.dialogSCAdvanced.checkBoxSCLinear.isChecked()
-        p.scPrefitReference = self.dialogSCAdvanced.checkBoxSCPrefitReference.isChecked()
-        p.scPenalize = self.dialogSCAdvanced.checkBoxSCPenalize.isChecked()
-        p.scPenalizeLambda = self.dialogSCAdvanced.lineEditSCPenalizeLambda.value()
-        p.scPCADynamic = self.dialogSCAdvanced.radioButtonSCPCADynamic.isChecked()
-        p.scPCA = self.dialogSCAdvanced.spinBoxSCPCA.value()
-        p.scPCAMax = self.dialogSCAdvanced.spinBoxSCPCAMax.value()
-        p.scPCAVariance = self.dialogSCAdvanced.lineEditSCPCAVariance.value()
-        p.scAutoIters = self.dialogSCAdvanced.checkBoxSCAutoIters.isChecked()
-        p.scMinImprov = self.dialogSCAdvanced.lineEditSCMinImprov.value()
+        dsa = self.dialogSCAdvanced
+        p.setAlgorithm(dsa.comboBoxSCAlgo.currentText())
+        p.scResolution = dsa.spinBoxSCResolution.value()
+        p.scAmin = dsa.lineEditSCamin.value()
+        p.scAmax = dsa.lineEditSCamax.value()
+        p.scDmin = dsa.lineEditSCdmin.value()
+        p.scDmax = dsa.lineEditSCdmax.value()
+        p.scConstant = dsa.checkBoxSCConstant.isChecked()
+        p.scLinear = dsa.checkBoxSCLinear.isChecked()
+        p.scPrefitReference = dsa.checkBoxSCPrefitReference.isChecked()
+        p.scPenalize = dsa.checkBoxSCPenalize.isChecked()
+        p.scPenalizeLambda = dsa.lineEditSCPenalizeLambda.value()
+        p.scPCADynamic = dsa.radioButtonSCPCADynamic.isChecked()
+        p.scPCA = dsa.spinBoxSCPCA.value()
+        p.scPCAMax = dsa.spinBoxSCPCAMax.value()
+        p.scPCAVariance = dsa.lineEditSCPCAVariance.value()
+        p.scAutoIters = dsa.checkBoxSCAutoIters.isChecked()
+        p.scMinImprov = dsa.lineEditSCMinImprov.value()
         p.mcDo = self.checkBoxMC.isChecked()
         dma = self.dialogMCAdvanced
         p.mcBreaks = []
@@ -873,51 +998,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
                         "Error saving settings to "+filename+": "+repr(e),
                         traceback.format_exc())
 
-    def setParameters(self, p):
-        "Copy from some kind of parameters object to UI"
-        # self.spinBoxSpectra.setValue(0)
-        self.fileLoader.loadParameters(p)
-        self.imageVisualizer.loadParameters(p)
-
-        self.lineEditSaveExt.setText(p.saveExt)
-        self.comboBoxSaveFormat.setCurrentText(p.saveFormat)
-        self.checkBoxAC.setChecked(p.acDo)
-        self.checkBoxSpline.setChecked(p.acSpline)
-        self.checkBoxLocalPeak.setChecked(p.acLocal)
-        self.checkBoxSmoothCorrected.setChecked(p.acSmooth)
-        self.lineEditACReference.setText(p.acReference)
-        self.checkBoxSC.setChecked(p.scDo)
-        self.comboBoxReference.setCurrentText(p.scRef)
-        self.lineEditReferenceName.setText(p.scOtherRef)
-        self.lineEditSCRefPercentile.setValue(p.scRefPercentile)
-        self.spinBoxNIteration.setValue(p.scIters)
-        self.spinBoxNclusScat.setValue(p.scClusters)
-        self.checkBoxClusters.setChecked(p.scClustering)
-        self.checkBoxStabilize.setChecked(p.scStable)
-
-        # Find the right algorithm - the name just needs to be in there somewhere
-        cb = self.dialogSCAdvanced.comboBoxSCAlgo
-        algnum = next((i for i in range(cb.count()) if
-                       p.scAlgorithm in cb.itemText(i).lower()), None)
-        if algnum is not None:
-            cb.setCurrentIndex(algnum)
-
-        self.dialogSCAdvanced.spinBoxSCResolution.setValue(p.scResolution)
-        self.dialogSCAdvanced.lineEditSCamin.setValue(p.scAmin)
-        self.dialogSCAdvanced.lineEditSCamax.setValue(p.scAmax)
-        self.dialogSCAdvanced.lineEditSCdmin.setValue(p.scDmin)
-        self.dialogSCAdvanced.lineEditSCdmax.setValue(p.scDmax)
-        self.dialogSCAdvanced.checkBoxSCConstant.setChecked(p.scConstant)
-        self.dialogSCAdvanced.checkBoxSCLinear.setChecked(p.scLinear)
-        self.dialogSCAdvanced.checkBoxSCPrefitReference.setChecked(p.scPrefitReference)
-        self.dialogSCAdvanced.radioButtonSCPCADynamic.setChecked(p.scPCADynamic)
-        self.dialogSCAdvanced.spinBoxSCPCA.setValue(p.scPCA)
-        self.dialogSCAdvanced.spinBoxSCPCAMax.setValue(p.scPCAMax)
-        self.dialogSCAdvanced.lineEditSCPCAVariance.setValue(p.scPCAVariance)
-        self.dialogSCAdvanced.checkBoxSCAutoIters.setChecked(p.scAutoIters)
-        self.dialogSCAdvanced.lineEditSCMinImprov.setValue(p.scMinImprov)
-
-        self.checkBoxMC.setChecked(p.mcDo)
+    def setParametersMC(self, p):
+        "Copy mIRage correctcion parameters to UI"
         dma = self.dialogMCAdvanced
         for i, b in enumerate(range(1, self.mcChips)):
             for j, be in enumerate(['b', 'e']):
@@ -937,6 +1019,53 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         dma.checkBoxMCPCA.setChecked(p.mcPCA)
         dma.checkBoxMCLimit.setChecked(p.mcSoftLimit)
         dma.checkBoxMCAccuratePreview.setChecked(p.mcAccuratePreview)
+
+    def setParameters(self, p):
+        "Copy from some kind of parameters object to UI"
+        # self.spinBoxSpectra.setValue(0)
+        self.fileLoader.loadParameters(p)
+        self.imageVisualizer.loadParameters(p)
+
+        self.lineEditSaveExt.setText(p.saveExt)
+        self.comboBoxSaveFormat.setCurrentText(p.saveFormat)
+        self.checkBoxAC.setChecked(p.acDo)
+        self.checkBoxSpline.setChecked(p.acSpline)
+        self.checkBoxSmoothCorrected.setChecked(p.acSmooth)
+        self.lineEditACReference.setText(p.acReference)
+        self.checkBoxSC.setChecked(p.scDo)
+        self.comboBoxReference.setCurrentText(p.scRef)
+        self.lineEditReferenceName.setText(p.scOtherRef)
+        self.lineEditSCRefPercentile.setValue(p.scRefPercentile)
+        self.spinBoxNIteration.setValue(p.scIters)
+        self.spinBoxNclusScat.setValue(p.scClusters)
+        self.checkBoxClusters.setChecked(p.scClustering)
+        self.checkBoxStabilize.setChecked(p.scStable)
+
+        # Find the right algorithm - the name just needs to be in there somewhere
+        dsa = self.dialogSCAdvanced
+        cb = dsa.comboBoxSCAlgo
+        algnum = next((i for i in range(cb.count()) if
+                       p.scAlgorithm in cb.itemText(i).lower()), None)
+        if algnum is not None:
+            cb.setCurrentIndex(algnum)
+
+        dsa.spinBoxSCResolution.setValue(p.scResolution)
+        dsa.lineEditSCamin.setValue(p.scAmin)
+        dsa.lineEditSCamax.setValue(p.scAmax)
+        dsa.lineEditSCdmin.setValue(p.scDmin)
+        dsa.lineEditSCdmax.setValue(p.scDmax)
+        dsa.checkBoxSCConstant.setChecked(p.scConstant)
+        dsa.checkBoxSCLinear.setChecked(p.scLinear)
+        dsa.checkBoxSCPrefitReference.setChecked(p.scPrefitReference)
+        dsa.radioButtonSCPCADynamic.setChecked(p.scPCADynamic)
+        dsa.spinBoxSCPCA.setValue(p.scPCA)
+        dsa.spinBoxSCPCAMax.setValue(p.scPCAMax)
+        dsa.lineEditSCPCAVariance.setValue(p.scPCAVariance)
+        dsa.checkBoxSCAutoIters.setChecked(p.scAutoIters)
+        dsa.lineEditSCMinImprov.setValue(p.scMinImprov)
+
+        self.checkBoxMC.setChecked(p.mcDo)
+        self.setParametersMC(p)
 
         self.checkBoxSGF.setChecked(p.sgfDo)
         self.spinBoxWindowLength.setValue(p.sgfWindow)

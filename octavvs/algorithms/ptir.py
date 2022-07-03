@@ -7,12 +7,13 @@ Created on Thu Feb  4 02:56:27 2021
 """
 
 import numpy as np
-from statsmodels.multivariate import pca
-
+import itertools
+from statsmodels.multivariate import pca as smpca
+from scipy.optimize import minimize
 
 def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
                    endpoints=[[4,4],[4,4],[4,4]], slopefactor=[1, 1, 1],
-                   pca_ncomp=None,
+                   pca=False, pca_ncomp=[2, 2, 2],
                    soft_limits=False, sl_level=[1, 1, 1],
                    chipweight=[0, .3, .35, .35]):
     """
@@ -45,6 +46,7 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
     slopefactor : float or array-like, optional
         the extent to which the slope of points near a break are used when
         inferring the level at the break point; useful range is 0 to 1.
+    pca:
     pca_ncomp : int or array-like, optional
         number of components for PCA filter of intensity levels around
         each break; useful for reducing noise in the estimation.
@@ -60,9 +62,8 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
     -------
     data : array
         corrected data
-    scale : array(pixels, nchips)
-        rescaling factor for the spectra at start and end of each of the
-        four regions defined by the breaks.
+    shifts : array(npixels, nbreaks)
+        log rescaling factor for the spectra at each of the breaks.
 
     """
     data = data.copy()
@@ -80,18 +81,14 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
         s = (rx * (y.T - ym).T).sum(1) / (rx * rx).sum()
         return xm, ym, s
 
-    if soft_limits:
-        # Parameters for the soft correction factor limits
-        sl_low_weight = 0.01
-        sl_tailoff = .5
-        weights = []
-
     cuts = [0]
     logshifts = []
+    weights = []
     # endp = (np.ones((len(breaks), 2), dtype=int).T * np.transpose(endpoints)).T
     endp = np.broadcast_to(np.transpose(endpoints), (2, len(breaks))).T
     slopef = np.broadcast_to(np.transpose(slopefactor), (2, len(breaks))).T
-    ncomp = np.broadcast_to(pca_ncomp, len(breaks))
+    if pca:
+        ncomp = np.broadcast_to(pca_ncomp, len(breaks))
     for j, bw in enumerate(breaks):
         # First index (in, after) the break region
         b = np.searchsorted(wn, bw[0]), np.searchsorted(wn, bw[1])
@@ -101,40 +98,47 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
         # Possibly do PCA noise reduction before computing slope
         dat = np.maximum(
             0, data[:, list(range(c[0], c[1])) + list(range(c[2], c[3]))])
-        if ncomp[j] and ncomp[j] < len(dat):
-            dat = pca.PCA(dat, ncomp=ncomp[j]).projection
+        if pca and ncomp[j] and ncomp[j] < len(dat):
+            dat = smpca.PCA(dat, ncomp=ncomp[j]).projection
+            dat = np.maximum(0, dat)
 
-        wb = linreg(wn[c[0]:c[1]], dat[:, :(c[1] - c[0])])
-        we = linreg(wn[c[2]:c[3]], dat[:, (c[1] - c[0]):])
+        dleft = dat[:, :(c[1] - c[0])]
+        dright = dat[:, (c[1] - c[0]):]
+        wb = linreg(wn[c[0]:c[1]], dleft)
+        we = linreg(wn[c[2]:c[3]], dright)
         wid = (we[0] - wb[0]) / 2
         # Compute desired step with some provision for near-zero values
-        epsilon = 1e-6 * dat.mean()
+        epsilon = 1e-3
         lb = wb[1] + slopef[j, 0] * wid * wb[2]
         le = we[1] - slopef[j, 1] * wid * we[2]
-        logshifts.append(np.log(np.maximum(epsilon, lb)) -
-                         np.log(np.maximum(epsilon, le)))
-        if soft_limits:
-            # Base weights on the variability among the points and their
-            # overall level
-            weights.append(np.std(dat, 1) /
-                           (dat.mean(1) + dat.mean() * sl_low_weight))
+        logshifts.append(np.log(np.maximum(epsilon * lb.mean(), lb)) -
+                         np.log(np.maximum(epsilon * le.mean(), le)))
+
+        weps = .1
+        weights.append(np.minimum(
+            dleft.mean(1) / (np.std(dleft, 1) + weps * dleft.mean()),
+            dright.mean(1) / (np.std(dright, 1) + weps * dright.mean())))
 
     cuts.append(len(wn))
     cuts = np.array(cuts).reshape((-1, 2))
     logshifts = np.array(logshifts)
 
+    means = None
     if soft_limits:
         sl_level = np.broadcast_to(sl_level, len(breaks))
         # Weight/importance: values above a fraction of the mean
+        # weights = np.array(weights)
         weights = np.array(weights)
-        lw = logshifts * weights
         # Compute weighted mean and stddev
-        means = (lw.sum(1) / weights.sum(1))[:, None]
-        sd = ((lw - means) ** 2).mean(1) ** .5
+        wsum = weights.sum(1)
+        means = ((logshifts * weights).sum(1) / wsum)[:, None]
+        sd = (((logshifts - means) ** 2 * weights).sum(1) / wsum) ** .5
+        # or
+        # sd = (((logshifts - means) ** 2 * weights**2).sum(1) / wsum**2) ** .5
 
-        lw = logshifts - means
-        logshifts = lw / (1 + sd[:, None] / sl_level[:, None]
-                          ) ** sl_tailoff + means
+        lim = (sd * sl_level)[:, None]
+        logshifts = logshifts - means
+        logshifts = means + logshifts / (1 + (logshifts / lim)**2)**.5
 
     # Turn steps into scale factors for the regions
     chipscale = np.zeros((len(breaks) + 1, len(data)))
@@ -155,5 +159,55 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
 
     if flipwn:
         data = data[:,::-1]
-    return data, chipscale
+    return np.maximum(0, data), (logshifts, weights)
 
+
+def optimize_mirage_pca(wn, data, callback=None, **cm_args):
+
+    def mirage_variance(x=None):
+        corr = correct_mirage(wn, data, **cm_args)[0]
+        normsd = np.std(corr / corr.mean(1)[:, None], 0).mean()
+        return normsd
+
+    nb = len(cm_args['breaks'])
+    pca_ncomps = itertools.product(*([range(0, 4)] * nb))
+    bestsol = None
+    cm_args['pca'] = True
+    # cm_args['soft_limits'] = False
+    for i, pca_ncomp in enumerate(pca_ncomps):
+        cm_args['pca_ncomp'] = pca_ncomp
+        v = mirage_variance()
+        if bestsol is None or v < bestsol[0]:
+            bestsol = (v, pca_ncomp)
+        if callback is not None:
+            callback(i)
+    return bestsol
+
+def optimize_mirage_sl(wn, data, callback=None, **cm_args):
+    nb = len(cm_args['breaks'])
+
+    lims = (.01, 10)
+    def unb_to_sl_level(x):
+        return x
+        # return lims[0] + .5 * (lims[1] - lims[0]) * (np.tanh(x) + 1)
+    def sl_level_to_unb(s):
+        return s
+        # return np.arctanh(2 * (np.asarray(s) - lims[0]) /
+        #                   (lims[1] - lims[0]) - 1)
+
+    def mirage_variance(x):
+        x = np.maximum(lims[0], np.minimum(lims[1], x))
+        cm_args['sl_level'] = unb_to_sl_level(x)
+        corr = correct_mirage(wn, data, **cm_args)[0]
+        normsd = np.std(corr / corr.mean(1)[:, None], 0).mean()
+        return normsd
+
+    init = np.ones((nb + 1, nb)) * 2.
+    init[1:, :] -= np.eye(nb)
+    cm_args['soft_limits'] = True
+    optr = minimize(mirage_variance, method='Nelder-Mead', x0=init[0],
+                    tol=1e-2, callback=callback,
+                    options={'xatol': .05, 'initial_simplex': init})
+    if not optr.success:
+        raise RuntimeError('Optimization failed: ' + optr.message)
+    return optr.fun, unb_to_sl_level(optr.x)

@@ -242,13 +242,12 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def updateFile(self, num):
         super().updateFile(num)
         self.updateWavenumberRange()
-        self.plot_roi.set_basic_data(
-            wh=self.data.wh, pixelxy=self.data.pixelxy)
+        geom = dict(pixels=len(self.data.raw),
+                    wh=self.data.wh, pixelxy=self.data.pixelxy)
+        self.plot_roi.set_basic_data(**geom)
         self.plot_decomp.set_basic_data(
-            wn=self.imageVisualizer.plot_raw.getWavenumbers(),
-            wh=self.data.wh, pixelxy=self.data.pixelxy)
-        self.plot_cluster.set_basic_data(
-            wh=self.data.wh, pixelxy=self.data.pixelxy)
+            wn=self.imageVisualizer.plot_raw.getWavenumbers(), **geom)
+        self.plot_cluster.set_basic_data(**geom)
         self.autoLoad()
         self.populatePlots()
         self.updatedFile()
@@ -273,6 +272,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         super().updateDimensions(wh)
         self.plot_roi.adjust_geometry(wh)
         self.plot_decomp.adjust_geometry(wh)
+        self.plot_cluster.adjust_geometry(wh)
 
     def setPlotColors(self, cmap):
         super().setPlotColors(cmap)

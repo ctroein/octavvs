@@ -171,7 +171,7 @@ margin: 5px;
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1,1,0,3">
+       <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1,0,3">
         <item>
          <widget class="QCheckBox" name="checkBoxSpline">
           <property name="toolTip">
@@ -179,19 +179,6 @@ margin: 5px;
           </property>
           <property name="text">
            <string>Spline at CO₂</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="checkBoxLocalPeak">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Attempt to refine the correction in a small sliding window to account for fluctuations in H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O peak intensities.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Local peak corr.</string>
           </property>
           <property name="checked">
            <bool>true</bool>
@@ -1049,7 +1036,7 @@ margin: 5px;
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_18">
+         <widget class="QLabel" name="labelUnits1">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -1229,7 +1216,6 @@ margin: 5px;
   <tabstop>pushButtonMCAdvanced</tabstop>
   <tabstop>checkBoxAC</tabstop>
   <tabstop>checkBoxSpline</tabstop>
-  <tabstop>checkBoxLocalPeak</tabstop>
   <tabstop>checkBoxSmoothCorrected</tabstop>
   <tabstop>pushButtonACLoadReference</tabstop>
   <tabstop>lineEditACReference</tabstop>

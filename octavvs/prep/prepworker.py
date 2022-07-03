@@ -118,7 +118,6 @@ class PrepWorker(QObject):
             self.emitProgress(-1, 100)
             y = correction.atmospheric(
                 wn, y, cut_co2=params.acSpline,
-                extra_iters=5 if params.acLocal else 0,
                 smooth_win=9 if params.acSmooth else 0,
                 atm=params.acReference,
                 progressCallback=self.emitProgress)[0]
@@ -357,16 +356,22 @@ class PrepWorker(QObject):
 
 class ABCWorker(QObject):
     """
-    A smaller worker thread class for atmospheric and baseline correction only.
+    A smaller worker thread class for atmospheric, baseline and mirage
+    correction only.
     """
     acDone = pyqtSignal(np.ndarray, np.ndarray, np.ndarray, np.ndarray)
     acFailed = pyqtSignal(str)
     bcDone = pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     bcFailed = pyqtSignal(str)
+    mcDone = pyqtSignal(np.ndarray, np.ndarray, np.ndarray, dict)
+    mcFailed = pyqtSignal(str)
+    mcOptimizeDone = pyqtSignal(str, np.ndarray)
+    mcOptimizeFailed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         QObject.__init__(self, parent)
         self.haltBC = False
+        self.haltMCOptimize = False
 
     @pyqtSlot(np.ndarray, np.ndarray, dict)
     def ac(self, wn, y, params):
@@ -376,7 +381,6 @@ class ABCWorker(QObject):
         try:
             corr, factors = correction.atmospheric(
                 wn, y, cut_co2=params['cut_co2'],
-                extra_iters=5 if params['extra'] else 0,
                 smooth_win=9 if params['smooth'] else 0,
                 atm=params['ref'])
             self.acDone.emit(wn, y, corr, factors)
@@ -402,4 +406,35 @@ class ABCWorker(QObject):
             self.bcFailed.emit('')
         except Exception:
             self.bcFailed.emit(traceback.format_exc())
+
+    @pyqtSlot(np.ndarray, np.ndarray, dict, dict)
+    def mc(self, wn, y, params, runinfo):
+        try:
+            corr, runinfo['mcinfo'] = ptir.correct_mirage(wn, y, **params)
+            self.mcDone.emit(wn, y, corr, runinfo)
+        except InterruptedError:
+            self.mcFailed.emit('')
+        except Exception:
+            self.mcFailed.emit(traceback.format_exc())
+
+    def checkHaltMCOptimize(self, *args):
+        if self.haltMCOptimize:
+            raise InterruptedError('interrupted by user')
+
+
+    @pyqtSlot(np.ndarray, np.ndarray, dict, str)
+    def mcOptimize(self, wn, y, params, what):
+        try:
+            self.checkHaltMCOptimize()
+            if what == 'pca':
+                best = ptir.optimize_mirage_pca(
+                    wn, y, callback=self.checkHaltMCOptimize, **params)
+            elif what == 'sl':
+                best = ptir.optimize_mirage_sl(
+                    wn, y, callback=self.checkHaltMCOptimize, **params)
+            self.mcOptimizeDone.emit(what, np.asarray(best[1]))
+        except InterruptedError:
+            self.mcOptimizeFailed.emit('')
+        except Exception:
+            self.mcOptimizeFailed.emit(traceback.format_exc())
 

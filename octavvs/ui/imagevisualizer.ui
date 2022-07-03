@@ -62,7 +62,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_19">
+      <widget class="QLabel" name="labelUnits1">
        <property name="text">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
