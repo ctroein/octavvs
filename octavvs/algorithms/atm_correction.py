@@ -170,11 +170,12 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
     if cut_co2:
         do_ranges[n_gas == 1] = True
     for i, (p, q) in enumerate(ranges[do_ranges]):
-        corr = np.abs(yorig[:, p:q] - y[:, p:q]).sum(1) / np.maximum(
-            np.abs(yorig[:, p:q]), np.abs(y[:, p:q])).sum(1)
-        g = n_gas[do_ranges][i]
-        corrs[g] += corr.mean()
-        ncorrs[g] += 1
+        if q > p:
+            corr = np.abs(yorig[:, p:q] - y[:, p:q]).sum(1) / np.maximum(
+                np.abs(yorig[:, p:q]), np.abs(y[:, p:q])).sum(1)
+            g = n_gas[do_ranges][i]
+            corrs[g] += corr.mean()
+            ncorrs[g] += 1
     corrs[ncorrs > 1] = corrs[ncorrs > 1] / ncorrs[ncorrs > 1]
 
     return (y.squeeze() if squeeze else y), corrs
