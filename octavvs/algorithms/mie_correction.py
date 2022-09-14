@@ -614,7 +614,7 @@ def rmiesc(wn, app, ref, iterations=10, clusters=None, modelparams={},
                 nimprov = improved.sum()
 
                 if verbose:
-                    print("iter %3d, cluster %3d (%5d px): avgres %7.3g  imprvd %4d  time %f" %
+                    print("iter %3d, cluster %3d (%5d px): avgres %8.3g  imprvd %4d  time %f" %
                           (iteration, cl, len(ix), resids.mean(), nimprov, monotonic()-startt))
                 if progressCallback:
                     progressCallback(progressA + cl + 1, progressB)

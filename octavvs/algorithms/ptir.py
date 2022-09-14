@@ -126,6 +126,7 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
     means = None
     if soft_limits:
         sl_level = np.broadcast_to(sl_level, len(breaks))
+        sl_level = np.maximum(sl_level, 0)
         # Weight/importance: values above a fraction of the mean
         # weights = np.array(weights)
         weights = np.array(weights)
@@ -186,18 +187,11 @@ def optimize_mirage_pca(wn, data, callback=None, **cm_args):
 def optimize_mirage_sl(wn, data, callback=None, **cm_args):
     nb = len(cm_args['breaks'])
 
-    lims = (.01, 10)
-    def unb_to_sl_level(x):
-        return x
-        # return lims[0] + .5 * (lims[1] - lims[0]) * (np.tanh(x) + 1)
-    def sl_level_to_unb(s):
-        return s
-        # return np.arctanh(2 * (np.asarray(s) - lims[0]) /
-        #                   (lims[1] - lims[0]) - 1)
+    lims = (.001, 10)
 
     def mirage_variance(x):
         x = np.maximum(lims[0], np.minimum(lims[1], x))
-        cm_args['sl_level'] = unb_to_sl_level(x)
+        cm_args['sl_level'] = x
         corr = correct_mirage(wn, data, **cm_args)[0]
         normsd = np.std(corr / corr.mean(1)[:, None], 0).mean()
         return normsd
@@ -210,4 +204,5 @@ def optimize_mirage_sl(wn, data, callback=None, **cm_args):
                     options={'xatol': .05, 'initial_simplex': init})
     if not optr.success:
         raise RuntimeError('Optimization failed: ' + optr.message)
-    return optr.fun, unb_to_sl_level(optr.x)
+    return optr.fun, np.maximum(lims[0], np.minimum(lims[1], optr.x))
+
