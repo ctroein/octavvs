@@ -45,11 +45,19 @@ class PtirReader:
         raw = []
         xy = []
         wh = None
+        defwn = None
+        if 'Measurement_000' in f:
+            v = f['Measurement_000']
+            defwn = v['Spectroscopic_Values'][0,:]
+
         for k, v in f.items():
             if 'MirageDC' in v.attrs:
                 if re.match(r'^Measurement_0+$', k):
                     continue
-                wn = v['Spectroscopic_Values'][0,:]
+                if 'Spectroscopic_Values' in v:
+                    wn = v['Spectroscopic_Values'][0,:]
+                else:
+                    wn = defwn
                 wns.append(wn)
                 for kk, vv in v.items():
                     try:

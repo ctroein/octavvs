@@ -9,10 +9,12 @@ Created on Wed Jan 29 14:01:08 2020
 import os.path
 import numpy as np
 import scipy.signal, scipy.io
+import pandas as pd
 from pymatreader import read_mat
 
 from .opusreader import OpusReader
 from .ptirreader import PtirReader
+from .omnicreader import OmnicReader
 from ..algorithms.util import pixels_fit
 
 class SpectralData:
@@ -75,7 +77,8 @@ class SpectralData:
             else:
                 filetype = 'txt'
                 s = {}
-                ss = np.loadtxt(filename)
+                # ss = np.loadtxt(filename)
+                ss = pd.read_csv(filename, sep=None, engine='python').to_numpy()
             if 'ImR' in s and 'lambda' in s:
                 ss = s['ImR']
                 if ss.ndim == 2:
@@ -97,11 +100,9 @@ class SpectralData:
                 deltar = np.diff(ss[0, :])
                 if np.all(deltac > 0) or np.all(deltac < 0):
                     d = 1
-                    # print('column order')
                     raw = ss[::d, 1:].T
                     wn = ss[::d, 0]
                 elif np.all(deltar > 0) or np.all(deltar < 0):
-                    # print('row order')
                     raw = ss[1:, :]
                     wn = ss[0, :]
                 else:
@@ -115,6 +116,9 @@ class SpectralData:
                 filetype = 'ptir'
                 reader = PtirReader(filename)
                 xy = reader.xy
+            elif fext in ['.spa', '.spg']:
+                filetype = 'omnic'
+                reader = OmnicReader(filename)
             else:
                 filetype = 'opus'
                 reader = OpusReader(filename)
