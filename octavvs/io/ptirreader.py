@@ -45,28 +45,22 @@ class PtirReader:
         raw = []
         xy = []
         wh = None
-        defwn = None
-        if 'Measurement_000' in f:
-            v = f['Measurement_000']
-            defwn = v['Spectroscopic_Values'][0,:]
 
         for k, v in f.items():
             if 'MirageDC' in v.attrs:
                 if re.match(r'^Measurement_0+$', k):
                     continue
-                if 'Spectroscopic_Values' in v:
-                    wn = v['Spectroscopic_Values'][0,:]
-                else:
-                    wn = defwn
-                wns.append(wn)
+
                 for kk, vv in v.items():
-                    try:
-                        r = vv['Raw_Data']
-                    except (AttributeError, ValueError):
-                        if kk not in ['Spectroscopic_Values',
-                                      'Spectroscopic_Indices']:
-                            print('skipping unknown', kk)
+                    if not re.match(r'^Channel_\d+$', kk):
                         continue
+
+                    r = vv['Raw_Data']
+                    wn = r.attrs['Spectroscopic_Values']
+                    if isinstance(wn, h5py.h5r.Reference):
+                        wn = f[wn][0, :]
+                    wns.append(wn)
+
                     d = r[:,:]
                     if d.shape[1] != len(wn):
                         print('incompatible shapes', d.shape, wn.shape)
@@ -100,12 +94,14 @@ class PtirReader:
         if not wns:
             raise RuntimeError('No spectra in input file')
         if not all([len(w) == len(wns[0]) for w in wns]):
-            raise NotImplementedError('Unable to load spectra of different length')
+            raise NotImplementedError(
+                'Unable to load spectra of different length')
         wns = np.array(wns)
         beg = wns[:,0]
         end = wns[:,-1]
         if beg.max() - beg.min() > 5 or end.max() - end.min() > 5:
-            raise NotImplementedError('Unable to load spectra with different wavenumbers')
+            raise NotImplementedError(
+                'Unable to load spectra with different wavenumbers')
         self.wavenum = np.median(wns, axis=0)[::-1]
         self.AB = np.array(raw)[:, ::-1]
         self.xy = np.array(xy)
