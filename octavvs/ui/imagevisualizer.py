@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import pyqtSignal
 from . import constants, uitools
 from octavvs.ui import NoRepeatStyle
-# from ..io import Image
+from ..io import Image
 
 ImageVisualizerUi = uic.loadUiType(
     resource_filename(__name__, "imagevisualizer.ui"))[0]
@@ -205,7 +205,7 @@ class ImageVisualizer():
         ok = self.imageVisualizer.plot_whitelight.is_loaded()
         self.imageVisualizer.plot_whitelight.setHidden(not ok)
         if ok:
-            self.whiteLightNames[self.data.curFile] = filename
+            self.whi4teLightNames[self.data.curFile] = filename
 
     def selectImage(self, num):
         if self.data.images and len(self.data.images):
@@ -215,5 +215,12 @@ class ImageVisualizer():
                 self.imageVisualizer.plot_whitelight.load(image=self.data.images[num])
             self.imageVisualizer.lineEditImageInfo.setText(
                 self.data.images[num].name)
+        else:
+            noimg = Image(data=[[[127,127,127]]])
+            if self.spatialMode:
+                self.imageVisualizer.plot_raw.setImage(None)
+            else:
+                self.imageVisualizer.plot_whitelight.clear()
+            self.imageVisualizer.lineEditImageInfo.setText('[No image]')
 
 

@@ -54,10 +54,14 @@ class WhiteLightWidget(FigureCanvas):
     #         i = i + 1
     #     self.draw_idle()
 
-    def load(self, filename=None, image=None):
+    def clear(self):
         self.ax.clear()
         self.ax.set_axis_off()
         self.img = None
+        self.image = None
+
+    def load(self, filename=None, image=None):
+        self.clear()
         self.image = image
 
         if image is not None:

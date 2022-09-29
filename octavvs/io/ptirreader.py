@@ -47,50 +47,50 @@ class PtirReader:
         wh = None
 
         for k, v in f.items():
-            if 'MirageDC' in v.attrs:
-                if re.match(r'^Measurement_0+$', k):
+            # Skip measurement zero
+            if re.match(r'^Measurement_0+$', k):
+                continue
+
+            for kk, vv in v.items():
+                if not re.match(r'^Channel_\d+$', kk):
                     continue
 
-                for kk, vv in v.items():
-                    if not re.match(r'^Channel_\d+$', kk):
-                        continue
+                r = vv['Raw_Data']
+                wn = r.attrs['Spectroscopic_Values']
+                if isinstance(wn, h5py.h5r.Reference):
+                    wn = f[wn][0, :]
+                wns.append(wn)
 
-                    r = vv['Raw_Data']
-                    wn = r.attrs['Spectroscopic_Values']
-                    if isinstance(wn, h5py.h5r.Reference):
-                        wn = f[wn][0, :]
-                    wns.append(wn)
-
-                    d = r[:,:]
-                    if d.shape[1] != len(wn):
-                        print('incompatible shapes', d.shape, wn.shape)
+                d = r[:,:]
+                if d.shape[1] != len(wn):
+                    print('incompatible shapes', d.shape, wn.shape)
+                    continue
+                if len(d) == 1:
+                    try:
+                        xy.append([v.attrs['LocationX'][0],
+                                  v.attrs['LocationY'][0]])
+                    except AttributeError:
+                        xy.append([0, 0])
+                        print('no LocationX/Y')
+                else:
+                    try:
+                        rxy = v['Position_Values']
+                    except AttributeError:
+                        print('no position values')
                         continue
-                    if len(d) == 1:
+                    if rxy.shape != (len(d), 2):
+                        print('position shape error', rxy.shape, d.shape)
+                        continue
+                    xy.extend(rxy)
+                    if wh is None:
                         try:
-                            xy.append([v.attrs['LocationX'][0],
-                                      v.attrs['LocationY'][0]])
+                            wh = [v.attrs['RangeXPoints'][0],
+                                  v.attrs['RangeYPoints'][0]]
                         except AttributeError:
-                            xy.append([0, 0])
-                            print('no LocationX/Y')
-                    else:
-                        try:
-                            rxy = v['Position_Values']
-                        except AttributeError:
-                            print('no position values')
-                            continue
-                        if rxy.shape != (len(d), 2):
-                            print('position shape error', rxy.shape, d.shape)
-                            continue
-                        xy.extend(rxy)
-                        if wh is None:
-                            try:
-                                wh = [v.attrs['RangeXPoints'][0],
-                                      v.attrs['RangeYPoints'][0]]
-                            except AttributeError:
-                                wh = [0, 0]
-                        else:
                             wh = [0, 0]
-                    raw.extend(d)
+                    else:
+                        wh = [0, 0]
+                raw.extend(d)
         if not wns:
             raise RuntimeError('No spectra in input file')
         if not all([len(w) == len(wns[0]) for w in wns]):
@@ -109,23 +109,26 @@ class PtirReader:
 
         self.images = []
         for imtype in ['Image', 'Heightmap']:
-            for imnum in range(1000):
-                try:
-                    im = f['%ss' % (imtype)]['%s_%03d' % (imtype, imnum)]
-                except (KeyError):
-                    break
+            try:
+                imgr = f[f'{imtype}s']
+            except (KeyError):
+                continue
+
+            for k, im in imgr.items():
+                if not re.match(f'^{imtype}_\\d+$', k):
+                    continue
+
+                if imtype == 'Image':
+                    imname = im.attrs['Label'].decode()
                 else:
-                    if imtype == 'Image':
-                        imname = im.name
-                    else:
-                        imwnum = im.attrs['IRWavenumber'].decode()
-                        imname=imwnum + " " + im.attrs['Label'].decode()
-                    img = Image(data=im[()][::-1,:], name=imname)
-                    img.xy = ([im.attrs['PositionX'][0],
-                              im.attrs['PositionY'][0]])
-                    img.wh = ([im.attrs['SizeWidth'][0],
-                              im.attrs['SizeHeight'][0]])
-                    self.images.append(img)
+                    imwnum = im.attrs['IRWavenumber'].decode()
+                    imname = imwnum + " " + im.attrs['Label'].decode()
+                img = Image(data=im[()][::-1,:], name=imname)
+                img.xy = ([im.attrs['PositionX'][0],
+                          im.attrs['PositionY'][0]])
+                img.wh = ([im.attrs['SizeWidth'][0],
+                          im.attrs['SizeHeight'][0]])
+                self.images.append(img)
 
         if clip_to_images:
             if self.images:
@@ -143,3 +146,4 @@ class PtirReader:
         if not self.images and wh is not None and wh[0] * wh[1] == len(raw):
             self.wh = wh
             self.xy = None
+

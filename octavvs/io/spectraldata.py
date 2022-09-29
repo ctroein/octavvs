@@ -11,11 +11,13 @@ import numpy as np
 import scipy.signal, scipy.io
 import pandas as pd
 from pymatreader import read_mat
+import h5py
 
 from .opusreader import OpusReader
 from .ptirreader import PtirReader
 from .omnicreader import OmnicReader
 from ..algorithms.util import pixels_fit
+from .. import octavvs_version
 
 class SpectralData:
     """
@@ -152,3 +154,102 @@ class SpectralData:
         self.pixelxy = xy
         self.curFile = filename
         self.filetype = filetype
+
+    def save_matrix_matlab_ab(self, filename, wn, ydata):
+        ab = np.hstack((wn[:, None], ydata.T))
+        abdata = {'AB': ab, 'wh': self.wh }
+        if self.pixelxy is not None:
+            abdata['xy'] = self.pixelxy
+        scipy.io.savemat(filename, abdata)
+
+    def save_matrix_matlab_quasar(self, filename, wn, ydata):
+        out = {'y': ydata, 'wavenumber': wn}
+        if self.pixelxy is not None:
+            map_x = np.array([x for (x,y) in self.pixelxy])
+            map_y = np.array([y for (x,y) in self.pixelxy])
+        else:
+            map_x = np.tile(self.wh[0], self.wh[1])
+            map_y = np.repeat(range(self.wh[0]), self.wh[1])
+        out['map_x'] = map_x[:, None]
+        out['map_y'] = map_y[:, None]
+        scipy.io.savemat(filename, out)
+
+    def save_matrix_ptir(self, filename, wn, ydata):
+        f = h5py.File(filename, mode='w')
+        print('h5py', filename, f)
+
+        f.attrs['DocType'] = b'IR'
+        f.attrs['SoftwareVersion'] = octavvs_version.encode('utf8')
+
+        digits = int(np.log10(len(ydata))) + 1
+        for i, d in enumerate(ydata):
+            mm = f.create_group(f'Measurement{i+1:0{digits}}')
+            if self.pixelxy is not None:
+                x, y = self.pixelxy[i]
+            else:
+                x = i % self.wh[0]
+                y = i // self.wh[0]
+            mm.attrs['LocationX'] = [x]
+            mm.attrs['LocationY'] = [y]
+
+            if not i:
+                specval = mm.create_dataset('Spectroscopic_Values',
+                                            data=wn[None, :])
+
+            ch = mm.create_group('Channel_000')
+            rd = ch.create_dataset('Raw_Data', data=d[None, :])
+            rd.attrs['Spectroscopic_Values'] = specval.ref
+
+        if self.images is not None and len(self.images):
+            imgs = f.create_group('Images')
+            digits = max(3, int(np.log10(len(self.images))) + 1)
+            for i, im in enumerate(self.images):
+                imds = imgs.create_dataset(f'Image_{i:0{digits}}',
+                                           data=im.data)
+                imds.attrs['Label'] = np.bytes_(im.name)
+                imds.attrs['PositionX'] = [im.xy[0]]
+                imds.attrs['PositionY'] = [im.xy[1]]
+                imds.attrs['SizeWidth'] = [im.wh[0]]
+                imds.attrs['SizeHeight'] = [im.wh[1]]
+
+        f.close()
+
+    def save_matrix(self, filename, fmt='ab', wn=None, ydata=None):
+        """
+        Save processed data in some format.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the output file.
+        fmt : str, optional
+            File format: 'ab', 'quasar' or 'ptir'. The default is 'ab', a
+            MATLAB file with array 'AB' with wavenumbers in the first _column_,
+            image size in 'wh' and optionally pixel coordinates in 'xy'.
+            The 'quasar' format has wavenumbers in a separate array.
+            The 'ptir' format is a reduced variant of the HDF5 format used
+            by PTIR Studio.
+        wn : 1D array, optional
+            Wavenumber vector. The default is self.wn.
+        ydata : 2D array, optional
+            Data in (pixel, wn) order. The default is self.raw.
+
+        Returns
+        -------
+        None.
+
+        """
+        if wn is None:
+            wn = self.wn
+        if ydata is None:
+            ydata = self.raw
+        if fmt == 'ab':
+            self.save_matrix_matlab_ab(filename, wn, ydata)
+        elif fmt == 'quasar':
+            self.save_matrix_matlab_quasar(filename, wn, ydata)
+        elif fmt == 'ptir':
+            self.save_matrix_ptir(filename, wn, ydata)
+        else:
+            raise ValueError('Unknown save file format')
+
+

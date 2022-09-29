@@ -49,7 +49,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         "Return the name of the program that this main window represents"
         return 'Decomposition'
 
-    def __init__(self, parent=None, files=None, paramFile=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.data = DecompositionData()
@@ -179,7 +179,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
 
         self.updateWavenumberRange()
 
-        self.post_setup()
+    def post_setup(self, files=None, paramFile=None):
+        super().post_setup()
+
         if paramFile is not None: # Loads the parameter file passed as argument
             self.loadParameters(filename=paramFile)
         if files is not None and files != []:

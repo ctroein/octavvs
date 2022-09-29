@@ -683,7 +683,7 @@ margin: 5px;
            <enum>Qt::LeftToRight</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <item>
            <property name="text">
@@ -1124,6 +1124,11 @@ margin: 5px;
           <item>
            <property name="text">
             <string>Quasar.mat</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>PTIR-lite</string>
            </property>
           </item>
          </widget>

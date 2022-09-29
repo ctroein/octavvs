@@ -115,7 +115,22 @@ class ProjectionWidget(FigureCanvas):
 
 
     def setImage(self, image):
-        "Set the background or white light image"
+        "Set the background or white light image (or None to clear it)"
+        if image is None:
+            for bgimg in self.bgimglist():
+                bgimg.set_data([[[200,200,200,255]]])
+                if self.pixelxy is None:
+                    bgimg.set_extent((0, self.wh[0], 0, self.wh[1]))
+                else:
+                    minxy = np.min(self.pixelxy, axis=0)
+                    maxxy = np.max(self.pixelxy, axis=0)
+                    dxy = (maxxy - minxy) * .2
+                    minxy = minxy - dxy
+                    maxxy = maxxy + dxy
+                    bgimg.set_extent((minxy[0], maxxy[0], minxy[1], maxxy[1]))
+            self.trigger_redraw()
+            return
+
         if image.fmt is not None:
             imgdata = plt.imread(BytesIO(image.data), format=image.fmt)
         elif image.data is not None:

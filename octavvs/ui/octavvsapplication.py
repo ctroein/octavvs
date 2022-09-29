@@ -12,21 +12,19 @@ import traceback
 import multiprocessing
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog
-from PyQt5.QtWidgets import QErrorMessage, QInputDialog, QDialog, QMessageBox
+from PyQt5.QtWidgets import QErrorMessage, QMessageBox #, QInputDialog, QDialog
 from PyQt5.QtCore import Qt, QSettings
 from PyQt5.Qt import qApp
 
 from .exceptiondialog import ExceptionDialog
 from .copyfigure import add_clipboard_to_figures
-
+from .. import octavvs_version
 
 
 
 class OctavvsMainWindow(QMainWindow):
 
     fileOptions = QFileDialog.Options() | QFileDialog.DontUseNativeDialog
-
-    octavvs_version = 'v0.1.15'
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -41,8 +39,8 @@ class OctavvsMainWindow(QMainWindow):
         self.plot_ltr = True
 
     def post_setup(self):
-        "Called by children after setting up UI but before loading data etc"
-        self.setWindowTitle('OCTAVVS %s %s' % (self.program_name(), self.octavvs_version))
+        "Called after setting up UI but before loading data etc"
+        self.setWindowTitle('OCTAVVS %s %s' % (self.program_name(), octavvs_version))
         ExceptionDialog.install(self)
 
     @classmethod
@@ -171,7 +169,7 @@ class OctavvsMainWindow(QMainWindow):
         res = 1
         try:
             progver = 'OCTAVVS %s %s' % (windowclass.program_name(),
-                                         OctavvsMainWindow.octavvs_version)
+                                         octavvs_version)
             windowparams = {}
             if parser is not None:
                 parser.add_argument('--version', action='version',
@@ -188,8 +186,9 @@ class OctavvsMainWindow(QMainWindow):
             if not app:
                 app = QApplication(sys.argv)
             add_clipboard_to_figures()
-            window = windowclass(**windowparams)
+            window = windowclass()
             window.show()
+            window.post_setup(**windowparams)
             if not isChild:
                 qApp.lastWindowClosed.connect(qApp.quit);
                 res = app.exec_()

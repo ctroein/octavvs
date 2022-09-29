@@ -67,7 +67,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         "Return the name of the program that this main window represents"
         return 'Preprocessing'
 
-    def __init__(self, parent=None, files=None, paramFile=None, savePath=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         # self.splitter.setSizes([1e5]*3)
@@ -276,7 +276,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         self.defaultParameters = self.getParameters()
 
-        self.post_setup()
+    def post_setup(self, files=None, paramFile=None, savePath=None):
+        super().post_setup()
         if paramFile is not None: # Loads the parameter file passed as argument
             self.loadParameters(filename=paramFile)
 
@@ -285,8 +286,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         if savePath is not None:
             if paramFile is None:
-                self.errorMsg.showMessage("Running from the command line "+
-                                          "without passing a parameter file does nothing.")
+                self.errorMsg.showMessage(
+                    "Running from the command line "
+                    "without passing a parameter file does nothing.")
             savePath = os.path.normpath(savePath)
             self.runBatch(foldername=savePath)
 
@@ -774,7 +776,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.updateSR()
 
     # BC, Baseline Correction
-    bcNames = ['rubberband', 'concaverubberband', 'asls', 'arpls', 'assymtruncq' ]
+    bcNames = ['rubberband', 'concaverubberband', 'asls', 'arpls']
     def bcName(self):
         if not self.checkBoxBC.isChecked():
             return 'none'
@@ -804,9 +806,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
             param = {}
         elif bc == 'concaverubberband':
             param = {'iters': self.spinBoxItersBC.value()}
-        elif bc == 'assymtruncq':
-            param = {'poly': self.spinBoxBCPoly.value(),
-                     'thresh': self.lineEditBCThresh.value()}
+        else:
+            raise ValueError(f"Unknown baseline method '{bc}'")
+
         if self.bcNext:
             self.abcWorker.haltBC = True
             self.bcNext = [ wn, indata, bc, param ]

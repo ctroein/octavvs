@@ -221,24 +221,14 @@ class PrepWorker(QObject):
             self.failed.emit(repr(e), traceback.format_exc())
 
 
-    def saveCorrected(self, outfile, fmt, data, wn, y):
-        if fmt == 'Quasar.mat':
-            out = {'y': y, 'wavenumber': wn}
-            if data.pixelxy is not None:
-                map_x = np.array([x for (x,y) in data.pixelxy])
-                map_y = np.array([y for (x,y) in data.pixelxy])
-            else:
-                map_x = np.tile(data.wh[0], data.wh[1])
-                map_y = np.repeat(range(data.wh[0]), data.wh[1])
-            out['map_x'] = map_x[:, None]
-            out['map_y'] = map_y[:, None]
-            scipy.io.savemat(outfile, out)
-        else:
-            ab = np.hstack((wn[:, None], y.T))
-            abdata = {'AB': ab, 'wh': data.wh }
-            if data.pixelxy is not None:
-                abdata['xy'] = data.pixelxy
-            scipy.io.savemat(outfile, abdata)
+    def saveCorrected(self, outfile, fmt, data : SpectralData, wn, y):
+        fmts = {'AB.mat': ('ab', 'mat'),
+                'Quasat.mat': ('quasar', 'mat'),
+                'PTIR-lite': ('ptir', 'ptir')}
+        if fmt not in fmts:
+            raise ValueError(f'Unknown save file format {fmt}')
+        filename = outfile + '.' + fmts[fmt][1]
+        data.save_matrix(filename, fmt=fmts[fmt][0], ydata=y, wn=wn)
 
     @pyqtSlot(SpectralData, PrepParameters, str, bool)
     def bigBatch(self, data, params, folder, preservepath):
@@ -252,6 +242,9 @@ class PrepWorker(QObject):
             data.foldername will be placed in the corresponding subdirectory
             of the output directory.
         """
+        if preservepath:
+            cpathlen = len(os.path.commonpath(
+                [os.path.dirname(f) for f in data.filenames]))
         try:
             for fi in range(len(data.filenames)):
                 self.batchProgress.emit(fi, len(data.filenames))
@@ -270,16 +263,14 @@ class PrepWorker(QObject):
 
                 # Figure out where to save the file
                 filename = data.curFile
-                if preservepath and filename.startswith(data.foldername):
-                    filename = filename[len(data.foldername):]
-                    filename = folder + filename
+                if preservepath:
+                    filename = os.path.join(folder, filename[cpathlen + 1:])
                     os.makedirs(os.path.dirname(filename), exist_ok=True)
                 else:
                     filename = os.path.join(folder, os.path.basename(filename))
                 # Add the extension
                 filename = os.path.splitext(filename)
-#                filename = filename[0] + params.saveExt + filename[1]
-                filename = filename[0] + params.saveExt + '.mat'
+                filename = filename[0] + params.saveExt
 
                 self.saveCorrected(filename, params.saveFormat, data, wn, y)
             self.batchDone.emit(True)
