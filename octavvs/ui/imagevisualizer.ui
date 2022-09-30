@@ -253,7 +253,7 @@
      <item>
       <widget class="QPushButton" name="pushButtonExpandProjection">
        <property name="text">
-        <string>Enlarge</string>
+        <string>Pop out</string>
        </property>
       </widget>
      </item>
@@ -277,7 +277,7 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>30</width>
+         <width>40</width>
          <height>0</height>
         </size>
        </property>

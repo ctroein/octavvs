@@ -41,9 +41,10 @@ class ProjectionWidget(FigureCanvas):
         self.spatial = False    # Display in pixelxy-mode
         self.clustered = False  # Select based on cluster centers
         self.selected = OrderedDict() # keys indicate selected pixels
-        self.pixel_levels = []  # Current intensity of each pixel
+        self.pixel_levels = None # Current intensity of each pixel
         self.cmap = plt.get_cmap().name # For img/fill
-        self.plot_cmap = None # Name of cmap for borders, if any
+        self.fillmode = False   # Fill the points
+        self.plot_cmap = None   # Name of cmap for borders, if any
         self.patches = {}       # Patch objects indexed by pixel number
         self.pop_patches = {}   # Ditto in pop-out plot
         # self.white_patches = {} # Ditto in white light subplot
@@ -66,7 +67,7 @@ class ProjectionWidget(FigureCanvas):
         for xy in self.pixelxy:
             rect = matplotlib.patches.Rectangle(
                 (xy[0] - rs/2, xy[1] - rs/2), rs, rs,
-                fill=False, color=self.rect_color)
+                fill=True, color=self.rect_color)
             ax.add_patch(rect)
             patches[len(patches)] = rect
 
@@ -119,15 +120,17 @@ class ProjectionWidget(FigureCanvas):
         if image is None:
             for bgimg in self.bgimglist():
                 bgimg.set_data([[[200,200,200,255]]])
-                if self.pixelxy is None:
-                    bgimg.set_extent((0, self.wh[0], 0, self.wh[1]))
-                else:
+                if self.spatial:
                     minxy = np.min(self.pixelxy, axis=0)
                     maxxy = np.max(self.pixelxy, axis=0)
                     dxy = (maxxy - minxy) * .2
                     minxy = minxy - dxy
                     maxxy = maxxy + dxy
                     bgimg.set_extent((minxy[0], maxxy[0], minxy[1], maxxy[1]))
+                    self.pixel_visible = [True] * len(self.pixelxy)
+                    self.update_patch_fill()
+                else:
+                    bgimg.set_extent((0, self.wh[0], 0, self.wh[1]))
             self.trigger_redraw()
             return
 
@@ -162,8 +165,6 @@ class ProjectionWidget(FigureCanvas):
 
     def setProjection(self, method, wavenumix):
         "Update pixel colors. Methods 0=area, 1=max, 2=wavenum"
-        # if self.wavenumber is None:
-        #     return
         if method == 0:
             assert self.wavenumber is not None
             data = np.trapz(self.raw, self.wavenumber, axis=1)
@@ -214,10 +215,12 @@ class ProjectionWidget(FigureCanvas):
             norm=matplotlib.colors.Normalize(
                 vmin=vislevels[0], vmax=vislevels[1], clip=True),
             cmap=self.cmap).to_rgba(self.pixel_levels)
-        for n, p in self.patches.items():
-            p.set_facecolor(colors[n])
-        for n, p in self.pop_patches.items():
-            p.set_facecolor(colors[n])
+        for pits in [self.patches, self.pop_patches]:
+            for n, p in pits.items():
+                if self.fillmode and n in self.selected:
+                    p.set_facecolor(p.get_edgecolor())
+                else:
+                    p.set_facecolor(colors[n])
 
     def setGlobalColorCycle(self, name):
         """
@@ -263,11 +266,16 @@ class ProjectionWidget(FigureCanvas):
         self.trigger_redraw()
 
     def setFill(self, fill):
-        "Fill/unfill pixelxy patches" # Todo: save/reset this state
-        for p in self.patches.values():
-            p.set_fill(fill)
-        for p in self.pop_patches.values():
-            p.set_fill(fill)
+        "Fill/unfill pixelxy patches"
+        self.fillmode = fill
+        # Spatial-mode pixels are always filled (with level or edgecolor)
+        if self.spatial:
+            self.update_patch_fill()
+        else:
+            for p in self.patches.values():
+                p.set_fill(fill)
+            for p in self.pop_patches.values():
+                p.set_fill(fill)
         self.trigger_redraw()
 
     def updatePlotColors(self, name=None):
@@ -308,14 +316,15 @@ class ProjectionWidget(FigureCanvas):
         "Construct Patch for pixel p in non-spatial mode"
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         return matplotlib.patches.Rectangle(
-            (p % self.wh[0], p // self.wh[0]), .999, .999, fill=False,
+            (p % self.wh[0], p // self.wh[0]), .999, .999, fill=self.fillmode,
             color=colors[colorix % len(colors)])
 
     def color_patch(self, p, color):
         "Set edge color of patch(es) for pixel p"
-        self.patches[p].set_edgecolor(color)
-        if p in self.pop_patches:
-            self.pop_patches[p].set_edgecolor(color)
+        for pps in [self.patches, self.pop_patches]:
+            pps[p].set_edgecolor(color)
+            if self.fillmode:
+                pps[p].set_facecolor(color)
 
     def select_point(self, p):
         assert p not in self.selected
@@ -441,6 +450,7 @@ class ProjectionWidget(FigureCanvas):
             self.pop_patches = {}
             if self.spatial:
                 self.make_spatial_patches(self.pop_patches, self.pop_ax)
+                self.update_patch_fill()
             else:
                 self.pop_cb = fig.colorbar(self.pop_bgimg, ax=self.pop_ax)
                 for p in self.selected:

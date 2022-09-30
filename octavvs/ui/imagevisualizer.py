@@ -1,5 +1,6 @@
 import os
 import os.path
+import numpy as np
 #import fnmatch
 #import traceback
 from pkg_resources import resource_filename
@@ -10,7 +11,8 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import pyqtSignal
 from . import constants, uitools
 from octavvs.ui import NoRepeatStyle
-from ..io import Image
+# from ..io import Image
+from scipy.spatial import KDTree
 
 ImageVisualizerUi = uic.loadUiType(
     resource_filename(__name__, "imagevisualizer.ui"))[0]
@@ -136,7 +138,18 @@ class ImageVisualizer():
     def updateFile(self, num):
         super().updateFile(num)
 
-        self.spatialMode = self.data.pixelxy is not None
+        if self.data.pixelxy is not None:
+            self.spatialMode = True
+            kd = KDTree(self.data.pixelxy)
+            dists = kd.query(self.data.pixelxy, k=2)[0][..., 1]
+            adist = np.percentile(dists, 20)
+            ps = self.imageVisualizer.lineEditPixelSize.value()
+            adist = float(f'{adist:.2g}')
+            if ps > adist:
+                self.imageVisualizer.lineEditPixelSize.setValue(adist)
+                self.imageVisualizer.pixelSizeEdit()
+        else:
+            self.spatialMode = True
 
         self.imageVisualizer.plot_raw.setData(
             self.data.wavenumber, self.data.raw,
@@ -216,7 +229,6 @@ class ImageVisualizer():
             self.imageVisualizer.lineEditImageInfo.setText(
                 self.data.images[num].name)
         else:
-            noimg = Image(data=[[[127,127,127]]])
             if self.spatialMode:
                 self.imageVisualizer.plot_raw.setImage(None)
             else:

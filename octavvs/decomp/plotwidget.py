@@ -135,7 +135,7 @@ class RoiPlotWidget(BasePlotWidget):
             if self.data is None:
                 minxy = np.min(self.pixelxy, axis=0)
                 maxxy = np.max(self.pixelxy, axis=0)
-                ps = self.pixel_size / 2
+                ps = self.pixel_size
                 for i in range(self.pixels):
                     p = matplotlib.patches.Rectangle(
                         self.pixelxy[i] - ps, ps, ps,
