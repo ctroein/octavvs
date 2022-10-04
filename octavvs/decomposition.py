@@ -276,6 +276,10 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.plot_decomp.adjust_geometry(wh)
         self.plot_cluster.adjust_geometry(wh)
 
+    def updateUnitsAndOrder(self, units, ltr):
+        super().updateUnitsAndOrder(units, ltr)
+        self.plot_decomp.set_order(ltr)
+
     def setPlotColors(self, cmap):
         super().setPlotColors(cmap)
         self.plot_decomp.draw_idle()
@@ -365,7 +369,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                 self.caSelectAnnotation()
                 save.append('clustering')
             for what in save:
-                self.data.save_rdc(self.suggestedFilename(
+                self.data.save_rdc(filename=self.suggestedFilename(
                     what=what), what=what)
 
     def reloadCheck(self, what):

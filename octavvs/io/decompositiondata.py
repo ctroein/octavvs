@@ -10,7 +10,7 @@ import os.path
 import numpy as np
 import h5py
 import csv
-import traceback
+# import traceback
 import time
 import scipy.io
 
@@ -436,9 +436,9 @@ class DecompositionData(SpectralData):
         Parameters
         ----------
         filename : str
-            A named file; possibly from rdc_filename
+            Output file with suitable suffix.
         what : str
-            One of 'all', 'roi', 'decomposition', 'clustering'
+            One of 'all', 'roi', 'decomposition', 'clustering'.
 
         Returns
         -------

@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from matplotlib.figure import Figure
-from matplotlib.ticker import MaxNLocator
+# from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 #import matplotlib.patches as patches

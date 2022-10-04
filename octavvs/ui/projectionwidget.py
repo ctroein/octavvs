@@ -322,9 +322,10 @@ class ProjectionWidget(FigureCanvas):
     def color_patch(self, p, color):
         "Set edge color of patch(es) for pixel p"
         for pps in [self.patches, self.pop_patches]:
-            pps[p].set_edgecolor(color)
-            if self.fillmode:
-                pps[p].set_facecolor(color)
+            if p in pps:
+                pps[p].set_edgecolor(color)
+                if self.fillmode:
+                    pps[p].set_facecolor(color)
 
     def select_point(self, p):
         assert p not in self.selected

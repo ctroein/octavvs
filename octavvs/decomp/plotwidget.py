@@ -138,7 +138,7 @@ class RoiPlotWidget(BasePlotWidget):
                 ps = self.pixel_size
                 for i in range(self.pixels):
                     p = matplotlib.patches.Rectangle(
-                        self.pixelxy[i] - ps, ps, ps,
+                        self.pixelxy[i] - ps / 2, ps, ps,
                         facecolor=cmap(norm(data[i])),
                         linewidth=2, zorder=0)
                     self.ax.add_patch(p)
@@ -164,7 +164,7 @@ class RoiPlotWidget(BasePlotWidget):
             else:
                 im = self.ax.get_images()[0]
                 im.set_data(data2d)
-                # im.set_clim(data2d.min(), data2d.max()) # test
+                im.set_clim(data2d.min(), data2d.max())
                 im.set_extent((0, self.wh[0], 0, self.wh[1]))
                 im = self.ax.get_images()[1]
                 im.set_extent((0, self.wh[0], 0, self.wh[1]))
@@ -375,6 +375,7 @@ class DecompositionPlotWidget(BasePlotWidget):
         # What/how to plot
         self.discrete_cmap = 'tab10'
         self.display_mode = 0 # Index for now - should perhaps be string
+        self.ltr = True
         self.clear_data()
 
     def clear_data(self):
@@ -420,6 +421,13 @@ class DecompositionPlotWidget(BasePlotWidget):
         self.wh = wh
         self.draw_idle()
 
+    def set_order(self, ltr):
+        if ltr != self.ltr:
+            if self.display_mode in [1, 2] and ltr == self.ax.xaxis_inverted():
+                self.ax.invert_xaxis()
+                FigureCanvas.draw(self)
+            self.ltr = ltr
+
     def clear_and_set_roi(self, roi=None):
         "Set ROI and clear spectra/concentrations"
         if roi is not None:
@@ -434,7 +442,7 @@ class DecompositionPlotWidget(BasePlotWidget):
 
         Parameters
         ----------
-        concentrations : array(ncomponents, npixels)
+        concentrations : array(ncontributions, npixels)
             Note the order.
 
         Returns
@@ -514,29 +522,32 @@ class DecompositionPlotWidget(BasePlotWidget):
             self.update_display_modes()
 
     def draw_error_log(self, ax):
+        ax.set_xlabel('Iteration')
+        if self.error_log is None or not len(self.error_log):
+            return
         ax.set_yscale('log')
         ax.xaxis.set_major_locator(
             matplotlib.ticker.MaxNLocator(integer=True))
-        ax.set_xlabel('Iteration')
-        if self.error_log is None:
-            return
-        if len(self.error_log):
-            ax.plot(self.error_log, label='Error')
-            ax.legend()
+        ax.plot(self.error_log, label='Error')
+        ax.legend()
 
     def draw_init_spectra(self, ax):
         ax.set_yscale('linear')
+        if not self.ltr:
+            ax.invert_xaxis()
         if self.init_spectra is not None:
             for i, s in enumerate(self.init_spectra):
                 ax.plot(self.wn, s,
-                        label='Initial component %d' % (i + 1))
+                        label='Initial contribution %d' % (i + 1))
             ax.legend()
 
     def draw_spectra(self, ax):
         ax.set_yscale('linear')
+        if not self.ltr:
+            ax.invert_xaxis()
         if self.spectra is not None:
             for i, s in enumerate(self.spectra):
-                ax.plot(self.wn, s, label='Component %d' % (i + 1))
+                ax.plot(self.wn, s, label='Contribution %d' % (i + 1))
             ax.legend()
 
     def draw_concentrations(self, ax):
@@ -544,7 +555,7 @@ class DecompositionPlotWidget(BasePlotWidget):
         if self.concentrations is not None:
             for i, s in enumerate(self.concentrations):
                 if s.any():
-                    ax.plot(s, label='Component %d' % (i + 1))
+                    ax.plot(s, label='Contribution %d' % (i + 1))
             ax.legend()
 
     def draw_heatmap(self, ax, data, discrete=False, cbfig=None):

@@ -63,14 +63,14 @@ margin: 5px;
         <item>
          <widget class="QPushButton" name="pushButtonLoadParameters">
           <property name="text">
-           <string>Load parameters</string>
+           <string>Load settings</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="pushButtonSaveParameters">
           <property name="text">
-           <string>Save parameters</string>
+           <string>Save settings</string>
           </property>
          </widget>
         </item>
@@ -953,7 +953,8 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
                <string>...</string>
               </property>
               <property name="icon">
-               <iconset theme="document-save"/>
+               <iconset theme="document-save">
+                <normaloff>.</normaloff>.</iconset>
               </property>
              </widget>
             </item>
@@ -963,7 +964,8 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
                <string>Del</string>
               </property>
               <property name="icon">
-               <iconset theme="user-trash"/>
+               <iconset theme="user-trash">
+                <normaloff>.</normaloff>.</iconset>
               </property>
              </widget>
             </item>
@@ -1245,7 +1247,7 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
             <item>
              <widget class="QPushButton" name="pushButtonCluster">
               <property name="text">
-               <string>Cluster</string>
+               <string>Run clustering</string>
               </property>
              </widget>
             </item>
@@ -1459,15 +1461,15 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>DecompositionPlotWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">octavvs/decomp/plotwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ImageVisualizerWidget</class>
    <extends>QWidget</extends>
    <header location="global">octavvs/ui/imagevisualizer.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DecompositionPlotWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">octavvs/decomp/plotwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

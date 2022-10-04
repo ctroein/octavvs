@@ -149,7 +149,7 @@ class ImageVisualizer():
                 self.imageVisualizer.lineEditPixelSize.setValue(adist)
                 self.imageVisualizer.pixelSizeEdit()
         else:
-            self.spatialMode = True
+            self.spatialMode = False
 
         self.imageVisualizer.plot_raw.setData(
             self.data.wavenumber, self.data.raw,
@@ -192,7 +192,7 @@ class ImageVisualizer():
         imgcnt = len(self.data.images) if self.data.images else 0
         intern = self.spatialMode or imgcnt
         if intern:
-            self.imageVisualizer.setImageCount(len(self.data.images))
+            self.imageVisualizer.setImageCount(imgcnt)
             self.selectImage(self.imageVisualizer.horizontalSliderImage.value())
             self.imageVisualizer.plot_whitelight.setHidden(self.spatialMode)
         else:
