@@ -464,7 +464,6 @@ class DecompositionData(SpectralData):
         None.
 
         """
-        print(f'save "{fmt}"')
         if fmt == '.rdc' or fmt == '.roi':
             self.save_rdc(filename=filename, what='roi')
             return

@@ -205,7 +205,7 @@ class SpectralData:
             digits = max(3, int(np.log10(len(self.images))) + 1)
             for i, im in enumerate(self.images):
                 imds = imgs.create_dataset(f'Image_{i:0{digits}}',
-                                           data=im.data)
+                                           data=im.data[::-1])
                 imds.attrs['Label'] = np.bytes_(im.name)
                 imds.attrs['PositionX'] = [im.xy[0]]
                 imds.attrs['PositionY'] = [im.xy[1]]

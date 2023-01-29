@@ -13,18 +13,27 @@ from scipy.optimize import minimize
 
 def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
                    endpoints=[[4,4],[4,4],[4,4]], slopefactor=[1, 1, 1],
-                   pca=False, pca_ncomp=[2, 2, 2],
-                   soft_limits=False, sl_level=[1, 1, 1],
+                   pca=True, pca_ncomp=[2, 2, 2],
+                   soft_limits=True, sl_level=[5, 5, 5],
                    chipweight=[0, .3, .35, .35]):
     """
-    Correct for drift in quantum cascade laser intensity between the four
-    regions of mIRage PTIR spectra.
+    Correct for step discontinuities in PTIR spectra caused by pixel-dependent
+    imperfections in focusing and alignment differentially affecting the
+    four quantum cascade laser (QCL) chip regions of the mIRage machines.
 
-    Near the end of each of the regions, spectra are be assumed to have the
-    same level except for an overall per-spectrum intensity level. The
-    normalization factors at the region ends are linearly interpolated
-    within each of the regions, then applied. Finally, values in the
-    break regions are interpolated anew from the surrounding points.
+    Correctly measured spectra are assumed to approximately follow a straight
+    line around each transition between regions. For each spectrum, the level
+    at each transition point is estimated from a small number of points in
+    the region to the left, and likewise in the region to the right, and
+    the ratio between these levels define the relative rescaling factor at
+    that transition.
+
+    The entire QCL regions are multiplicatively rescaled in the spectrum,
+    with the overall absorption level approximately preserved through
+    weighted zero-normalization of the log rescaling factors.
+
+    Values in the transition regions are interpolated anew from the
+    surrounding points.
 
     'A first chip provides IR light from 770 cm-1 to 975.8 cm-1; a
     second chip from 975.9 cm-1 to 1204 cm-1; a third chip from
@@ -46,7 +55,9 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
     slopefactor : float or array-like, optional
         the extent to which the slope of points near a break are used when
         inferring the level at the break point; useful range is 0 to 1.
-    pca:
+    pca : bool
+        perform PCA filtering across all spectra of the points in each
+        transition region.
     pca_ncomp : int or array-like, optional
         number of components for PCA filter of intensity levels around
         each break; useful for reducing noise in the estimation.
@@ -106,11 +117,11 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
         dright = dat[:, (c[1] - c[0]):]
         wb = linreg(wn[c[0]:c[1]], dleft)
         we = linreg(wn[c[2]:c[3]], dright)
-        wid = (we[0] - wb[0]) / 2
+        bmid = (bw[0] + bw[1]) / 2
         # Compute desired step with some provision for near-zero values
         epsilon = 1e-3
-        lb = wb[1] + slopef[j, 0] * wid * wb[2]
-        le = we[1] - slopef[j, 1] * wid * we[2]
+        lb = wb[1] + slopef[j, 0] * (bmid - wb[0]) * wb[2]
+        le = we[1] - slopef[j, 1] * (we[0] - bmid) * we[2]
         logshifts.append(np.log(np.maximum(epsilon * lb.mean(), lb)) -
                          np.log(np.maximum(epsilon * le.mean(), le)))
 
@@ -164,8 +175,7 @@ def correct_mirage(wn, data, breaks=[(973,977), (1201.5,1205.5), (1449,1453)],
 
 
 def optimize_mirage_pca(wn, data, callback=None, **cm_args):
-
-    def mirage_variance(x=None):
+    def mirage_variance():
         corr = correct_mirage(wn, data, **cm_args)[0]
         normsd = np.std(corr / corr.mean(1)[:, None], 0).mean()
         return normsd
@@ -174,7 +184,6 @@ def optimize_mirage_pca(wn, data, callback=None, **cm_args):
     pca_ncomps = itertools.product(*([range(0, 4)] * nb))
     bestsol = None
     cm_args['pca'] = True
-    # cm_args['soft_limits'] = False
     for i, pca_ncomp in enumerate(pca_ncomps):
         cm_args['pca_ncomp'] = pca_ncomp
         v = mirage_variance()
@@ -186,7 +195,6 @@ def optimize_mirage_pca(wn, data, callback=None, **cm_args):
 
 def optimize_mirage_sl(wn, data, callback=None, **cm_args):
     nb = len(cm_args['breaks'])
-
     lims = (.001, 10)
 
     def mirage_variance(x):
@@ -205,4 +213,27 @@ def optimize_mirage_sl(wn, data, callback=None, **cm_args):
     if not optr.success:
         raise RuntimeError('Optimization failed: ' + optr.message)
     return optr.fun, np.maximum(lims[0], np.minimum(lims[1], optr.x))
+
+def optimize_mirage_endpoints(wn, data, callback=None, **cm_args):
+    nb = len(cm_args['breaks'])
+    lims = (4, 17)
+
+    def mirage_variance(x):
+        cm_args['endpoints'] = np.maximum(lims[0], np.minimum(
+            lims[1], x, dtype=int, casting='unsafe'))
+        corr = correct_mirage(wn, data, **cm_args)[0]
+        normsd = np.std(corr / corr.mean(1)[:, None], 0).mean()
+        return normsd
+
+    init = np.ones((nb + 1, nb)) * 9.
+    init[1:, :] -= np.eye(nb) * 3
+    optr = minimize(mirage_variance, method='Nelder-Mead', x0=init[0],
+                    tol=1e-4, callback=callback,
+                    bounds=[lims] * nb,
+                    options={'xatol': 1, 'initial_simplex': init})
+    if not optr.success:
+        raise RuntimeError('Optimization failed: ' + optr.message)
+    finalx = np.maximum(lims[0], np.minimum(
+        lims[1], optr.x, dtype=int, casting='unsafe'))
+    return optr.fun, finalx
 

@@ -4,8 +4,8 @@ from functools import partial
 from pkg_resources import resource_filename
 import argparse
 
-from PyQt5.QtWidgets import QMessageBox, QStyle, QTableWidget, \
-    QTableWidgetItem, QMainWindow, QDialog, QDialogButtonBox, \
+from PyQt5.QtWidgets import QMessageBox, QStyle, \
+    QTableWidgetItem, QDialog, QDialogButtonBox, \
     QListWidgetItem, QMenu, QAction
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
@@ -330,7 +330,13 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         for what in ['roi', 'decomposition', 'clustering']:
             filename = self.suggestedFilename(what)
             if filename and os.path.exists(filename):
-                self.data.load_rdc(filename, what=what)
+                try:
+                    self.data.load_rdc(filename, what=what)
+                except Exception as e:
+                    q = self.loadErrorBox(
+                        filename, (repr(e), traceback.format_exc()),
+                        warning=True)
+                    q.exec()
 
     def genericSave(self, what='all'):
         if not self.data.curFile:
