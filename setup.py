@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="octavvs",
-    version="0.1.17",
+    version="0.1.18",
     author="Syahril Siregar, Carl Troein, Michiel Op De Beeck et al.",
     author_email="carl@thep.lu.se",
     description="Open Chemometrics Toolkit for Analysis and Visualization of Vibrational Spectroscopy data",
