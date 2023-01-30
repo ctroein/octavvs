@@ -79,7 +79,7 @@ margin: 5px;
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -972,7 +972,7 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,1,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,1,0,0">
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
@@ -987,6 +987,16 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
               </property>
               <property name="maxVisibleItems">
                <number>16</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="toolButtonExport">
+              <property name="text">
+               <string>Export decomposition</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::InstantPopup</enum>
               </property>
              </widget>
             </item>

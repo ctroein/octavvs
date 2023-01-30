@@ -118,6 +118,19 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.plot_decomp.displayModesUpdated.connect(
             self.updateDCPlotModes)
 
+        exportMenu = QMenu()
+        for txt, ft in [['CSV, spectra only', 'csv-s'],
+                        ['CSV, contributions only', 'csv-c'],
+                        ['CSV, combined', 'csv'],
+                        ['MATLAB', 'mat'],
+                        ['Numpy data', 'npy']]:
+            exportAction = QAction(txt, self)
+            exportAction.triggered.connect(
+                partial(self.dcExport, filetype=ft))
+            exportAction.setIconVisibleInMenu(False)
+            exportMenu.addAction(exportAction)
+        self.toolButtonExport.setMenu(exportMenu)
+
         for plot in [self.plot_roi, self.plot_decomp, self.plot_cluster]:
             self.imageVisualizer.updatePixelSize.connect(
                 plot.set_pixel_size)
@@ -585,6 +598,30 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
             ...
         elif button == QDialogButtonBox.Close:
             self.dialogSettingsTable.hide()
+
+    def dcExport(self, filetype):
+        """
+        Export the current C and/or S matrices in some chosen format.
+        """
+        if not self.data.has_decomposition():
+            return
+        ext = filetype.split('-')[0]
+        ftypes = {'mat': 'MATLAB data',
+                  'csv': 'Comma-separated values',
+                  'npy': 'Numpy data'}
+        filename = self.getSaveFileName(
+                f"Export C and S matrices as {filetype}",
+                filter=f"{ftypes[ext]} (*.{ext});;All files (*)",
+                settingname='exportDir',
+                suffix=ext)
+        if not filename:
+            return
+        try:
+            self.data.save_decomposition(filename, filetype)
+        except Exception as e:
+            self.showDetailedErrorMessage(
+                "Error saving settings to "+filename+": "+repr(e),
+                traceback.format_exc())
 
     def dcBatchRun(self, checked=False):
         """

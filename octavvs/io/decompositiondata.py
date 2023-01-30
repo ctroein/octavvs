@@ -176,6 +176,10 @@ class DecompositionData(SpectralData):
         self.decomposition_data[iteration] = {
             'spectra': spectra, 'concentrations': concentrations}
 
+    def has_decomposition(self):
+        return self.decomposition_data is not None and \
+            len(self.decomposition_data) > 0
+
     # Clustering/annotation stuff
     def set_clustering_settings(self, params, roi):
         """
@@ -481,6 +485,59 @@ class DecompositionData(SpectralData):
         else:
             raise ValueError('Unknown ROI save format %s' % fmt)
 
+
+    def save_decomposition(self, filename, filetype):
+        """
+        Save the last iteration of decomposition (C and S) along with pixel
+        coordinates and wavenumbers.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file.
+        filetype : str
+            File type, one of {'mat', 'npy', 'csv', 'csv-s', 'csv-c'}.
+            The MATLAB and numpy formats keep the pixel coordinates and
+            wavenumbers in separate matrices while the CSV formats merge
+            the output data into just two matrixes (and output both or
+            just one).
+
+        Returns
+        -------
+        None.
+        """
+        lastit = list(self.decomposition_data.keys())[-1]
+        s = self.decomposition_data[lastit]['spectra']
+        c = self.decomposition_data[lastit]['concentrations']
+        if self.decomposition_roi is None:
+            ixs = np.arange(len(self.raw))
+        else:
+            ixs = self.decomposition_roi.nonzero()[0]
+        if self.pixelxy is None:
+            xy = np.array([ixs % self.wh[0], ixs // self.wh[0]])
+        else:
+            xy = self.pixelxy[ixs].T
+
+        if filetype in ['csv', 'csv-s', 'csv-c']:
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                if filetype != 'csv-c':
+                    writer.writerow(['#Spectra'])
+                    writer.writerow(self.wavenumber)
+                    writer.writerows(s)
+                if filetype != 'csv-s':
+                    writer.writerow(['#X', 'Y', 'Concentrations'])
+                    print('shapes', xy.T.shape, c.T.shape )
+                    writer.writerows(np.hstack((xy.T, c.T)))
+        else:
+            savedict = {'C': c, 'S': s, 'xy': xy, 'wn': self.wavenumber}
+            if filetype == 'mat':
+                scipy.io.savemat(filename, savedict)
+            elif filetype == 'npy':
+                np.save(filename, savedict)
+            else:
+                raise ValueError(f'Invalid filetype {filetype}')
+
     def get_headers_as_lists(self):
         headers = []
         headers.append(['#Input file', self.curFile])
@@ -557,6 +614,6 @@ class DecompositionData(SpectralData):
             with open(filename, 'w', newline='') as f:
                 self.save_spectra_csv(csv.writer(f), average=average)
         else:
-            raise ValueError('Invalid filetype %d' % filetype)
+            raise ValueError(f'Invalid filetype {filetype}')
 
 
