@@ -195,7 +195,6 @@ def compute_model(wn, ref, model='konevskikh', n_components=7,
         if not hasattr(compute_model, 'qtable'):
             qtable = read_mat(resource_filename(
                 'octavvs.reference_spectra', "Q_table.mat"))
-            print('shape', qtable['n_table'].shape)
             compute_model.qtable = RectBivariateSpline(
                 qtable['x_table'], qtable['n_table'],
                 qtable['Qsca_table'])

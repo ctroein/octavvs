@@ -97,17 +97,9 @@ class DataPlotWidget(FigureCanvas):
 
             if ax.figure.canvas.toolbar is not None:
                 tb = ax.figure.canvas.toolbar
-                # print(dir(tb))
-                print(dir(tb._nav_stack))
-                # tb.update()
-                # n = tb._nav_stack.back()
-                print(tb._nav_stack._elements)
-                # print(dir(tb._nav_stack._elements))
                 if tb._nav_stack._elements:
                     wl = tb._nav_stack._elements[0]
                     for q,qq in wl.items():
-                        print('q',qq)
-                        print('qq',qq[0])
                         wl[q] = ((1000,4000,0,1), qq[1])
 
         else:

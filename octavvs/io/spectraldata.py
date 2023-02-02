@@ -176,7 +176,6 @@ class SpectralData:
 
     def save_matrix_ptir(self, filename, wn, ydata):
         f = h5py.File(filename, mode='w')
-        print('h5py', filename, f)
 
         f.attrs['DocType'] = b'IR'
         f.attrs['SoftwareVersion'] = octavvs_version.encode('utf8')

@@ -527,7 +527,6 @@ class DecompositionData(SpectralData):
                     writer.writerows(s)
                 if filetype != 'csv-s':
                     writer.writerow(['#X', 'Y', 'Concentrations'])
-                    print('shapes', xy.T.shape, c.T.shape )
                     writer.writerows(np.hstack((xy.T, c.T)))
         else:
             savedict = {'C': c, 'S': s, 'xy': xy, 'wn': self.wavenumber}
