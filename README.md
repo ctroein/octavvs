@@ -43,7 +43,7 @@ After installation, start Terminal.
 running conda init, it wants to modify your \$PATH in .bashrc. This can be fine, but on some
 Linux distributions (notably OpenSUSE) it breaks KDE when logging in. A suggested workaround
 is to change \$PATH manually when needed. An alias in .bashrc can be convenient:  
-``alias startconda='export PATH=~/miniconda3/bin:"\$PATH"'``
+``alias startconda='export PATH=~/miniconda3/bin:"$PATH"'``
 
 From the console, install OCTAVVS and its dependencies: ``conda install -c ctroein octavvs``
 
