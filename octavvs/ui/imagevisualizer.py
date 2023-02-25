@@ -72,8 +72,9 @@ class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
         self.horizontalSliderWavenumber.setEnabled(iswn)
         wn = self.plot_raw.getWavenumbers()
         if wn is not None:
-            wix = len(wn)-1 - self.horizontalSliderWavenumber.value() if (
-                wn[0] > wn[-1]) else self.horizontalSliderWavenumber.value()
+            wix = self.horizontalSliderWavenumber.value()
+            if wn[0] > wn[-1]:
+                wix = len(wn)-1 - wix
             self.plot_raw.setProjection(meth, wix)
 
     def selectedSpectraUpdated(self, n):
@@ -156,11 +157,15 @@ class ImageVisualizer():
             self.data.pixelxy)
         self.imageVisualizer.plot_raw.setDimensions(self.data.wh)
 
+    def updateWavenumberLabels(self):
+        minmax = ["%.2f" % self.data.wmin, "%.2f" % self.data.wmax]
+        self.imageVisualizer.labelMinwn.setText(minmax[1 - self.plot_ltr])
+        self.imageVisualizer.labelMaxwn.setText(minmax[0 + self.plot_ltr])
+
     def updateWavenumberRange(self):
         super().updateWavenumberRange()
 
-        self.imageVisualizer.labelMinwn.setText("%.2f" % self.data.wmin)
-        self.imageVisualizer.labelMaxwn.setText("%.2f" % self.data.wmax)
+        self.updateWavenumberLabels()
         wmin = min(self.data.wmin, constants.WMIN)
         wmax = max(self.data.wmax, constants.WMAX)
         self.imageVisualizer.lineEditWavenumber.setRange(
@@ -172,7 +177,6 @@ class ImageVisualizer():
         self.imageVisualizer.updateSpectralImage()
         self.updateWhiteLightImages()
         self.imageVisualizer.selectSpectra()
-
 
     def updateDimensions(self, wh):
         try:
@@ -187,6 +191,8 @@ class ImageVisualizer():
         self.imageVisualizer.plot_spectra.setOrder(ltr)
         self.imageVisualizer.horizontalSliderWavenumber.setInvertedAppearance(
             not ltr)
+        self.updateWavenumberLabels()
+
 
     def updateWhiteLightImages(self):
         imgcnt = len(self.data.images) if self.data.images else 0
@@ -225,7 +231,8 @@ class ImageVisualizer():
             if self.spatialMode:
                 self.imageVisualizer.plot_raw.setImage(self.data.images[num])
             else:
-                self.imageVisualizer.plot_whitelight.load(image=self.data.images[num])
+                self.imageVisualizer.plot_whitelight.load(
+                    image=self.data.images[num])
             self.imageVisualizer.lineEditImageInfo.setText(
                 self.data.images[num].name)
         else:

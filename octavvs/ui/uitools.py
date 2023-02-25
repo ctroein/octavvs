@@ -11,13 +11,13 @@ import numpy as np
 from . import constants
 
 def ixfinder_nearest(wn, val):
-    return len(wn)-1 - (np.abs(wn - val)).argmin()
+    return (np.abs(wn - val)).argmin()
 
 def ixfinder_noless(wn, val):
-    return wn[::-1].searchsorted(val, 'left')
+    return wn.searchsorted(val, 'left')
 
 def ixfinder_nomore(wn, val):
-    return wn[::-1].searchsorted(val, 'right')-1
+    return wn.searchsorted(val, 'right')-1
 
 def slider_to_box(slider, box, wn, ixfinder):
     """Set a QLineEdit from the value on a slider, discretized by
@@ -25,7 +25,7 @@ def slider_to_box(slider, box, wn, ixfinder):
     if wn is not None:
         if (not box.hasAcceptableInput() or
             slider.value() != ixfinder(wn, box.value())):
-            box.setValue(wn[-1-slider.value()])
+            box.setValue(wn[slider.value()])
     elif (not box.hasAcceptableInput() or
             slider.value() != int(round(slider.maximum() *
             (box.value() - constants.WMIN) / (constants.WMAX - constants.WMIN)))):
@@ -43,7 +43,7 @@ def box_to_slider(slider, box, wn, ixfinder):
         if box.hasAcceptableInput():
             slider.setValue(ixfinder(wn, box.value()))
         else:
-            box.setValue(wn[-1-slider.value()])
+            box.setValue(wn[slider.value()])
     else:
         slider.setValue(int(round(slider.maximum() *
               (box.value() - constants.WMIN) / (constants.WMAX - constants.WMIN))))

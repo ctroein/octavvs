@@ -27,7 +27,7 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="1,2,1,1,0,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_27" stretch="0,1,1,1,0,1">
      <item>
       <widget class="QLabel" name="label_11">
        <property name="text">
@@ -39,7 +39,7 @@
       <widget class="QComboBox" name="comboBoxMethod">
        <item>
         <property name="text">
-         <string>Total intensity</string>
+         <string>Total sum</string>
         </property>
        </item>
        <item>
@@ -49,13 +49,19 @@
        </item>
        <item>
         <property name="text">
-         <string>Wavenumber</string>
+         <string>Wavenum</string>
         </property>
        </item>
       </widget>
      </item>
      <item>
       <widget class="LineDouble" name="lineEditWavenumber">
+       <property name="minimumSize">
+        <size>
+         <width>45</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>1655</string>
        </property>

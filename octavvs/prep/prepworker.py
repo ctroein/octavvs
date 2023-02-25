@@ -170,8 +170,8 @@ class PrepWorker(QObject):
                 y, params.sgfWindow, params.sgfOrder, axis=1)
 
         if params.srDo:
-            a = len(wn) - wn[::-1].searchsorted(params.srMax, 'right')
-            b = len(wn) - wn[::-1].searchsorted(params.srMin, 'left')
+            a = wn.searchsorted(params.srMax, 'right')
+            b = wn.searchsorted(params.srMin, 'left')
             wn = wn[a:b]
             y = y[:, a:b]
 

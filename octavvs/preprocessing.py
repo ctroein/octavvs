@@ -741,15 +741,16 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         if indata is None or not self.checkBoxSR.isChecked():
             self.plot_SR.setData(wn, indata, None, None, 1234, 2345)
             return
-        cut = range(len(wn)-1 - self.horizontalSliderMax.value(),
-                    len(wn) - self.horizontalSliderMin.value())
+        cut = range(self.horizontalSliderMin.value(),
+                    self.horizontalSliderMax.value())
         if len(cut) < 2:
             self.plot_SR.setData(wn, indata, None, None, 1234, 2345)
         else:
             self.plot_SR.setData(wn, indata,
                                  self.plot_SGF.getSpectra()[:, cut],
                                  self.plot_SGF.getWavenumbers()[cut],
-                                 self.lineEditMinwn.value(), self.lineEditMaxwn.value())
+                                 self.lineEditMinwn.value(),
+                                 self.lineEditMaxwn.value())
 
     def srMinSlide(self):
         uitools.slider_to_box(

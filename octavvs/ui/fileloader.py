@@ -122,6 +122,7 @@ class FileLoader():
                         filter="Spectral data files (*.mat *.txt *.csv *.ptir "
                         "*.spa *.spg *.0 *.1 *.2);;"
                         "Matlab files (*.mat);;"
+                        "Excel files (*.xls *.xlsx);;"
                         "Text files (*.txt *.csv);;"
                         "OPUS files (*.0 *.1 *.2 *.3 *.4 *.5 *.6 *.7 *.8 *.9);;"
                         "mIRage files (*.ptir);;"

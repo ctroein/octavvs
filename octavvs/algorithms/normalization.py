@@ -38,7 +38,7 @@ def normalize_spectra(method, y, wn=None, **kwargs):
     if method == 'mean':
         return (y.T / y.mean(axis=1)).T
     elif method == 'area':
-         return (y.T / -np.trapz(y, wn, axis=1)).T
+         return (y.T / np.trapz(y, wn, axis=1)).T
     elif method == 'wn':
         idx = (np.abs(wn - kwargs['wavenum'])).argmin()
         return (y.T / y[:, idx]).T

@@ -28,7 +28,7 @@ class SpectralData:
         self.foldername = '' # Root dir
         self.filenames = []  # With full paths
         self.curFile = ''    # The currently loaded file
-        self.wavenumber = None # array in order high->low
+        self.wavenumber = None # array in order low->high
         self.wmin = 800
         self.wmax = 4000
         self.raw = np.empty((0,0)) # data in order (pixel, wavenumber)
@@ -64,8 +64,10 @@ class SpectralData:
         wh = None
         xy = None
         images = None
+        raw = None
         fext = os.path.splitext(filename)[1].lower()
-        if fext in ['.txt', '.csv', '.mat']:
+        if fext in ['.txt', '.csv', '.mat', '.xls', '.xlsx']:
+            s = {} # possible
             if fext == '.mat':
                 filetype = 'mat'
                 try:
@@ -76,12 +78,17 @@ class SpectralData:
                     s = scipy.io.loadmat(filename)
                 # Assume data are in the biggest matrix in the file
                 ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
+            elif fext in ['.xls', '.xlsx']:
+                filetype = 'xls'
+                ss = pd.read_excel(filename, header=None).to_numpy()
             else:
                 filetype = 'txt'
-                s = {}
-                # ss = np.loadtxt(filename)
-                ss = pd.read_csv(filename, sep=None, engine='python').to_numpy()
+                ss = pd.read_csv(filename, sep=None, engine='python',
+                                 header=None).to_numpy()
+            # Check for some particular format(s)
             if 'ImR' in s and 'lambda' in s:
+                # Matlab file with data in ImR, wavelengths in lambda
+                # (encountered with hyperspectral data in Lund)
                 ss = s['ImR']
                 if ss.ndim == 2:
                     raw = ss
@@ -90,24 +97,31 @@ class SpectralData:
                     wh = [ss.shape[1], ss.shape[0]]
                     raw = ss.reshape((-1, ss.shape[2]))
                 wn = s['lambda'].flatten()
-                if wn[0] < wn[-1]:
-                    wn = wn[::-1]
-                    raw = raw[:, ::-1]
                 assert len(wn) == raw.shape[1]
             elif ss.ndim == 2 and ss.shape[0] > 1 and ss.shape[1] > 1:
                 if 'wh' in s:
                     wh = s['wh'].flatten()
-                # Assume wavenumbers are a) first column or b) first row
-                deltac = np.diff(ss[:, 0])
-                deltar = np.diff(ss[0, :])
-                if np.all(deltac > 0) or np.all(deltac < 0):
-                    d = 1
-                    raw = ss[::d, 1:].T
-                    wn = ss[::d, 0]
-                elif np.all(deltar > 0) or np.all(deltar < 0):
-                    raw = ss[1:, :]
-                    wn = ss[0, :]
-                else:
+                # Assume wavenumbers are a) first row or b) first column
+                for transp in range(2):
+                    if transp:
+                        ss = ss.T
+                    wn = ss[0]
+                    cols = None
+                    # if mixed data, remove strings (these should be saved
+                    # as annotations!)
+                    if wn.dtype == object:
+                        cols = [not isinstance(s, str) for s in wn]
+                        wn = wn[cols].astype(float, casting='unsafe')
+                        if len(wn) < 2:
+                            continue
+                    deltas = np.diff(wn)
+                    if np.all(deltas > 0) or np.all(deltas < 0):
+                        if cols is not None:
+                            raw = ss[1:, cols].astype(float)
+                        else:
+                            raw = ss[1:]
+                        break
+                if raw is None:
                     raise RuntimeError(
                         'first column or row must contain sorted wavenumbers')
             else:
@@ -128,6 +142,11 @@ class SpectralData:
             wn = reader.wavenum
             wh = reader.wh
             images = reader.images
+
+        # Ensure ascending wavenumbers
+        if wn[0] > wn[1]:
+            wn = wn[::-1]
+            raw = raw[:, ::-1]
 
         diffsign = np.sign(np.diff(wn))
         if (diffsign >= 0).any() and (diffsign <= 0).any():
