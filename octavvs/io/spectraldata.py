@@ -98,6 +98,11 @@ class SpectralData:
                     raw = ss.reshape((-1, ss.shape[2]))
                 wn = s['lambda'].flatten()
                 assert len(wn) == raw.shape[1]
+            if 'wavenumber' in s and 'y' in s:
+                # Quasar.mat - and we ought to load map_x/y to a wh rectangle
+                # or fall back to pixelxy if necessary.
+                wn = s['wavenumber'].flatten()
+                raw = s['y']
             elif ss.ndim == 2 and ss.shape[0] > 1 and ss.shape[1] > 1:
                 if 'wh' in s:
                     wh = s['wh'].flatten()
@@ -144,6 +149,7 @@ class SpectralData:
             images = reader.images
 
         # Ensure ascending wavenumbers
+        assert len(wn) == raw.shape[1]
         if wn[0] > wn[1]:
             wn = wn[::-1]
             raw = raw[:, ::-1]
@@ -184,10 +190,9 @@ class SpectralData:
     def save_matrix_matlab_quasar(self, filename, wn, ydata):
         out = {'y': ydata, 'wavenumber': wn}
         if self.pixelxy is not None:
-            map_x = np.array([x for (x,y) in self.pixelxy])
-            map_y = np.array([y for (x,y) in self.pixelxy])
+            map_x, map_y = np.array(self.pixelxy).T
         else:
-            map_x = np.tile(self.wh[0], self.wh[1])
+            map_x = np.tile(range(self.wh[1]), self.wh[0])
             map_y = np.repeat(range(self.wh[0]), self.wh[1])
         out['map_x'] = map_x[:, None]
         out['map_y'] = map_y[:, None]

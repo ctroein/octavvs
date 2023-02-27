@@ -624,6 +624,12 @@ margin: 5px;
         </item>
         <item row="0" column="1" rowspan="2">
          <widget class="LineDouble" name="lineEditMinwn">
+          <property name="minimumSize">
+           <size>
+            <width>45</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="text">
            <string>800</string>
           </property>
@@ -638,6 +644,12 @@ margin: 5px;
         </item>
         <item row="0" column="3" rowspan="2">
          <widget class="LineDouble" name="lineEditMaxwn">
+          <property name="minimumSize">
+           <size>
+            <width>45</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="text">
            <string>4000</string>
           </property>
@@ -1048,6 +1060,76 @@ margin: 5px;
        <widget class="NormPlotWidget" name="plot_norm" native="true"/>
       </item>
       <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_28" stretch="1,2,1,0,0">
+        <item>
+         <widget class="QLabel" name="label_13">
+          <property name="text">
+           <string>Save suffix</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEditSaveExt">
+          <property name="toolTip">
+           <string>Extension added before .mat in output files.</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_8">
+          <property name="text">
+           <string>Format</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBoxSaveFormat">
+          <item>
+           <property name="text">
+            <string>AB.mat</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Quasar.mat</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>PTIR-lite</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBoxSaveMerge">
+          <property name="toolTip">
+           <string>Output will be merged into ONE output file. You will be prompted for its name.</string>
+          </property>
+          <property name="text">
+           <string>Merge</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBarRun">
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item>
        <layout class="QHBoxLayout" name="horizontalLayout_13">
         <item>
          <widget class="QPushButton" name="pushButtonSaveParameters">
@@ -1081,66 +1163,6 @@ margin: 5px;
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_28" stretch="1,2,1,2">
-        <item>
-         <widget class="QLabel" name="label_13">
-          <property name="text">
-           <string>Save suffix</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEditSaveExt">
-          <property name="toolTip">
-           <string>Extension added before .mat in output files.</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Save format</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBoxSaveFormat">
-          <item>
-           <property name="text">
-            <string>AB.mat</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Quasar.mat</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>PTIR-lite</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QProgressBar" name="progressBarRun">
-        <property name="value">
-         <number>0</number>
-        </property>
-       </widget>
       </item>
      </layout>
     </item>

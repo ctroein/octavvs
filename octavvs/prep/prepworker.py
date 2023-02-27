@@ -11,6 +11,7 @@ import os.path
 from collections import namedtuple
 import numpy as np
 import scipy.signal, scipy.io
+import copy
 from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -220,15 +221,15 @@ class PrepWorker(QObject):
             traceback.print_exc()
             self.failed.emit(repr(e), traceback.format_exc())
 
-
-    def saveCorrected(self, outfile, fmt, data : SpectralData, wn, y):
+    @staticmethod
+    def saveFormatInfo(fmt):
         fmts = {'AB.mat': ('ab', 'mat'),
-                'Quasat.mat': ('quasar', 'mat'),
+                'Quasar.mat': ('quasar', 'mat'),
                 'PTIR-lite': ('ptir', 'ptir')}
         if fmt not in fmts:
-            raise ValueError(f'Unknown save file format {fmt}')
-        filename = outfile + '.' + fmts[fmt][1]
-        data.save_matrix(filename, fmt=fmts[fmt][0], ydata=y, wn=wn)
+            raise ValueError(f'Unknown save file format "{fmt}" not in '
+                             '"{list(fmts.keys())}"')
+        return fmts[fmt]
 
     @pyqtSlot(SpectralData, PrepParameters, str, bool)
     def bigBatch(self, data, params, folder, preservepath):
@@ -240,21 +241,21 @@ class PrepWorker(QObject):
             folder: output directory
             preservepath: if True, all processed files whose paths are under
             data.foldername will be placed in the corresponding subdirectory
-            of the output directory.
+            of the output directory
         """
-        if preservepath:
-            cpathlen = len(os.path.commonpath(
-                [os.path.dirname(f) for f in data.filenames]))
         try:
+            if preservepath:
+                cpathlen = len(os.path.commonpath(
+                    [os.path.dirname(f) for f in data.filenames]))
+            fmt, ext = self.saveFormatInfo(params.saveFormat)
+
             for fi in range(len(data.filenames)):
                 self.batchProgress.emit(fi, len(data.filenames))
                 if not self.loadFile(data, fi):
                     continue
 
                 wn = data.wavenumber
-                y = data.raw
-
-                y = self.callACandSC(data, params, wn, y)
+                y = self.callACandSC(data, params, wn, data.raw)
                 wn, y = self.callSGFandSRandBC(params, wn, y)
 
                 if params.normDo:
@@ -270,9 +271,9 @@ class PrepWorker(QObject):
                     filename = os.path.join(folder, os.path.basename(filename))
                 # Add the extension
                 filename = os.path.splitext(filename)
-                filename = filename[0] + params.saveExt
+                filename = filename[0] + params.saveExt + '.' + ext
 
-                self.saveCorrected(filename, params.saveFormat, data, wn, y)
+                data.save_matrix(filename, fmt=fmt, ydata=y, wn=wn)
             self.batchDone.emit(True)
             return
 
@@ -283,6 +284,72 @@ class PrepWorker(QObject):
             self.failed.emit(repr(e), traceback.format_exc())
         self.batchDone.emit(False)
 
+    @pyqtSlot(SpectralData, PrepParameters, str)
+    def bigBatchMerge(self, data, params, outfile):
+        """
+        Run the batch processing of all the files listed in 'data', saving
+        eveything to one massive file
+        Parameters:
+            data: SpectralData object with one or more files
+            params: PrepParameters object from the user
+            outfile: output file
+        """
+        wns = []
+        ys = []
+        try:
+            fmt, ext = self.saveFormatInfo(params.saveFormat)
+
+            for fi in range(len(data.filenames)):
+                self.batchProgress.emit(fi, len(data.filenames))
+                if not self.loadFile(data, fi):
+                    continue
+
+                wn = data.wavenumber
+                y = self.callACandSC(data, params, wn, data.raw)
+                wn, y = self.callSGFandSRandBC(params, wn, y)
+                if params.normDo:
+                    y = normalization.normalize_spectra(
+                        params.normMethod, y, wn, wavenum=params.normWavenum)
+                wns.append(wn)
+                ys.append(y)
+
+            # Do all images have the same wavenumbers?
+            if all(np.array_equal(v, wn[0]) for v in wns):
+                wns = wn[0]
+                ys = np.vstack(ys)
+            else:
+                rwns = None  # Resampled wavenumbers
+                # Almost the same wavenumbers? If so, use those.
+                if np.ptp([len(v) for v in wns]) == 0:
+                    wns = np.vstack(wns)
+                    rwns = wns.mean(0)
+                    wnstep = (rwns[-1] - rwns[0]) / (len(rwns) - 1)
+                    if not np.allclose(rwns, wns, rtol=0, atol=.5*wnstep):
+                        rwns = None
+                if rwns is None:
+                    # Resample evenly
+                    w1 = min(v[0] for v in wns)
+                    w2 = max(v[-1] for v in wns)
+                    maxres = max((len(v) - 1) / (v[-1] - v[0]) for v in wns)
+                    rwns = np.linspace(w1, w2, num=(maxres * (w2 - w1) + 1))
+
+                rys = np.vstack([
+                    interp1d(v, y, kind='quadratic', fill_value=0,
+                             bounds_error=False)(rwns)
+                       for v, y in zip(wns, ys) ])
+            data = copy.copy(data)
+            data.pixelxy = None
+            data.wh = (len(rys), 1)
+            data.save_matrix(outfile, fmt=fmt, ydata=rys, wn=rwns)
+            self.batchDone.emit(True)
+            return
+
+        except InterruptedError:
+            self.stopped.emit()
+        except Exception as e:
+            traceback.print_exc()
+            self.failed.emit(repr(e), traceback.format_exc())
+        self.batchDone.emit(False)
 
     @pyqtSlot(SpectralData, PrepParameters, str)
     def createReference(self, data, params, outfile):

@@ -56,6 +56,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
     startMCOptimize = pyqtSignal(np.ndarray, np.ndarray, dict, str)
     startBC = pyqtSignal(np.ndarray, np.ndarray, str, dict)
     startBatch = pyqtSignal(SpectralData, PrepParameters, str, bool)
+    startBatchMerge = pyqtSignal(SpectralData, PrepParameters, str)
     startCreateReference = pyqtSignal(SpectralData, PrepParameters, str)
 
     bcLambdaRange = np.array([0, 8])
@@ -211,6 +212,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.pushButtonLoadParameters.clicked.connect(self.loadParameters)
 
         self.pushButtonRun.clicked.connect(self.runBatch)
+        self.checkBoxSaveMerge.toggled.connect(
+            lambda t: self.lineEditSaveExt.setEnabled(not t))
 
         # Defaults when no data loaded
         self.scSettings = {}
@@ -229,6 +232,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.worker.fileLoaded.connect(self.updateFile)
         self.worker.loadFailed.connect(self.showLoadErrorMessage)
         self.startBatch.connect(self.worker.bigBatch)
+        self.startBatchMerge.connect(self.worker.bigBatchMerge)
         self.startCreateReference.connect(self.worker.createReference)
         self.worker.batchDone.connect(self.batchDone)
         self.workerThread.start()
@@ -290,7 +294,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
                     "Running from the command line "
                     "without passing a parameter file does nothing.")
             savePath = os.path.normpath(savePath)
-            self.runBatch(foldername=savePath)
+            self.runBatch(outpath=savePath)
 
     def closeEvent(self, event):
         self.worker.halt = True
@@ -646,7 +650,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
     def toggleRunning(self, newstate):
         onoff = not newstate
         self.fileLoader.setEnabled(onoff)
-        self.lineEditSaveExt.setEnabled(onoff)
+        self.checkBoxSaveMerge.setEnabled(onoff)
+        if not self.checkBoxSaveMerge.isChecked():
+            self.lineEditSaveExt.setEnabled(onoff)
         self.comboBoxSaveFormat.setEnabled(onoff)
         self.pushButtonRun.setEnabled(onoff)
         self.pushButtonSCRefresh.setEnabled(onoff)
@@ -905,6 +911,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         p.saveExt = self.lineEditSaveExt.text()
         p.saveFormat = self.comboBoxSaveFormat.currentText()
+        p.saveMerge = self.checkBoxSaveMerge.isChecked()
         p.acDo = self.checkBoxAC.isChecked()
         p.acSpline = self.checkBoxSpline.isChecked()
         p.acSmooth = self.checkBoxSmoothCorrected.isChecked()
@@ -1031,6 +1038,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         self.lineEditSaveExt.setText(p.saveExt)
         self.comboBoxSaveFormat.setCurrentText(p.saveFormat)
+        self.checkBoxSaveMerge.setChecked(p.saveMerge)
         self.checkBoxAC.setChecked(p.acDo)
         self.checkBoxSpline.setChecked(p.acSpline)
         self.checkBoxSmoothCorrected.setChecked(p.acSmooth)
@@ -1117,10 +1125,11 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
                         traceback.format_exc())
 
 
-    def runBatch(self, checked=False, foldername=None):
+    def runBatch(self, checked=False, outpath=None):
         """
-        Run the selected preprocessing steps, showing a dialog if no output path is given.
-        The 'checked' parameter is just a placeholder to match QPushButton.clicked().
+        Run the selected preprocessing steps, showing a dialog if no
+        output path is given. The 'checked' parameter is just a placeholder
+        to match QPushButton.clicked().
         """
         assert not self.rmiescRunning
         if len(self.data.filenames) < 1:
@@ -1132,44 +1141,68 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         else:
             params.mcDo = False
 
-        if foldername is None:
-            foldername = self.getDirectoryName("Select save directory",
-                                               settingname='spectraDir',
-                                               savesetting=False)
-        if not foldername:
-            return
         preservepath = False
-
-        all_paths = { os.path.dirname(f) for f in self.data.filenames }
-        folder_within_input = any(p.startswith(foldername) for p in all_paths)
-
-        if folder_within_input:
-            if params.saveExt == '':
-                self.errorMsg.showMessage('A filename save suffix must be specified '+
-                                          'when loading and saving files in the same directory')
+        if params.saveMerge:
+            if outpath is None:
+                fmt, ext = PrepWorker.saveFormatInfo(params.saveFormat)
+                outpath = self.getSaveFileName(
+                    'Select merged output file', savesuffix=ext,
+                    filter=f"{params.saveFormat} (*.{ext});;All files (*)",
+                    settingname='spectraDir')
+            if not outpath:
                 return
-            elif len(self.data.filenames) > 1:
-                yn = QMessageBox.question(self, 'Identical directory',
-                                          'Are you sure you want to '+
-                                          'save output files in the input directory')
-                if yn != QMessageBox.Yes:
+
+            if outpath in self.data.filenames:
+                self.errorMsg.showMessage(
+                    'The output file cannot be identical to an input file')
+                return
+        else:
+            # Get/query output path and check collisions and directory handling
+            if outpath is None:
+                outpath = self.getDirectoryName(
+                    'Select save directory', settingname='spectraDir',
+                    savesetting=False)
+            if not outpath:
+                return
+
+            all_paths = { os.path.dirname(f) for f in self.data.filenames }
+            folder_within_input = any(p.startswith(outpath) for p in all_paths)
+
+            if folder_within_input:
+                if params.saveExt == '':
+                    self.errorMsg.showMessage(
+                        'A filename save suffix must be specified '+
+                        'when loading and saving files in the same directory')
                     return
-            preservepath = True
-        elif len(all_paths) > 1:
-            yn = QMessageBox.question(self, 'Multiple directories',
-                      'Input files are in multiple directories. Should this '+
-                      'directory structure be replicated in the output directory?')
-            preservepath = yn == QMessageBox.Yes
+                elif len(self.data.filenames) > 1:
+                    yn = QMessageBox.question(
+                        self, 'Identical directory',
+                        'Are you sure you want to save output files '
+                        'in the input directory')
+                    if yn != QMessageBox.Yes:
+                        return
+                preservepath = True
+            elif len(all_paths) > 1:
+                yn = QMessageBox.question(
+                    self, 'Multiple directories',
+                    'Input files are in multiple directories. Should '
+                    'this directory structure be replicated in the output '
+                    'directory?')
+                preservepath = yn == QMessageBox.Yes
 
         self.toggleRunning(2)
         self.scNewSettings = self.getSCSettings()
-        self.startBatch.emit(self.data, params, foldername, preservepath)
+        if params.saveMerge:
+            self.startBatchMerge.emit(self.data, params, outpath)
+        else:
+            self.startBatch.emit(self.data, params, outpath, preservepath)
 
     def createReference(self, checked=False):
         """
-        Run the selected preprocessing steps (sans SC and SR) on all data, then
-        save the average spectrum as a reference for scattering correction.
-        The 'checked' parameter is just a placeholder to match QPushButton.clicked().
+        Run the selected preprocessing steps (sans SC and SR) on all data,'
+        then save the average spectrum as a reference for scattering
+        correction. The 'checked' parameter is just a placeholder to
+        match QPushButton.clicked().
         """
         assert not self.rmiescRunning
         if len(self.data.filenames) < 1:
@@ -1210,16 +1243,17 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
 def main():
     parser = argparse.ArgumentParser(
-            description='Graphical application for preprocessing of hyperspectral data.')
+            description='Graphical application for preprocessing of'
+            ' hyperspectral data.')
     parser.add_argument('files', metavar='file', nargs='*',
                         help='initial hyperspectral images to load')
     parser.add_argument('-p', '--params', metavar='file.pjs', dest='paramFile',
                         help='parameter file to load')
-    parser.add_argument('-r', '--run', metavar='output_dir', nargs='?',
+    parser.add_argument('-r', '--run', metavar='output', nargs='?',
                         dest='savePath', const='./',
-                        help='runs and saves to the output directory (params '+
-                        'argument must also be passed)')
-    MyMainWindow.run_octavvs_application(parser=parser,
-                                         parameters=['files', 'paramFile', 'savePath'])
+                        help='runs and saves to the given directory/file '
+                        '(--params file must be specified)')
+    MyMainWindow.run_octavvs_application(
+        parser=parser, parameters=['files', 'paramFile', 'savePath'])
 
 

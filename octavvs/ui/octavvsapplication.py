@@ -105,10 +105,9 @@ class OctavvsMainWindow(QMainWindow):
             self.settings.setValue(settingname, os.path.dirname(files[0]))
         return files if multiple else files[0]
 
-    def getSaveFileName(self, title, suffix='', **kwargs):
+    def getSaveFileName(self, title, **kwargs):
         "Show a file dialog and select an output file"
-        return self.getLoadSaveFileName(
-            title=title, savesuffix=suffix, **kwargs)
+        return self.getLoadSaveFileName(title=title, **kwargs)
 
     def getLoadFileName(self, title, **kwargs):
         "Show a file dialog and select an input file"
