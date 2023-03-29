@@ -618,8 +618,11 @@ class DecompositionPlotWidget(BasePlotWidget):
         # obj_name = '%s%d' % (self.objectName(), self.display_mode)
         obj_name = None # New figure on every click
         fig = plt.figure(obj_name, tight_layout=dict(pad=.6))
-        fig.canvas.set_window_title(self.window_title + ' ' +
-                                    self.display_modes[self.display_mode])
+        try:
+            fig.canvas.set_window_title(self.window_title + ' ' +
+                                        self.display_modes[self.display_mode])
+        except:
+            pass
         ax = fig.gca()
         self.draw_ax(ax, fig=fig)
         fig.canvas.draw_idle()

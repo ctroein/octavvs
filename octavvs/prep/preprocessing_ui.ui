@@ -1060,7 +1060,7 @@ margin: 5px;
        <widget class="NormPlotWidget" name="plot_norm" native="true"/>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_28" stretch="1,2,1,0,0">
+       <layout class="QHBoxLayout" name="horizontalLayout_28" stretch="0,2,1,0,0">
         <item>
          <widget class="QLabel" name="label_13">
           <property name="text">

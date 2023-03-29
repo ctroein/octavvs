@@ -613,7 +613,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                 f"Export C and S matrices as {filetype}",
                 filter=f"{ftypes[ext]} (*.{ext});;All files (*)",
                 settingname='exportDir',
-                suffix=ext)
+                savesuffix=ext)
         if not filename:
             return
         try:
@@ -871,7 +871,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                     "Export annotated spectra",
                     filter="Comma-separated values (*.csv);;All files (*)",
                     settingname='exportDir',
-                    suffix='csv',
+                    savesuffix='csv',
                     defaultfilename=filename)
             if not filename:
                 return
@@ -946,7 +946,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                 "Save decomposition settings",
                 filter="Setting files (*.djs);;All files (*)",
                 settingname='settingsDir',
-                suffix='djs')
+                savesuffix='djs')
         if filename:
             try:
                 self.getParameters().save(filename)

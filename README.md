@@ -72,7 +72,7 @@ Information about the most recent release of OCTAVVS can be found on its
 [PyPI page](https://pypi.org/project/octavvs), as well as on its
 [Anaconda Cloud page](https://anaconda.org/ctroein/octavvs).
 
-To upgrade to the most recent version, do ``conda update octavvs`` in the Conda console / Terminal.
+To upgrade to the most recent version, do ``conda update -c ctroein octavvs`` in the Conda console / Terminal.
 
 Information about released versions can be found [here](https://github.com/ctroein/octavvs/blob/master/HISTORY.md).
 

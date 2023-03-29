@@ -129,7 +129,11 @@ class DataPlotWidget(FigureCanvas):
 
     def popOut(self):
         fig = plt.figure(self.objectName(), tight_layout=dict(pad=.6))
-        fig.canvas.set_window_title(self.window_title)
+        try:
+            # Does this work on all platforms/versions?
+            fig.canvas.manager.set_window_title(self.window_title)
+        except:
+            pass
         ax = fig.gca()
         self.draw_or_clear(ax)
         fig.canvas.draw_idle()
