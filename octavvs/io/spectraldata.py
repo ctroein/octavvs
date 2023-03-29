@@ -80,11 +80,14 @@ class SpectralData:
                 ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
             elif fext in ['.xls', '.xlsx']:
                 filetype = 'xls'
-                ss = pd.read_excel(filename, header=None).to_numpy()
+                ss = pd.read_excel(filename, header=None).to_numpy(dtype=float)
             else:
                 filetype = 'txt'
                 ss = pd.read_csv(filename, sep=None, engine='python',
-                                 header=None).to_numpy()
+                                 header=None).to_numpy(dtype=float)
+            if ss.dtype != np.float32 and ss.dtype != np.float64:
+                print(f'Loaded as {ss.dtype}, converting to float64')
+                ss = ss.astype(float)
             # Check for some particular format(s)
             if 'ImR' in s and 'lambda' in s:
                 # Matlab file with data in ImR, wavelengths in lambda
