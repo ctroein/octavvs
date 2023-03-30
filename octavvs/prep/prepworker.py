@@ -326,15 +326,25 @@ class PrepWorker(QObject):
                     wnstep = (rwns[-1] - rwns[0]) / (len(rwns) - 1)
                     if not np.allclose(rwns, wns, rtol=0, atol=.5*wnstep):
                         rwns = None
+                    else:
+                        print('Interpolating near-identical wavenumbers')
                 if rwns is None:
                     # Resample evenly
                     w1 = min(v[0] for v in wns)
                     w2 = max(v[-1] for v in wns)
                     maxres = max((len(v) - 1) / (v[-1] - v[0]) for v in wns)
-                    rwns = np.linspace(w1, w2, num=(maxres * (w2 - w1) + 1))
+                    rwns = np.linspace(w1, w2, num=int(maxres * (w2 - w1)) + 1)
+                    print('Resampling wavenumbers')
 
+                # Linear interpolation because it happens to handle NaN
+                # and out-of-bounds x fairly nicely. We could get better
+                # results with pchipinterpolator, but that may require
+                # a two-step handling of NaN: Remove all NaN values from
+                # the input, interpolate, set values to NaN wherever the
+                # closest point in the input is NaN or where you have to
+                # pass another output point to get to the nearest input.
                 rys = np.vstack([
-                    interp1d(v, y, kind='quadratic', fill_value=0,
+                    interp1d(v, y, kind='linear', fill_value=0,
                              bounds_error=False)(rwns)
                        for v, y in zip(wns, ys) ])
             data = copy.copy(data)
