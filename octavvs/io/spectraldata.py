@@ -56,6 +56,108 @@ class SpectralData:
             return True
         return False
 
+    def extract_data_from_matrix(self, mx, meta):
+        """
+        Extract wavenumbers, raw data and image dimensions from some kind
+        of data matrix, with or without additional metadata
+
+        Parameters
+        ----------
+        mx : numpy.array or None
+            raw matrix data, possibly with wavenumbers and annotations.
+        meta : dict
+            additional metadata, possibly including mx itself
+
+        Returns
+        -------
+        raw : numpy.array
+            matrix of floats
+        wn : numpy.array
+            sorted array of wavenumbers
+        wh : tuple or None
+            image dimensions (width and height)
+        """
+        if meta is None:
+            meta = {}
+        wh = None
+
+        # Check for some particular format(s)
+        if 'ImR' in meta and 'lambda' in meta:
+            # Matlab file with data in ImR, wavelengths in lambda
+            # (encountered with hyperspectral data in Lund)
+            mx = meta['ImR']
+            if mx.ndim == 2:
+                raw = mx
+            else:
+                assert mx.ndim == 3
+                wh = [mx.shape[1], mx.shape[0]]
+                raw = mx.reshape((-1, mx.shape[2]))
+            wn = meta['lambda'].flatten()
+            assert len(wn) == raw.shape[1]
+            return raw, wn, wh
+        if 'wavenumber' in meta and 'y' in meta:
+            # Quasar.mat - and we ought to load map_x/y and figure out a
+            # wh rectangle or fall back to pixelxy if necessary.
+            wn = meta['wavenumber'].flatten()
+            raw = meta['y']
+            ...
+            return raw, wn, None
+
+        if mx is None:
+            # Assume data are in the biggest matrix in the file
+            mx = max(meta.items(), key=lambda k: np.size(k[1]))[1]
+
+        if mx.ndim == 3 and (np.array(mx.shape) > 1).all():
+            wh = (mx.shape[0], mx.shape[1])
+            mx = mx.reshape((-1, mx.shape[2]))
+        if mx.ndim != 2 or (np.array(mx.shape) < 2).any():
+            raise RuntimeError(
+                'file does not appear to describe an FTIR image matrix')
+
+        if 'wh' in meta:
+            wh = meta['wh'].flatten()
+
+        # Assume wavenumbers are a) first row or b) first column
+        if mx.dtype == object:
+            # Find columns with only numbers. Removed strings ought to
+            # be saved as annotations.
+            alltypes = np.vectorize(lambda x: np.issubdtype(
+                type(x), np.number))(mx)
+            numcols = [np.all(alltypes, axis=0), np.all(alltypes, axis=1)]
+            wns = [wn.astype(float, casting='unsafe') for wn in
+                   [mx[0, numcols[0]], mx[numcols[1], 0]]]
+        else:
+            wns = [mx[0, :], mx[:, 0]]
+        # Find the direction with most sorted wavenumbers
+        for i, wn in enumerate(wns):
+            deltas = np.diff(wn)
+            if np.any(deltas <= 0) and np.any(deltas >= 0):
+                wns[i] = []
+        if len(wns[0]) < 3 and len(wns[1]) < 3:
+            raise RuntimeError(
+                'First column or row must contain sorted wavenumbers')
+        # Transpose if needed
+        if len(wns[1]) > len(wns[0]):
+            mx = mx.T
+            mxt = 1
+        else:
+            mxt = 0
+        wn = wns[mxt]
+        # Remove the non-numeric stuff
+        if mx.dtype == object:
+            nonnum = mx[0, ~numcols[mxt]]
+            if len(nonnum):
+                print(f'Removing non-numeric fields: {nonnum}')
+            raw = mx[1:, numcols[mxt]].astype(float)
+        else:
+            raw = mx[1:]
+
+        if raw.dtype != np.float32 and raw.dtype != np.float64:
+            print(f'Loaded as {raw.dtype}, converting to float64')
+            wn = wn.astype(float)
+            raw = raw.astype(float)
+        return raw, wn, wh
+
     def read_matrix(self, filename):
         """
         Read data from a file, with some error checking. The object is modified
@@ -66,75 +168,24 @@ class SpectralData:
         images = None
         raw = None
         fext = os.path.splitext(filename)[1].lower()
-        if fext in ['.txt', '.csv', '.mat', '.xls', '.xlsx']:
-            s = {} # possible
-            if fext == '.mat':
-                filetype = 'mat'
-                try:
-                    s = read_mat(filename)
-                except TypeError:
-                    # Workaround for uint16_codec bug (pymatreader
-                    # assumes mio5, not mio4)
-                    s = scipy.io.loadmat(filename)
-                # Assume data are in the biggest matrix in the file
-                ss = max(s.items(), key=lambda k: np.size(k[1]) )[1]
-            elif fext in ['.xls', '.xlsx']:
+        if fext == '.mat':
+            filetype = 'mat'
+            try:
+                s = read_mat(filename)
+            except TypeError:
+                # Workaround for uint16_codec bug (pymatreader
+                # assumes mio5, not mio4)
+                s = scipy.io.loadmat(filename)
+            raw, wn, wh = self.extract_data_from_matrix(None, s)
+        elif fext in ['.txt', '.csv', '.xls', '.xlsx']:
+            if fext in ['.xls', '.xlsx']:
                 filetype = 'xls'
-                ss = pd.read_excel(filename, header=None).to_numpy(dtype=float)
+                ss = pd.read_excel(filename, header=None).to_numpy()
             else:
                 filetype = 'txt'
                 ss = pd.read_csv(filename, sep=None, engine='python',
-                                 header=None).to_numpy(dtype=float)
-            if ss.dtype != np.float32 and ss.dtype != np.float64:
-                print(f'Loaded as {ss.dtype}, converting to float64')
-                ss = ss.astype(float)
-            # Check for some particular format(s)
-            if 'ImR' in s and 'lambda' in s:
-                # Matlab file with data in ImR, wavelengths in lambda
-                # (encountered with hyperspectral data in Lund)
-                ss = s['ImR']
-                if ss.ndim == 2:
-                    raw = ss
-                else:
-                    assert ss.ndim == 3
-                    wh = [ss.shape[1], ss.shape[0]]
-                    raw = ss.reshape((-1, ss.shape[2]))
-                wn = s['lambda'].flatten()
-                assert len(wn) == raw.shape[1]
-            if 'wavenumber' in s and 'y' in s:
-                # Quasar.mat - and we ought to load map_x/y to a wh rectangle
-                # or fall back to pixelxy if necessary.
-                wn = s['wavenumber'].flatten()
-                raw = s['y']
-            elif ss.ndim == 2 and ss.shape[0] > 1 and ss.shape[1] > 1:
-                if 'wh' in s:
-                    wh = s['wh'].flatten()
-                # Assume wavenumbers are a) first row or b) first column
-                for transp in range(2):
-                    if transp:
-                        ss = ss.T
-                    wn = ss[0]
-                    cols = None
-                    # if mixed data, remove strings (these should be saved
-                    # as annotations!)
-                    if wn.dtype == object:
-                        cols = [not isinstance(s, str) for s in wn]
-                        wn = wn[cols].astype(float, casting='unsafe')
-                        if len(wn) < 2:
-                            continue
-                    deltas = np.diff(wn)
-                    if np.all(deltas > 0) or np.all(deltas < 0):
-                        if cols is not None:
-                            raw = ss[1:, cols].astype(float)
-                        else:
-                            raw = ss[1:]
-                        break
-                if raw is None:
-                    raise RuntimeError(
-                        'first column or row must contain sorted wavenumbers')
-            else:
-                raise RuntimeError(
-                    'file does not appear to describe an FTIR image matrix')
+                                 header=None).to_numpy()
+            raw, wn, wh = self.extract_data_from_matrix(ss, None)
         else:
             if fext == '.ptir' or fext == '.hdf':
                 filetype = 'ptir'
@@ -156,10 +207,11 @@ class SpectralData:
         if wn[0] > wn[1]:
             wn = wn[::-1]
             raw = raw[:, ::-1]
-
         diffsign = np.sign(np.diff(wn))
         if (diffsign >= 0).any() and (diffsign <= 0).any():
             raise RuntimeError('wavenumbers must be sorted')
+
+        # Guess the image shape if square
         npix = raw.shape[0]
         if wh is not None:
             if len(wh) != 2:
@@ -174,6 +226,7 @@ class SpectralData:
                 self.wh = (res, res)
             else:
                 self.wh = (npix, 1)
+
         self.raw = raw
         self.wavenumber = wn
         self.wmin = self.wavenumber.min()
