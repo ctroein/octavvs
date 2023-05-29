@@ -1257,7 +1257,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 class Multiple_Calculation(QThread):
 
     DataInit = pyqtSignal(int, str)
-    purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
+    purest = pyqtSignal(int,np.float64,str,np.ndarray, np.ndarray)
 
     QThread.setTerminationEnabled()
     def __init__(self, filenames, nr, f, max_iter, stopping_error, init,win, pol,implement, parent=None):
@@ -1498,7 +1498,7 @@ class Multiple_Calculation(QThread):
 
 
 class single_report(QThread):
-    purest = pyqtSignal(np.int,np.float64,str,np.ndarray, np.ndarray)
+    purest = pyqtSignal(int,np.float64,str,np.ndarray, np.ndarray)
     def __init__(self, sp, nr, f, niter, stopping_error, init, parent=None
                 ):
         QThread.__init__(self, parent)

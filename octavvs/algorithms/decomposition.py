@@ -45,7 +45,7 @@ def simplisma(d, nr, f):
     p = s / mf
 
     # First Pure Spectral/Concentration profile
-    imp = np.empty(nr, dtype=np.int)
+    imp = np.empty(nr, dtype=int)
     imp[0] = p.argmax()
 
     #Calculation of correlation matrix

@@ -266,7 +266,7 @@ def stable_rmiesc_clusters(iters, clusters):
     the input iterations
     """
     iters = max(2, iters) * 2
-    cc = np.zeros(iters, dtype=np.int)
+    cc = np.zeros(iters, dtype=int)
     cc[:iters//3] = 1
     cc[iters//2:iters*3//4] = clusters
 #    cc = np.zeros(max(2, iters) * 3 // 2, dtype=np.int)
