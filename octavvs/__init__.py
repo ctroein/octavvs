@@ -1,1 +1,1 @@
-octavvs_version = 'v0.1.22'
+octavvs_version = 'v0.1.23'
