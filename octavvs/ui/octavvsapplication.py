@@ -10,6 +10,7 @@ import os
 import sys
 import traceback
 import multiprocessing
+import signal
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog
 from PyQt5.QtWidgets import QErrorMessage, QMessageBox #, QInputDialog, QDialog
@@ -165,6 +166,7 @@ class OctavvsMainWindow(QMainWindow):
     @classmethod
     def run_octavvs_application(windowclass, parser=None, parameters=[],
                                 isChild=False):
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
         res = 1
         try:
             progver = 'OCTAVVS %s %s' % (windowclass.program_name(),
@@ -173,7 +175,8 @@ class OctavvsMainWindow(QMainWindow):
             if parser is not None:
                 parser.add_argument('--version', action='version',
                                     version=progver)
-                selmp = multiprocessing.get_start_method(allow_none=True) is None
+                selmp = multiprocessing.get_start_method(
+                    allow_none=True) is None
                 if selmp:
                     parser.add_argument('--mpmethod', help='')
                 args = parser.parse_args()
