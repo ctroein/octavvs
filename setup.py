@@ -25,9 +25,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    install_requires=['numpy', 'scipy', 'matplotlib', 'sklearn', 'pyshortcuts',
+    install_requires=['numpy', 'scipy', 'matplotlib', 'scikit-learn', 'pyshortcuts',
                       'opencv-python', 'pandas', 'pillow', 'pymatreader', 'dill',
-                      'threadpoolctl', 'statsmodels'],
+                      'threadpoolctl>=3.1.0', 'statsmodels'],
     package_data={ '': ['*.ui', '*.mat', '*.ico', '*.icns'] },
     entry_points={'console_scripts':
         ['octavvs = octavvs.launcher:main',
