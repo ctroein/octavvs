@@ -720,7 +720,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
                 inlist.add(c)
         for c in clusters - inlist:
             item = QListWidgetItem('Cluster %d' % c)
-            cc = np.asarray(self.plot_cluster.cluster_color(c)[:3]) * 255
+            # Get the cluster color as 0-255 RGB
+            cc = (np.asarray(self.plot_cluster.cluster_color(c)[:3]) * 255
+                  ).astype(int)
             item.setBackground(QtGui.QBrush(QtGui.QColor(*cc)))
             item.octavvs_id = c
             listw.addItem(item)
