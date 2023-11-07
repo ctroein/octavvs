@@ -214,18 +214,35 @@ class SpectralData:
         # Guess the image shape if square
         npix = raw.shape[0]
         if wh is not None:
+            # print(f'image size {wh}')
             if len(wh) != 2:
                 raise RuntimeError('Image size in "wh" must have length 2')
             wh = (int(wh[0]), int(wh[1]))
             if not pixels_fit(npix, wh):
                 raise RuntimeError('Image size in "wh" does not match data size')
-            self.wh = wh
-        elif npix != self.wh[0] * self.wh[1]:
-            res = int(np.sqrt(npix))
-            if npix == res * res:
-                self.wh = (res, res)
+        elif xy is not None:
+            # We should do some clever deduction of size and add code
+            # to deduce the best rectangular grid from xy coordinates,
+            # but for now we keep it simple.
+            yy = np.diff(xy[:, 0])
+            yy = yy - yy.mean()
+            yy = yy / np.median(yy)
+            guessh = (yy < .25 * yy.min()).sum() + 1
+            if guessh > npix**.2 and guessh < npix **.8:
+                wh = ((npix + guessh - 1) // guessh, guessh)
+                print(f'assuming image size {wh} from xy data')
+        if wh is None:
+            if npix == self.wh[0] * self.wh[1]:
+                wh = self.wh
             else:
-                self.wh = (npix, 1)
+                res = int(np.sqrt(npix))
+                if npix == res * res:
+                    wh = (res, res)
+                    print(f'assuming square image {wh}')
+                else:
+                    wh = (npix, 1)
+                    print(f'assuming non-grid data {wh}')
+        self.wh = wh
 
         self.raw = raw
         self.wavenumber = wn

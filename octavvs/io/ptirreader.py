@@ -94,6 +94,9 @@ class PtirReader:
         if not wns:
             raise RuntimeError('No spectra in input file')
         if not all([len(w) == len(wns[0]) for w in wns]):
+            print('Lengths', [len(w) for w in wns])
+            print('Min', [min(w) for w in wns])
+            print('Max', [max(w) for w in wns])
             raise NotImplementedError(
                 'Unable to load spectra of different length')
         wns = np.array(wns)
@@ -105,7 +108,8 @@ class PtirReader:
         self.wavenum = np.median(wns, axis=0)[::-1]
         self.AB = np.array(raw)[:, ::-1]
         self.xy = np.array(xy)
-        self.wh = (len(self.AB), 1)
+        # self.wh = (len(self.AB), 1)
+        self.wh = None
 
         self.images = []
         for imtype in ['Image', 'Heightmap']:
@@ -140,7 +144,7 @@ class PtirReader:
                 inside = (minxy <= self.xy).all(1) & (self.xy <= maxxy).all(1)
                 self.xy = self.xy[inside,:]
                 self.AB = self.AB[inside,:]
-            self.wh = (len(self.AB), 1)
+            # self.wh = (len(self.AB), 1)
 
         # Switch to rectangle mode if appropriate
         if not self.images and wh is not None and wh[0] * wh[1] == len(raw):
