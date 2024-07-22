@@ -7,7 +7,8 @@ Created on Wed Mar  4 16:21:46 2020
 """
 
 import numpy as np
-from scipy.signal import savgol_filter, tukey
+from scipy.signal import savgol_filter
+from scipy.signal.windows import tukey
 
 from . import baseline
 from .util import load_reference, find_wn_ranges
