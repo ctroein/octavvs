@@ -47,8 +47,8 @@ class PtirReader:
         wh = None
 
         for k, v in f.items():
-            # Skip measurement zero
-            if re.match(r'^Measurement_0+$', k):
+            # Skip background measurements
+            if v.attrs.get("IsBackground", 0):
                 continue
 
             for kk, vv in v.items():
