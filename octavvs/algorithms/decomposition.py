@@ -291,8 +291,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                     B, res, _, _ = np.linalg.lstsq(newA, sp.T, rcond=-1)
                     error = res.sum()
                 if normalize == 'B':
-                    norm = np.linalg.norm(B, axis=1)
-                    B = np.divide(B.T, norm, where=norm!=0, out=B.T).T
+                    norm = np.linalg.norm(B, axis=1, keepdims=True)
+                    np.divide(B, norm, where=norm!=0, out=B)
                 newA = None
             else:
                 if newB is None:
