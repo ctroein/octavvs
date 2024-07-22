@@ -201,7 +201,8 @@ class RoiPlotWidget(BasePlotWidget):
     def stop_polygon(self):
         "Remove polygon lines"
         if self.polyline is not None:
-            self.ax.lines.remove(self.polyline)
+            # self.ax.lines.remove(self.polyline)
+            self.polyline.remove()
             self.polyline = None
         if self.polystart is not None:
             self.polystart.remove()
