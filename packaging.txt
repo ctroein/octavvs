@@ -6,7 +6,7 @@ we don't have any automated tests.
 
 To build and release a new version:
 bumpversion --new-version XX.YY.ZZ  or  bumpversion patch (or minor / major)
-rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u ctroein dist/*
+rm -rf dist build && python setup.py bdist_wheel sdist && twine upload -u __token__ dist/*
 git push --tags
 
 To build the conda package (after the above):
