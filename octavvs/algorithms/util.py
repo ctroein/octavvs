@@ -6,33 +6,49 @@ Created on Wed Mar  4 16:24:50 2020
 @author: carl
 """
 
-#import os.path
+import os.path
 from pkg_resources import resource_filename
 import numpy as np
 from scipy.interpolate import PchipInterpolator
 #from scipy.io import loadmat
 from pymatreader import read_mat
+import pandas as pd
 
 
-def load_reference(wn, what=None, matfilename=None):
+def load_reference(wn, what=None, filename=None):
     """
-    Loads and normalizes a spectrum from a Matlab file, interpolating at the given points.
-        The reference is assumed to cover the entire range of wavenumbers.
-    Parameters:
-        wn: array of wavenumbers at which to get the spectrum
-        what: A string defining what type of reference to get, corresponding to a file in the
-        'reference' directory
-        matfilename: the name of an arbitrary Matlab file to load data from; the data must be
-        in a matrix called AB, with wavenumbers in the first column.
-        Returns: spectrum at the points given by wn
+    Load and normalize a spectrum from a Matlab file, interpolating at
+    the given points. The reference is assumed to cover the entire range
+    of wavenumbers.
+
+
+    Parameters
+    ----------
+    wn : ndarray
+        wavenumbers at which to get the spectrum.
+    what : string, optional
+        Type of reference to get, corresponding to a file in the
+        'reference' directory.
+    filename : string, optional
+        The name of an arbitrary Matlab/CSV file to load data from.
+        For .mat, the data must be in a matrix called AB, with wavenumbers
+        in the first column.
+
+    Returns
+    -------
+    Spectrum at the points given by wn.
+
     """
-    if (what is None) == (matfilename is None):
-        raise ValueError("Either 'what' or 'matfilename' must be specified")
+    if (what is None) == (filename is None):
+        raise ValueError("Either 'what' or 'filename' must be specified")
     if what is not None:
-        matfilename = resource_filename('octavvs.reference_spectra', what + ".mat")
-#        matfilename = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),
-#                                       'reference', what + '.mat'))
-    ref = read_mat(matfilename)['AB']
+        filename = resource_filename(
+            'octavvs.reference_spectra', what + ".mat")
+    if os.path.splitext(filename)[1].lower() == ".mat":
+        ref = read_mat(filename)['AB']
+    else:
+        ref = pd.read_csv(filename, sep=None, comment='#', engine="python")
+        ref = ref.to_numpy()
     # Handle the case of high-to-low since the interpolator requires low-to-high
     d = 1 if ref[0,0] < ref[-1,0] else -1
     ref = PchipInterpolator(ref[::d,0], ref[::d,1])(wn)

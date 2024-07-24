@@ -520,7 +520,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         startdir = resource_filename('octavvs', "reference_spectra")
         ref = self.getLoadFileName(
             "Load atmospheric reference spectrum",
-            filter="Matrix file (*.mat)",
+            filter="Matlab file (*.mat);;CSV file (*.csv)",
             settingname='atmRefDir', settingdefault=startdir)
         if not ref:
             return

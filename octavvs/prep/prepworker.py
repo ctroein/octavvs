@@ -94,8 +94,8 @@ class PrepWorker(QObject):
         elif ref == 'Other':
             if otherref == '':
                 raise RuntimeError('Specify a reference spectrum file')
-            return correction.load_reference(data.wavenumber,
-                                             matfilename=otherref)
+            return correction.load_reference(
+                data.wavenumber, filename=otherref)
         else:
             return correction.load_reference(data.wavenumber, what=ref.lower())
 

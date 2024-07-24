@@ -35,8 +35,8 @@ def cut_wn(wn, y, ranges):
     ix = np.array([inrange(w) for w in wn])
     return wn[ix], y[...,ix]
 
-def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
-                extra_factor=0.25, smooth_win=9, progressCallback = None):
+def atmospheric(wn, y, atm=None, cut_co2=True, extra_iters=5,
+                extra_factor=0.25, smooth_win=9, progressCallback=None):
     """
     Correct for atmospheric gases.
 
@@ -74,7 +74,7 @@ def atmospheric(wn, y, atm=None, cut_co2 = True, extra_iters=5,
     if atm is None or (isinstance(atm, str) and atm == ''):
         atm = load_reference(wn, what='water')
     elif isinstance(atm, str):
-        atm = load_reference(wn, matfilename=atm)
+        atm = load_reference(wn, filename=atm)
     else:
         atm = atm.copy()
 
