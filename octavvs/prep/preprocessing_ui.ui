@@ -1105,6 +1105,16 @@ margin: 5px;
           </item>
           <item>
            <property name="text">
+            <string>CSV</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Excel .xlsx</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
             <string>PTIR-lite</string>
            </property>
           </item>

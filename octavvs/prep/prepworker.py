@@ -12,6 +12,7 @@ from collections import namedtuple
 import numpy as np
 import scipy.signal, scipy.io
 import copy
+import itertools
 from scipy.interpolate import interp1d
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -223,9 +224,12 @@ class PrepWorker(QObject):
 
     @staticmethod
     def saveFormatInfo(fmt):
+        "Translate string in UI/settings to internal name and file extension"
         fmts = {'AB.mat': ('ab', 'mat'),
                 'Quasar.mat': ('quasar', 'mat'),
-                'PTIR-lite': ('ptir', 'ptir')}
+                'PTIR-lite': ('ptir', 'ptir'),
+                'CSV': ('csv', 'csv'),
+                'Excel .xlsx': ('xlsx', 'xlsx')}
         if fmt not in fmts:
             raise ValueError(f'Unknown save file format "{fmt}" not in '
                              '"{list(fmts.keys())}"')
@@ -296,6 +300,7 @@ class PrepWorker(QObject):
         """
         wns = []
         ys = []
+        pixelxys = []
         try:
             fmt, ext = self.saveFormatInfo(params.saveFormat)
 
@@ -312,6 +317,7 @@ class PrepWorker(QObject):
                         params.normMethod, y, wn, wavenum=params.normWavenum)
                 wns.append(wn)
                 ys.append(y)
+                pixelxys.append(data.get_xy())
 
             # Do all images have the same wavenumbers?
             if all(np.array_equal(v, wn[0]) for v in wns):
@@ -350,7 +356,20 @@ class PrepWorker(QObject):
             data = copy.copy(data)
             data.pixelxy = None
             data.wh = (len(rys), 1)
-            data.save_matrix(outfile, fmt=fmt, ydata=rys, wn=rwns)
+            short_filenames = [[os.path.splitext(os.path.basename(f))[0]] +
+                               [""] * (len(pixelxys[i]) - 1)
+                               for i, f in enumerate(data.filenames)]
+            short_filenames = list(itertools.chain.from_iterable(
+                short_filenames))
+            filenums = np.repeat(range(len(ys)), [len(p) for p in pixelxys])
+            pixelxys = np.vstack(pixelxys).T
+            metadata = {"Filename": short_filenames,
+                        "File_num": filenums,
+                        "X": pixelxys[0],
+                        "Y": pixelxys[1]}
+
+            data.save_matrix(outfile, fmt=fmt, ydata=rys, wn=rwns,
+                             metadata=metadata)
             self.batchDone.emit(True)
             return
 

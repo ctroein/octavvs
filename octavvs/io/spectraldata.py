@@ -56,6 +56,23 @@ class SpectralData:
             return True
         return False
 
+    def get_xy(self):
+        """
+        Get pixel coordinates, regardless of data format.
+
+        Returns
+        -------
+        Coordinates : numpy.ndarray
+            Array of size (npixels, 2) with x, y pairs.
+        """
+        if self.pixelxy is not None:
+            return self.pixelxy
+        elif self.wh is not None and self.wh[0] and self.wh[1]:
+            return np.indices((self.wh[1], self.wh[0])).reshape(
+                (2, -1)).T[:len(self.raw),::-1]
+        else:
+            return np.vstack(range(len(self.raw)), [0] * len(self.raw)).T
+
     def extract_data_from_matrix(self, mx, meta):
         """
         Extract wavenumbers, raw data and image dimensions from some kind
@@ -63,16 +80,16 @@ class SpectralData:
 
         Parameters
         ----------
-        mx : numpy.array or None
+        mx : numpy.ndarray or None
             raw matrix data, possibly with wavenumbers and annotations.
         meta : dict
             additional metadata, possibly including mx itself
 
         Returns
         -------
-        raw : numpy.array
+        raw : numpy.ndarray
             matrix of floats
-        wn : numpy.array
+        wn : numpy.ndarray
             sorted array of wavenumbers
         wh : tuple or None
             image dimensions (width and height)
@@ -253,14 +270,17 @@ class SpectralData:
         self.curFile = filename
         self.filetype = filetype
 
-    def save_matrix_matlab_ab(self, filename, wn, ydata):
+    def save_matrix_matlab_ab(self, filename, wn, ydata, metadata=None):
         ab = np.hstack((wn[:, None], ydata.T))
         abdata = {'AB': ab, 'wh': self.wh }
         if self.pixelxy is not None:
             abdata['xy'] = self.pixelxy
+        if metadata is not None:
+            for k, v in metadata.items():
+                abdata[k] = v
         scipy.io.savemat(filename, abdata)
 
-    def save_matrix_matlab_quasar(self, filename, wn, ydata):
+    def save_matrix_matlab_quasar(self, filename, wn, ydata, metadata=None):
         out = {'y': ydata, 'wavenumber': wn}
         if self.pixelxy is not None:
             map_x, map_y = np.array(self.pixelxy).T
@@ -269,13 +289,32 @@ class SpectralData:
             map_y = np.repeat(range(self.wh[0]), self.wh[1])
         out['map_x'] = map_x[:, None]
         out['map_y'] = map_y[:, None]
+        if metadata is not None:
+            for k, v in metadata.items():
+                out[k] = v
         scipy.io.savemat(filename, out)
 
-    def save_matrix_ptir(self, filename, wn, ydata):
+    def save_matrix_pandas(self, filename, wn, ydata, fmt, metadata=None):
+        df = pd.DataFrame(ydata.T, index=wn)
+        if metadata is not None:
+            mdf = pd.DataFrame([v for v in metadata.values()],
+                               index=["#" + k for k in metadata])
+            df = pd.concat([mdf, df])
+        if fmt == 'csv':
+            df.to_csv(filename, header=False)
+        elif fmt == 'xlsx':
+            df.to_excel(filename)
+
+    def save_matrix_ptir(self, filename, wn, ydata, metadata=None):
         f = h5py.File(filename, mode='w')
 
         f.attrs['DocType'] = b'IR'
         f.attrs['SoftwareVersion'] = octavvs_version.encode('utf8')
+        if metadata is not None:
+            # This information really should be associated with each
+            # spectrum in a more meaningful way.
+            for k, v in metadata.items():
+                f.attrs[k] = v
 
         digits = int(np.log10(len(ydata))) + 1
         for i, d in enumerate(ydata):
@@ -310,7 +349,8 @@ class SpectralData:
 
         f.close()
 
-    def save_matrix(self, filename, fmt='ab', wn=None, ydata=None):
+    def save_matrix(self, filename, fmt='ab', wn=None, ydata=None,
+                    metadata=None):
         """
         Save processed data in some format.
 
@@ -319,8 +359,9 @@ class SpectralData:
         filename : str
             Name of the output file.
         fmt : str, optional
-            File format: 'ab', 'quasar' or 'ptir'. The default is 'ab', a
-            MATLAB file with array 'AB' with wavenumbers in the first _column_,
+            File format: 'ab', 'quasar', 'ptir', 'csv', 'xlsx'.
+            The default is 'ab', a MATLAB file with array 'AB'
+            with wavenumbers in the first _column_,
             image size in 'wh' and optionally pixel coordinates in 'xy'.
             The 'quasar' format has wavenumbers in a separate array.
             The 'ptir' format is a reduced variant of the HDF5 format used
@@ -329,6 +370,9 @@ class SpectralData:
             Wavenumber vector. The default is self.wn.
         ydata : 2D array, optional
             Data in (pixel, wn) order. The default is self.raw.
+        metadata : dict, optional
+            Data to be included in the output, e.g. as comment lines before
+            the data.
 
         Returns
         -------
@@ -340,11 +384,15 @@ class SpectralData:
         if ydata is None:
             ydata = self.raw
         if fmt == 'ab':
-            self.save_matrix_matlab_ab(filename, wn, ydata)
+            self.save_matrix_matlab_ab(filename, wn, ydata, metadata=metadata)
         elif fmt == 'quasar':
-            self.save_matrix_matlab_quasar(filename, wn, ydata)
+            self.save_matrix_matlab_quasar(
+                filename, wn, ydata, metadata=metadata)
         elif fmt == 'ptir':
-            self.save_matrix_ptir(filename, wn, ydata)
+            self.save_matrix_ptir(filename, wn, ydata, metadata=metadata)
+        elif fmt == 'csv' or fmt == 'xlsx':
+            self.save_matrix_pandas(
+                filename, wn, ydata, fmt, metadata=metadata)
         else:
             raise ValueError('Unknown save file format')
 
