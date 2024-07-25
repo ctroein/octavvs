@@ -133,3 +133,30 @@ def pixels_fit(npixels, wh):
     "Check that n pixels fit snugly within w * h"
     return wh[0] * (wh[1] - 1) < npixels <= wh[0] * wh[1]
 
+
+def subtract_background(y, background):
+    """
+    Subtract such an amount of a background spectrum that the resulting
+    spectra become maximally smooth.
+
+    Parameters
+    ----------
+    y : ndarray
+        1D or 2D array of spectra.
+    background : ndarray
+        1D reference spectrum of the same length as y.
+
+    Returns
+    -------
+    ret : ndarray
+        Input spectra minus background.
+    """
+
+    dh = background[:-1] - background[1:]
+    dy = y[:,:-1] - y[:,1:]
+    dh2 = np.cumsum(dh * dh)
+    dhdy = np.cumsum(dy * dh, 1)
+
+    az = dhdy[:,-1] / dh2[-1]
+    ret = y - az[:, None] @ background[None, ...]
+    return ret
