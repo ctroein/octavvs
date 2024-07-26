@@ -21,7 +21,6 @@ def load_reference(wn, what=None, filename=None):
     the given points. The reference is assumed to cover the entire range
     of wavenumbers.
 
-
     Parameters
     ----------
     wn : ndarray
@@ -33,6 +32,8 @@ def load_reference(wn, what=None, filename=None):
         The name of an arbitrary Matlab/CSV file to load data from.
         For .mat, the data must be in a matrix called AB, with wavenumbers
         in the first column.
+        For CSV, the wavenumbers must be in the first row and the spectrum
+        in the second row.
 
     Returns
     -------
@@ -47,8 +48,16 @@ def load_reference(wn, what=None, filename=None):
     if os.path.splitext(filename)[1].lower() == ".mat":
         ref = read_mat(filename)['AB']
     else:
-        ref = pd.read_csv(filename, sep=None, comment='#', engine="python")
+        ref = pd.read_csv(filename, sep=None, comment='#', engine="python",
+                          header=None)
         ref = ref.to_numpy()
+        if ref.shape[0] < ref.shape[1]:
+            ref = ref.T
+        if ref.shape[1] != 2:
+            raise RuntimeError(
+                "CSV reference error: wavenumbers must be in the"
+                " first row/col and the spectrum in the second row/col."
+                f" (got: {ref.shape})")
     # Handle the case of high-to-low since the interpolator requires low-to-high
     d = 1 if ref[0,0] < ref[-1,0] else -1
     ref = PchipInterpolator(ref[::d,0], ref[::d,1])(wn)

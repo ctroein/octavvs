@@ -127,7 +127,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxSpline.toggled.connect(self.updateAC)
         self.checkBoxSmoothCorrected.toggled.connect(self.updateAC)
         referenceMenu = QMenu()
-        for txt, what in [['H<sub>2</sub>O / CO2 spectra', False],
+        for txt, what in [['H₂O + CO₂ spectra', False],
                         ['Custom background', True],
                         ['Default', None]]:
             refAction = QAction(txt, self)
@@ -554,7 +554,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.updateAC()
 
     def updateAC(self):
-        print("HH")
         wn = self.plot_MC.getWavenumbers()
         if wn is None:
             return
