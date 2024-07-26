@@ -270,17 +270,16 @@ class SpectralData:
         self.curFile = filename
         self.filetype = filetype
 
-    def save_matrix_matlab_ab(self, filename, wn, ydata, metadata=None):
+    def save_matrix_matlab_ab(self, filename, wn, ydata, metadata):
         ab = np.hstack((wn[:, None], ydata.T))
         abdata = {'AB': ab, 'wh': self.wh }
         if self.pixelxy is not None:
             abdata['xy'] = self.pixelxy
-        if metadata is not None:
-            for k, v in metadata.items():
-                abdata[k] = v
+        for k, v in metadata.items():
+            abdata[k] = v
         scipy.io.savemat(filename, abdata)
 
-    def save_matrix_matlab_quasar(self, filename, wn, ydata, metadata=None):
+    def save_matrix_matlab_quasar(self, filename, wn, ydata, metadata):
         out = {'y': ydata, 'wavenumber': wn}
         if self.pixelxy is not None:
             map_x, map_y = np.array(self.pixelxy).T
@@ -289,19 +288,18 @@ class SpectralData:
             map_y = np.repeat(range(self.wh[0]), self.wh[1])
         out['map_x'] = map_x[:, None]
         out['map_y'] = map_y[:, None]
-        if metadata is not None:
-            for k, v in metadata.items():
-                out[k] = v
+        for k, v in metadata.items():
+            out[k] = v
         scipy.io.savemat(filename, out)
 
-    def save_matrix_pandas(self, filename, wn, ydata, fmt, metadata=None):
+    def save_matrix_pandas(self, filename, wn, ydata, fmt, metadata):
         df = pd.DataFrame(ydata.T, index=wn)
-        if metadata is not None:
-            mdf = pd.DataFrame([v for v in metadata.values()],
-                               index=["#" + k for k in metadata])
-            df = pd.concat([mdf, df])
+        kpad = "#" if fmt == "csv" else ""
+        mdf = pd.DataFrame(metadata.values(),
+                           index=[kpad + k for k in metadata])
+        df = pd.concat([mdf, df])
         if fmt == 'csv':
-            df.to_csv(filename, header=False)
+            df.to_csv(filename, header=False, float_format="%.16g")
         elif fmt == 'xlsx':
             df.to_excel(filename)
 
@@ -310,22 +308,21 @@ class SpectralData:
 
         f.attrs['DocType'] = b'IR'
         f.attrs['SoftwareVersion'] = octavvs_version.encode('utf8')
-        if metadata is not None:
-            # This information really should be associated with each
-            # spectrum in a more meaningful way.
-            for k, v in metadata.items():
-                f.attrs[k] = v
 
         digits = int(np.log10(len(ydata))) + 1
         for i, d in enumerate(ydata):
             mm = f.create_group(f'Measurement{i+1:0{digits}}')
-            if self.pixelxy is not None:
-                x, y = self.pixelxy[i]
-            else:
-                x = i % self.wh[0]
-                y = i // self.wh[0]
+            # if self.pixelxy is not None:
+            #     x, y = self.pixelxy[i]
+            # else:
+            #     x = i % self.wh[0]
+            #     y = i // self.wh[0]
+            x = metadata["X"][i]
+            y = metadata["Y"][i]
             mm.attrs['LocationX'] = [x]
             mm.attrs['LocationY'] = [y]
+            if "Filename" in metadata:
+                mm.attrs["Filename"] = [metadata["Filename"][i]]
 
             if not i:
                 specval = mm.create_dataset('Spectroscopic_Values',
@@ -383,6 +380,9 @@ class SpectralData:
             wn = self.wn
         if ydata is None:
             ydata = self.raw
+        if metadata is None:
+            pxy = self.get_xy().T
+            metadata = {"X": pxy[0], "Y": pxy[1]}
         if fmt == 'ab':
             self.save_matrix_matlab_ab(filename, wn, ydata, metadata=metadata)
         elif fmt == 'quasar':
