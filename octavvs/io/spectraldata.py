@@ -201,7 +201,7 @@ class SpectralData:
             else:
                 filetype = 'txt'
                 ss = pd.read_csv(filename, sep=None, engine='python',
-                                 header=None).to_numpy()
+                                 header=None, comment="#").to_numpy()
             raw, wn, wh = self.extract_data_from_matrix(ss, None)
         else:
             if fext == '.ptir' or fext == '.hdf':
