@@ -142,7 +142,7 @@ margin: 5px;
            </font>
           </property>
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Atmospheric correction, designed to remove spectral contributions from H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O and CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; by subtracting an atmospheric reference spectrum (times an appropriate factor) in each of two H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O regions and, optionally, one CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; region.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Atmospheric correction, designed to remove spectral contributions from H&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:sub;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;O and CO&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:sub;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; by subtracting an atmospheric reference spectrum (times an appropriate factor) in each of three H&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:sub;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;O regions and, optionally, one CO&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:sub;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; region. The H&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:sub;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;O regions are: 399-776, 1300-2100 and 3410-3960 cm&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;. The CO&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:sub;&quot;&gt;2&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; region is 2190-2480 cm&lt;/span&gt;&lt;span style=&quot; font-weight:400; vertical-align:super;&quot;&gt;-1&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;These same regions will apply if you load your own atmospheric spectrum. Alternatively, if you load a background spectrum the correction will simply be applied to the entire spectral range.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="layoutDirection">
            <enum>Qt::LeftToRight</enum>
@@ -175,7 +175,7 @@ margin: 5px;
         <item>
          <widget class="QCheckBox" name="checkBoxSpline">
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Replace data in the CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; region (2245-2445 cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;) with a smooth curve. Otherwise apply the same type of correction as in the H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O regions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Replace data in the CO&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt; region (2190-2480 cm&lt;span style=&quot; vertical-align:super;&quot;&gt;-1&lt;/span&gt;) with a smooth curve softly merged with the data. Otherwise apply the same type of correction as in the H&lt;span style=&quot; vertical-align:sub;&quot;&gt;2&lt;/span&gt;O regions.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Spline at CO₂</string>
@@ -199,9 +199,12 @@ margin: 5px;
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButtonACLoadReference">
+         <widget class="QToolButton" name="toolButtonACLoadReference">
           <property name="text">
            <string>Load ref.</string>
+          </property>
+          <property name="popupMode">
+           <enum>QToolButton::InstantPopup</enum>
           </property>
          </widget>
         </item>
@@ -1254,7 +1257,7 @@ margin: 5px;
   <tabstop>checkBoxAC</tabstop>
   <tabstop>checkBoxSpline</tabstop>
   <tabstop>checkBoxSmoothCorrected</tabstop>
-  <tabstop>pushButtonACLoadReference</tabstop>
+  <tabstop>toolButtonACLoadReference</tabstop>
   <tabstop>lineEditACReference</tabstop>
   <tabstop>checkBoxSC</tabstop>
   <tabstop>pushButtonSCRefresh</tabstop>

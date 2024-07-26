@@ -1,10 +1,11 @@
 import os
 import traceback
+from functools import partial
 # from os.path import basename, dirname
 from pkg_resources import resource_filename
 import argparse
 
-from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt5.QtWidgets import QDialog, QMessageBox, QMenu, QAction
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from PyQt5 import uic
 
@@ -125,8 +126,19 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxAC.toggled.connect(self.updateAC)
         self.checkBoxSpline.toggled.connect(self.updateAC)
         self.checkBoxSmoothCorrected.toggled.connect(self.updateAC)
-        self.pushButtonACLoadReference.clicked.connect(self.loadACReference)
-        self.lineEditACReference.editingFinished.connect(self.updateAC)
+        referenceMenu = QMenu()
+        for txt, what in [['H<sub>2</sub>O / CO2 spectra', False],
+                        ['Custom background', True],
+                        ['Default', None]]:
+            refAction = QAction(txt, self)
+            refAction.triggered.connect(
+                partial(self.loadACReference, what)
+                if what is not None else
+                lambda : self.lineEditACReference.setText(""))
+            refAction.setIconVisibleInMenu(False)
+            referenceMenu.addAction(refAction)
+        self.toolButtonACLoadReference.setMenu(referenceMenu)
+        self.lineEditACReference.editingFinished.connect(self.updateACReference)
 
         self.plot_AC.updated.connect(self.updateSC)
         self.plot_SC.clicked.connect(self.plot_SC.popOut)
@@ -516,20 +528,33 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.mcOptimizeDone(None, None)
 
     # AC, Atmospheric correction
-    def loadACReference(self):
+    def loadACReference(self, custom):
         startdir = resource_filename('octavvs', "reference_spectra")
+        what = "custom background" if custom else "H2O+CO2 reference"
         ref = self.getLoadFileName(
-            "Load atmospheric reference spectrum",
+            f"Load {what} spectrum",
             filter="2-column spectrum (*.mat *.csv);;"
                 "Matlab AB file (*.mat);;"
                 "CSV file (*.csv *.txt);;All files (*)",
             settingname='atmRefDir', settingdefault=startdir)
         if not ref:
             return
+        self.checkBoxSpline.setEnabled(not custom)
+        self.checkBoxSmoothCorrected.setEnabled(not custom)
         self.lineEditACReference.setText(ref)
+        self.updateACReference()
+
+    def updateACReference(self):
+        if self.lineEditACReference.text() == "":
+            self.checkBoxSpline.setEnabled(True)
+            self.checkBoxSmoothCorrected.setEnabled(True)
+        self.checkBoxAC.setText(
+            "Atmospheric correction" if
+            self.checkBoxSpline.isEnabled() else "Background subtraction")
         self.updateAC()
 
     def updateAC(self):
+        print("HH")
         wn = self.plot_MC.getWavenumbers()
         if wn is None:
             return
@@ -538,7 +563,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
             self.plot_AC.setData(wn, indata, None)
             self.labelACInfo.setText('')
             return
-        opt = dict(cut_co2=self.checkBoxSpline.isChecked(),
+        opt = dict(simplified=not self.checkBoxSpline.isEnabled(),
+                   cut_co2=self.checkBoxSpline.isChecked(),
                    smooth=self.checkBoxSmoothCorrected.isChecked(),
                    ref=self.lineEditACReference.text())
         args = [ wn, indata, opt ]
@@ -556,7 +582,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
             self.acNext = True
         else:
             self.acNext = None
-        if factors is not None:
+        if factors is not None and len(factors):
             h = 'H<sub>2</sub>O: %.2f%%' % (factors[0] * 100)
             if factors[0] > .05:
                 h = '<span style="color:red">%s</span>' % (h)
@@ -918,6 +944,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         p.acSpline = self.checkBoxSpline.isChecked()
         p.acSmooth = self.checkBoxSmoothCorrected.isChecked()
         p.acReference = self.lineEditACReference.text()
+        p.acSimplified = self.checkBoxSpline.isEnabled()
         p.scDo = self.checkBoxSC.isChecked()
         p.scRef = self.comboBoxReference.currentText()
         p.scOtherRef = self.lineEditReferenceName.text()
@@ -1045,6 +1072,9 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxSpline.setChecked(p.acSpline)
         self.checkBoxSmoothCorrected.setChecked(p.acSmooth)
         self.lineEditACReference.setText(p.acReference)
+        self.checkBoxSpline.setEnabled(not p.acSimplified)
+        self.checkBoxSmoothCorrected.setEnabled(not p.acSimplified)
+
         self.checkBoxSC.setChecked(p.scDo)
         self.comboBoxReference.setCurrentText(p.scRef)
         self.lineEditReferenceName.setText(p.scOtherRef)

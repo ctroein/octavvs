@@ -14,7 +14,7 @@ except ImportError:
     from scipy.signal import tukey
 
 from . import baseline
-from .util import load_reference, find_wn_ranges
+from .util import load_reference, find_wn_ranges, subtract_background
 
 
 def cut_wn(wn, y, ranges):
@@ -36,7 +36,8 @@ def cut_wn(wn, y, ranges):
     return wn[ix], y[...,ix]
 
 def atmospheric(wn, y, atm=None, cut_co2=True, extra_iters=5,
-                extra_factor=0.25, smooth_win=9, progressCallback=None):
+                extra_factor=0.25, smooth_win=9, simplified=False,
+                progressCallback=None):
     """
     Correct for atmospheric gases.
 
@@ -60,8 +61,7 @@ def atmospheric(wn, y, atm=None, cut_co2=True, extra_iters=5,
 
     Returns
     -------
-        Tuple of (spectra after correction, array of correction factors;
-                  shape (spectra,ranges))
+        Tuple of (spectra after correction, array of correction factors)
     """
     squeeze = False
     yorig = y
@@ -77,6 +77,9 @@ def atmospheric(wn, y, atm=None, cut_co2=True, extra_iters=5,
         atm = load_reference(wn, filename=atm)
     else:
         atm = atm.copy()
+
+    if simplified:
+        return subtract_background(y, atm), np.zeros(0)
 
     # ranges: numpy array (n, 2) of n non-overlapping wavenumber ranges
     # (typically for H2O only), or None

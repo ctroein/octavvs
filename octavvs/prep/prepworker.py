@@ -122,6 +122,7 @@ class PrepWorker(QObject):
                 wn, y, cut_co2=params.acSpline,
                 smooth_win=9 if params.acSmooth else 0,
                 atm=params.acReference,
+                simplified=params.acSimplified,
                 progressCallback=self.emitProgress)[0]
 
         if params.scDo:
@@ -469,7 +470,8 @@ class ABCWorker(QObject):
             corr, factors = correction.atmospheric(
                 wn, y, cut_co2=params['cut_co2'],
                 smooth_win=9 if params['smooth'] else 0,
-                atm=params['ref'])
+                atm=params['ref'],
+                simplified=params['simplified'])
             self.acDone.emit(wn, y, corr, factors)
         except Exception:
             self.acFailed.emit(traceback.format_exc())
