@@ -126,15 +126,19 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.checkBoxAC.toggled.connect(self.updateAC)
         self.checkBoxSpline.toggled.connect(self.updateAC)
         self.checkBoxSmoothCorrected.toggled.connect(self.updateAC)
+        # TODO Load the reference on update, make lineedit read-only, show
+        # ref spectrum in plot, show corrected in same color as orig
         referenceMenu = QMenu()
-        for txt, what in [['H₂O + CO₂ spectra', False],
-                        ['Custom background', True],
-                        ['Default', None]]:
+        for txt, cust in [['H₂O + CO₂ spectra', False],
+                        ['Default', None],
+                        ['Custom background', True]]:
             refAction = QAction(txt, self)
-            refAction.triggered.connect(
-                partial(self.loadACReference, what)
-                if what is not None else
-                lambda : self.lineEditACReference.setText(""))
+            if cust is None:
+                refAction.triggered.connect(
+                    lambda : self.lineEditACReference.setText(""))
+            else:
+                refAction.triggered.connect(
+                    partial(self.loadACReference, cust))
             refAction.setIconVisibleInMenu(False)
             referenceMenu.addAction(refAction)
         self.toolButtonACLoadReference.setMenu(referenceMenu)
@@ -943,7 +947,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         p.acSpline = self.checkBoxSpline.isChecked()
         p.acSmooth = self.checkBoxSmoothCorrected.isChecked()
         p.acReference = self.lineEditACReference.text()
-        p.acSimplified = self.checkBoxSpline.isEnabled()
+        p.acSimplified = not self.checkBoxSpline.isEnabled()
         p.scDo = self.checkBoxSC.isChecked()
         p.scRef = self.comboBoxReference.currentText()
         p.scOtherRef = self.lineEditReferenceName.text()
