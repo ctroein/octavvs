@@ -228,7 +228,8 @@ class PrepWorker(QObject):
         "Translate string in UI/settings to internal name and file extension"
         fmts = {'AB.mat': ('ab', 'mat'),
                 'Quasar.mat': ('quasar', 'mat'),
-                'PTIR-lite': ('ptir', 'ptir'),
+                'PTIR-copy': ('ptir', 'ptir'),
+                'PTIR-lite': ('ptirlite', 'ptir'),
                 'CSV': ('csv', 'csv'),
                 'Excel .xlsx': ('xlsx', 'xlsx')}
         if fmt not in fmts:

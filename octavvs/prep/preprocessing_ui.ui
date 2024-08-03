@@ -1086,6 +1086,15 @@ margin: 5px;
         </item>
         <item>
          <widget class="QLabel" name="label_8">
+          <property name="toolTip">
+           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Output formats compatible with various other software.&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;PTIR-copy is only available for PTIR Studio input files (and without Merge), as it copies the file contents but replaces the spectra with new values.&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;PTIR-lite is a minimal PTIR-like format which keeps pixel coordinates and images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="text">
            <string>Format</string>
           </property>
@@ -1118,6 +1127,11 @@ margin: 5px;
           </item>
           <item>
            <property name="text">
+            <string>PTIR-copy</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
             <string>PTIR-lite</string>
            </property>
           </item>
@@ -1126,7 +1140,7 @@ margin: 5px;
         <item>
          <widget class="QCheckBox" name="checkBoxSaveMerge">
           <property name="toolTip">
-           <string>Output will be merged into ONE output file. You will be prompted for its name.</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output will be merged into &lt;span style=&quot; font-weight:600;&quot;&gt;one&lt;/span&gt; output file. You will be prompted for its name.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Merge</string>

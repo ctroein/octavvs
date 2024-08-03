@@ -230,6 +230,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.pushButtonRun.clicked.connect(self.runBatch)
         self.checkBoxSaveMerge.toggled.connect(
             lambda t: self.lineEditSaveExt.setEnabled(not t))
+        self.comboBoxSaveFormat.currentTextChanged.connect(
+            lambda t: self.checkBoxSaveMerge.setEnabled("PTIR-copy" not in t))
 
         # Defaults when no data loaded
         self.scSettings = {}
@@ -942,7 +944,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
         p.saveExt = self.lineEditSaveExt.text()
         p.saveFormat = self.comboBoxSaveFormat.currentText()
-        p.saveMerge = self.checkBoxSaveMerge.isChecked()
+        p.saveMerge = (self.checkBoxSaveMerge.isEnabled() and
+            self.checkBoxSaveMerge.isChecked())
         p.acDo = self.checkBoxAC.isChecked()
         p.acSpline = self.checkBoxSpline.isChecked()
         p.acSmooth = self.checkBoxSmoothCorrected.isChecked()

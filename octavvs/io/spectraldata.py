@@ -36,6 +36,7 @@ class SpectralData:
         self.pixelxy = None # Positions of pixels in image
         self.images = None # list of Image loaded from raw data file
         self.filetype = None # str from [txt, mat, opus, ptir]
+        self.ptir_h5info = None # Possibly populated when loading PTIR file
 
     def set_width(self, w):
         try:
@@ -184,6 +185,7 @@ class SpectralData:
         xy = None
         images = None
         raw = None
+        ptir_h5info = None
         fext = os.path.splitext(filename)[1].lower()
         if fext == '.mat':
             filetype = 'mat'
@@ -206,8 +208,10 @@ class SpectralData:
         else:
             if fext == '.ptir' or fext == '.hdf':
                 filetype = 'ptir'
-                reader = PtirReader(filename)
+                reader = PtirReader()
+                reader.load(filename, keep_copyable=True)
                 xy = reader.xy
+                ptir_h5info = reader.h5info
             elif fext in ['.spa', '.spg']:
                 filetype = 'omnic'
                 reader = OmnicReader(filename)
@@ -269,6 +273,7 @@ class SpectralData:
         self.pixelxy = xy
         self.curFile = filename
         self.filetype = filetype
+        self.ptir_h5info = ptir_h5info
 
     def save_matrix_matlab_ab(self, filename, wn, ydata, metadata):
         ab = np.hstack((wn[:, None], ydata.T))
@@ -346,7 +351,7 @@ class SpectralData:
 
         f.close()
 
-    def save_matrix(self, filename, fmt='ab', wn=None, ydata=None,
+    def save_matrix(self, filename, fmt, wn=None, ydata=None,
                     metadata=None):
         """
         Save processed data in some format.
@@ -356,13 +361,14 @@ class SpectralData:
         filename : str
             Name of the output file.
         fmt : str, optional
-            File format: 'ab', 'quasar', 'ptir', 'csv', 'xlsx'.
+            File format: 'ab', 'quasar', 'ptirlite', 'ptir', 'csv', 'xlsx'.
             The default is 'ab', a MATLAB file with array 'AB'
             with wavenumbers in the first _column_,
             image size in 'wh' and optionally pixel coordinates in 'xy'.
             The 'quasar' format has wavenumbers in a separate array.
-            The 'ptir' format is a reduced variant of the HDF5 format used
+            The 'ptirlite' format is a reduced variant of the HDF5 format used
             by PTIR Studio.
+            The 'ptir' format requires that the loaded file was PTIR.
         wn : 1D array, optional
             Wavenumber vector. The default is self.wn.
         ydata : 2D array, optional
@@ -388,8 +394,14 @@ class SpectralData:
         elif fmt == 'quasar':
             self.save_matrix_matlab_quasar(
                 filename, wn, ydata, metadata=metadata)
-        elif fmt == 'ptir':
+        elif fmt == 'ptirlite':
             self.save_matrix_ptir(filename, wn, ydata, metadata=metadata)
+        elif fmt == 'ptir':
+            if self.ptir_h5info is None:
+                print("Falling back to PTIR-lite format")
+                self.save_matrix_ptir(filename, wn, ydata, metadata=metadata)
+            else:
+                PtirReader.copy_and_save(filename, ydata, self.ptir_h5info)
         elif fmt == 'csv' or fmt == 'xlsx':
             self.save_matrix_pandas(
                 filename, wn, ydata, fmt, metadata=metadata)
