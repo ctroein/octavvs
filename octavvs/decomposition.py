@@ -107,11 +107,6 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.comboBoxDerivative.currentIndexChanged.connect(
             self.dcDerivativeChanged)
         self.checkBoxContrast.toggled.connect(self.dcContrastChanged)
-        self.lineEditContrast.setFormat("%g")
-        self.lineEditContrast.setRange(0, .1)
-        self.lineEditContrast.editingFinished.connect(self.dcContrastEdit)
-        self.horizontalSliderContrast.valueChanged.connect(
-            self.dcContrastSlide)
 
         self.comboBoxPlotMode.currentIndexChanged.connect(
             self.plot_decomp.set_display_mode)
@@ -565,16 +560,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
     def dcContrastChanged(self):
         en = self.checkBoxContrast.isChecked()
         self.comboBoxContrast.setEnabled(en)
-        self.horizontalSliderContrast.setEnabled(en)
-        self.lineEditContrast.setEnabled(en)
+        self.spinContrast.setEnabled(en)
 
-    def dcContrastSlide(self):
-        self.lineEditContrast.setValue(
-            self.horizontalSliderContrast.value() * .001)
-
-    def dcContrastEdit(self):
-        self.horizontalSliderContrast.setValue(
-            self.lineEditContrast.value() * 1000)
 
     def dcSettingsUpdate(self):
         "Update the table of most recent dc settings"
@@ -922,7 +909,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         p.dcRoi = self.useRoiNames[self.comboBoxUseRoi.currentIndex()]
         p.dcContrast = self.checkBoxContrast.isChecked()
         p.dcContrastConcentrations = self.comboBoxContrast.currentIndex()
-        p.dcContrastWeight = self.lineEditContrast.value()
+        p.dcContrastWeight = self.spinContrast.value()
         p.dcIterations = self.spinBoxIterations.value()
         p.dcTolerance = self.lineEditTolerance.value()
 
@@ -982,7 +969,7 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow,
         self.comboBoxUseRoi.setCurrentIndex(self.useRoiNames.index(p.dcRoi))
         self.checkBoxContrast.setChecked(p.dcContrast)
         self.comboBoxContrast.setCurrentIndex(p.dcContrastConcentrations)
-        self.lineEditContrast.setValue(p.dcContrastWeight)
+        self.spinContrast.setValue(p.dcContrastWeight)
         self.spinBoxIterations.setValue(p.dcIterations)
         self.lineEditTolerance.setValue(p.dcTolerance)
 

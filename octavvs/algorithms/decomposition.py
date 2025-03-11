@@ -22,7 +22,7 @@ def simplisma(d, nr, f):
 
     Parameters
     ----------
-    d : array(nspectra, nwavenums)
+    d : array(nwavenums, nspectra)
         input spectra.
     nr : int
         number of output components.
@@ -70,6 +70,88 @@ def simplisma(d, nr, f):
     ss = d[:,imp]
     spout = ss / np.sqrt(np.sum(ss**2, axis=0))
     return spout.T, imp
+
+def simplisma_with_reference(data, nr, f, refdata):
+    """
+    Like @simplisma but with m reference spectra that become the first
+    m spectra of the output.
+
+    Parameters
+    ----------
+    data : array(nspectra, nwavenums)
+        Input spectra. Note the transposed order vs simplisma.
+    refdata : array(nrefspectra, nwavenums)
+        Reference spectra.
+    nr : int
+        Number of output components, nr >= len(refdata)
+    f : float
+        Noise threshold.
+
+    Returns
+    -------
+    spout: array(nr, nspectra)
+        concentration profiles of reference and 'purest' spectra.
+    """
+    s_comps = nr - len(refdata)
+    if s_comps < 0:
+        raise ValueError("Number of simplisma output spectra cannot be "
+                         "lower than number of reference spectra")
+    if s_comps == 0:
+        return refdata.copy()
+
+    # s_data = data
+    # for i in range(len(refdata)-1, 0-1, -1):
+    #     proj = np.dot(s_data, refdata[i]) / (refdata[i] ** 2).sum()**.5
+    #     print("proj before",i, (proj**2).sum()**.5)
+    #     s_data = s_data - proj[:, None] @ refdata[i][None, :]
+    # for i in range(len(refdata)-1, 0-1, -1):
+    #     proj = np.dot(s_data, refdata[i]) / (refdata[i] ** 2).sum()**.5
+    #     print("proj after",i, (proj**2).sum()**.5)
+    # s_init = simplisma(s_data.T, s_comps, f)
+    # return np.vstack((refdata, data[s_init[1]]))
+
+    s_data = data
+    for i in range(len(refdata)-1, 0-1, -1):
+        proj = np.dot(s_data, refdata[i]) / (refdata[i] ** 2).sum()**.5
+        s_data = s_data - proj[:, None] @ refdata[i][None, :]
+
+    # Components first, then spectra
+    c_other = simplisma(s_data, s_comps, f)[0]
+    # s_init = np.linalg.lstsq(s_pre.T, data, rcond=-1)[0]
+    # import matplotlib.pyplot as plt
+    # plt.figure("initcomps")
+    # plt.cla()
+    # plt.plot(c_other.T)
+
+    s_init = []
+    for i in range(s_data.shape[1]):
+        r, _ = scipy.optimize.nnls(c_other.T, s_data[:, i])
+        s_init.append(r)
+    s_init = np.array(s_init).T
+    s_init = s_init / s_init.mean(1, keepdims=True)
+    return np.vstack((refdata, s_init))
+
+    # c_ref = []
+    # for i in range(len(data)):
+    #     r, _ = scipy.optimize.nnls(refdata.T, data[i])
+    #     c_ref.append(r)
+    # print("cs", np.array(c_ref).T.shape, c_other.shape)
+    # comps = np.vstack((np.array(c_ref).T, c_other))
+    # import matplotlib.pyplot as plt
+    # plt.figure("initcomps")
+    # plt.cla()
+    # plt.plot(comps.T)
+    # s_init = []
+    # for i in range(data.shape[1]):
+    #     r, _ = scipy.optimize.nnls(comps.T, data[:, i])
+    #     s_init.append(r)
+    # print("s", np.array(s_init).T.shape, refdata.shape)
+    # s_init = np.array(s_init).T
+    # s_init[:len(refdata), :] = refdata
+    # s_init = s_init / s_init.mean(1, keepdims=True)
+
+    return s_init
+
 
 def clustersubtract(data, components, skewness=100, power=2, verbose=False):
     """
@@ -155,9 +237,12 @@ def numpy_scipy_threading_fix_(func):
 def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
             tol_abs_error=0, tol_rel_improv=None, tol_iters_after_best=None,
             maxtime=None, callback=None, acceleration=None, normalize=None,
+            fixed_components_a=0, filter_function=None, filter_lambda=None,
             contrast_weight=None, return_time=False, **kwargs):
     """
-    Perform MCR-ALS nonnegative matrix decomposition on the matrix sp
+    Perform MCR-ALS nonnegative matrix decomposition on the matrix sp.
+    The input array is decomposed as A@B where A and B are spectra and
+    concentrations or vice versa.
 
     Parameters
     ----------
@@ -178,7 +263,14 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
     maxtime : float, optional
         Stop after this many seconds of process time have elapsed
     callback : func(it : int, err : float, A : array, B : array)
-        Callback for every iteration.
+        Progress callback for every iteration.
+    filter_function : func(it : int, ab : str, arr : array)
+        Filter/transform the spectra/components; ab is 'A' or 'B'. Func should
+        return the filtered or unchanged arr. B arr is shaped (ncomp, :)
+        but A arr is (:, ncomp).
+    filter_lambda : float, optional
+        If >0, nudge values towards the filter_function output iteratively
+        using this lambda.
     acceleration : str, optional
         None or 'Anderson'.
         Anderson acceleration operates on whole iterations (A or B updates),
@@ -187,6 +279,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
         better.
     normalize : str, optional
         Which matrix to l2 normalize: None, 'A' or 'B'
+    fixed_components_a : int
+        Number of components of A that are kept as-is.
     contrast_weight : (str, float), optional
         Increase contrast in one matrix by mixing the other, named matrix
         ('A' or 'B') with the mean of its vectors. If A is spectra,
@@ -228,6 +322,11 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
 
     nrow, ncol = sp.shape
     nr = initial_A.shape[0]
+    if initial_A.shape[1] != ncol:
+        raise ValueError("Mismatching size of data and initial vectors")
+    if fixed_components_a > nr or fixed_components_a < 0:
+        raise ValueError("There must be at least one non-fixed component")
+
     if normalize == 'A':
         norm = np.linalg.norm(initial_A, axis=1)
         A = np.divide(initial_A.T, norm, where=norm!=0,
@@ -290,6 +389,9 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                 else:
                     B, res, _, _ = np.linalg.lstsq(newA, sp.T, rcond=-1)
                     error = res.sum()
+                if filter_function is not None:
+                    B = filter_function(it, 'B', B)
+                    # TODO: Check if error needs to be recomputed
                 if normalize == 'B':
                     norm = np.linalg.norm(B, axis=1, keepdims=True)
                     np.divide(B, norm, where=norm!=0, out=B)
@@ -300,17 +402,32 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                 prevB = newB
                 if cw < 0:
                     newB = (1 + cw) * newB - cw * newB.mean(1)[:,None]
+                if fixed_components_a > 0:
+                    tmpsp = sp - (A[:, :fixed_components_a] @
+                                  newB[:fixed_components_a, :]).T
+                else:
+                    tmpsp = sp
                 if nonnegative[0]:
                     error = 0
                     if not retry:
-                        A = np.empty_like(A)
+                        # A = np.empty_like(A)
+                        A = A.copy()
                     for i in range(ncol):
-                        A[i, :], res = scipy.optimize.nnls(newB.T, sp[:, i])
+                        A[i, fixed_components_a:], res = scipy.optimize.nnls(
+                            newB[fixed_components_a:, :].T,
+                            tmpsp[:, i])
                         error = error + res * res
                 else:
-                    A, res, _, _ = np.linalg.lstsq(newB.T, sp, rcond=-1)
-                    A = A.T
+                    tmpA, res, _, _ = np.linalg.lstsq(
+                        newB[fixed_components_a:, :].T,
+                        tmpsp, rcond=-1)
+                    A[:, fixed_components_a:] = tmpA.T
+                    # A, res, _, _ = np.linalg.lstsq(newB.T, sp, rcond=-1)
+                    # A = A.T
                     error = res.sum()
+                if filter_function is not None:
+                    A = filter_function(it, 'A', A)
+                    # TODO: Check if error needs to be recomputed
                 if normalize == 'A':
                     norm = np.linalg.norm(A, axis=0)
                     np.divide(A, norm, where=norm!=0, out=A)

@@ -631,12 +631,12 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
              <widget class="QComboBox" name="comboBoxInitPlot">
               <item>
                <property name="text">
-                <string>Initial spectra</string>
+                <string>PCA</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>PCA</string>
+                <string>Initial values</string>
                </property>
               </item>
              </widget>
@@ -659,7 +659,7 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
          <attribute name="title">
           <string>MCR-ALS</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,0,1,0">
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,1,0">
           <property name="leftMargin">
            <number>6</number>
           </property>
@@ -834,7 +834,7 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1,0,1,1">
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,0,0,0,0,1,0,0,0">
             <item>
              <widget class="QCheckBox" name="checkBoxContrast">
               <property name="toolTip">
@@ -876,59 +876,21 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
              </widget>
             </item>
             <item>
-             <widget class="QSlider" name="horizontalSliderContrast">
+             <widget class="QDoubleSpinBox" name="spinContrast">
               <property name="enabled">
                <bool>false</bool>
+              </property>
+              <property name="decimals">
+               <number>4</number>
               </property>
               <property name="maximum">
-               <number>50</number>
+               <double>1.000000000000000</double>
               </property>
-              <property name="pageStep">
-               <number>5</number>
+              <property name="singleStep">
+               <double>0.005000000000000</double>
               </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="LineDouble" name="lineEditContrast">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>0</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,0,0,0,0,0,0,0">
-            <item>
-             <widget class="QPushButton" name="pushButtonStart">
-              <property name="text">
-               <string>Run decomposition</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonStop">
-              <property name="text">
-               <string>Stop</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonSettingsInfo">
-              <property name="text">
-               <string>Show settings used</string>
+              <property name="value">
+               <double>0.010000000000000</double>
               </property>
              </widget>
             </item>
@@ -981,7 +943,21 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,1,0,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,0,0,1,0,0">
+            <item>
+             <widget class="QPushButton" name="pushButtonStart">
+              <property name="text">
+               <string>Run MCR-ALS</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonStop">
+              <property name="text">
+               <string>Stop</string>
+              </property>
+             </widget>
+            </item>
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
@@ -1000,22 +976,19 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
              </widget>
             </item>
             <item>
-             <widget class="QToolButton" name="toolButtonExport">
+             <widget class="QPushButton" name="pushButtonSettingsInfo">
               <property name="text">
-               <string>Export decomposition</string>
-              </property>
-              <property name="popupMode">
-               <enum>QToolButton::InstantPopup</enum>
+               <string>Show settings</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButtonRun">
-              <property name="toolTip">
-               <string>Run decomposition with the current setting on all data files</string>
-              </property>
+             <widget class="QToolButton" name="toolButtonExport">
               <property name="text">
-               <string>Run batch</string>
+               <string>Export results</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::InstantPopup</enum>
               </property>
              </widget>
             </item>
@@ -1032,7 +1005,7 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
            </widget>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_13" stretch="0,1,0,1,0,1,4,0">
+           <layout class="QHBoxLayout" name="horizontalLayout_13" stretch="0,1,0,1,0,1,2,0,0">
             <item>
              <widget class="QLabel" name="label_15">
               <property name="sizePolicy">
@@ -1051,6 +1024,12 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
             </item>
             <item>
              <widget class="QLineEdit" name="lineEditIteration">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>0</height>
+               </size>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -1115,6 +1094,16 @@ K-means clustering performs a clustering on the unscaled data and chooses repres
              <widget class="QProgressBar" name="progressBarRun">
               <property name="value">
                <number>0</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonRun">
+              <property name="toolTip">
+               <string>Run decomposition with the current setting on all data files</string>
+              </property>
+              <property name="text">
+               <string>Run batch</string>
               </property>
              </widget>
             </item>
