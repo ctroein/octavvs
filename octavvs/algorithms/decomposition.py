@@ -7,7 +7,7 @@ Created on Tue May 18 14:45:53 2021
 """
 
 import numpy as np
-import scipy
+import scipy, scipy.optimize, scipy.spatial.distance
 import math
 import time
 from threadpoolctl import threadpool_limits
@@ -224,10 +224,14 @@ def numpy_scipy_threading_fix_(func):
     to be parallelized.
     Note: This issue is seen on my Linux setup and might be highly version-
     dependent. More investigation is needed.
+    Update 2025: The problem persists but 2 threads seems like a better
+    limit to minimize wall clock time (at surprisingly high CPU time cost).
     """
     def check(*args, **kwargs):
-        if 'nonnegative' not in kwargs or np.any(kwargs['nonnegative']):
-            with threadpool_limits(1, 'blas'):
+        if (('nonnegative' not in kwargs or np.any(kwargs['nonnegative']))
+            and kwargs.get('blas_threads', 1)):
+            with threadpool_limits(
+                    {'libopenblas': kwargs.get('blas_threads', 2)}, 'blas'):
                 return func(*args, **kwargs)
         else:
             return func(*args, **kwargs)
@@ -316,7 +320,7 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
     if normalize not in [None, 'A', 'B']:
         raise ValueError('Normalization must be None, A or B')
     unknown_args = kwargs.keys() - {
-        'm', 'alternate', 'beta', 'betascale', 'bmode'}
+        'm', 'alternate', 'beta', 'betascale', 'bmode', 'blas_threads'}
     if unknown_args:
         raise TypeError('Unknown arguments: {}'.format(unknown_args))
 
@@ -462,8 +466,10 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                         ason_X.pop(0)
                     Garr = np.asarray(ason_G)
                     try:
-                        gamma = scipy.linalg.lstsq(Garr.T, ason_g)[0]
-                    except scipy.linalg.LinAlgError:
+                    #     gamma = scipy.linalg.lstsq(Garr.T, ason_g)[0]
+                    # except scipy.linalg.LinAlgError:
+                        gamma = np.linalg.lstsq(Garr.T, ason_g, rcond=None)[0]
+                    except np.linalg.LinAlgError:
                         print('lstsq failed to converge; '
                               'restart at iter %d' % it)
                         # print('nans', np.isnan(Garr).sum(),
