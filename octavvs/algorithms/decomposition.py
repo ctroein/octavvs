@@ -45,7 +45,7 @@ def simplisma(d, nr, f):
     p = s / mf
 
     # First Pure Spectral/Concentration profile
-    imp = np.empty(nr, dtype=int)
+    imp = np.empty(nr, dtype=np.int64)
     imp[0] = p.argmax()
 
     #Calculation of correlation matrix
@@ -180,7 +180,8 @@ def clustersubtract(data, components, skewness=100, power=2, verbose=False):
         # draw sqrt(n) random data points, r
         # find closest in r for each s in data
         # for r with most s, return mean of those s
-        r = np.random.choice(len(data), min(200, math.floor(math.sqrt(len(data)))))
+        r = np.random.choice(
+            len(data), min(200, math.floor(math.sqrt(len(data)))))
         rd = data[r]
         nearest = scipy.spatial.distance.cdist(
             rd, data, 'cosine').argmin(axis=0)
@@ -228,21 +229,24 @@ def numpy_scipy_threading_fix_(func):
     limit to minimize wall clock time (at surprisingly high CPU time cost).
     """
     def check(*args, **kwargs):
+        th = kwargs.get('blas_threads', 2)
+        kwargs.pop('blas_threads', None)
         if (('nonnegative' not in kwargs or np.any(kwargs['nonnegative']))
-            and kwargs.get('blas_threads', 1)):
-            with threadpool_limits(
-                    {'libopenblas': kwargs.get('blas_threads', 2)}, 'blas'):
+            and th):
+            # with threadpool_limits({'libscipy_openblas': th}, 'blas'):
+            # with threadpool_limits({'libopenblas': th}, 'blas'):
+            with threadpool_limits(th, 'blas'):
                 return func(*args, **kwargs)
         else:
             return func(*args, **kwargs)
     return check
 
 @numpy_scipy_threading_fix_
-def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
+def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
             tol_abs_error=0, tol_rel_improv=None, tol_iters_after_best=None,
             maxtime=None, callback=None, acceleration=None, normalize=None,
             fixed_components_a=0, filter_function=None, filter_lambda=None,
-            contrast_weight=None, return_time=False, **kwargs):
+            contrast_weight=None, return_time=False):
     """
     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp.
     The input array is decomposed as A@B where A and B are spectra and
@@ -293,19 +297,6 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
     return_time : bool, default False
         Measure and return process_time at each iteration.
 
-    Anderson acceleration parameters in kwargs
-    -------
-    m : int, >1, default 2
-        The maximum number of earlier steps to consider.
-    alternate : bool, default True
-        Alternate between accelerating A and B, switching when restarting.
-    beta : float, default 1.
-        Scaling factor for accelerated step length.
-    betascale : float, default 1.
-        Reduction factor for beta after each restart.
-    bmode : bool, default False
-        Start with accelerating B instead of A.
-
     Returns
     -------
     A : array(ncomponents, nfeatures)
@@ -319,10 +310,6 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
     """
     if normalize not in [None, 'A', 'B']:
         raise ValueError('Normalization must be None, A or B')
-    unknown_args = kwargs.keys() - {
-        'm', 'alternate', 'beta', 'betascale', 'bmode', 'blas_threads'}
-    if unknown_args:
-        raise TypeError('Unknown arguments: {}'.format(unknown_args))
 
     nrow, ncol = sp.shape
     nr = initial_A.shape[0]
@@ -355,11 +342,8 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
 
 
     if acceleration == 'Anderson':
-        ason_Bmode = kwargs.get('bmode', False)
-        ason_alternate = kwargs.get('alternate', True)
-        ason_m = kwargs.get('m', 2)
-        ason_beta = kwargs.get('beta', 1.)
-        ason_betascale = kwargs.get('betascale', 1.)
+        ason_m = 2 # Memory depth
+        ason_Bmode = False # Currently accelerating B steps?
         ason_g = None
         ason_G = []
         ason_X = []
@@ -442,9 +426,7 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
             elif ba == ason_Bmode:
                 if retry:
                     retry = False
-                    if ason_alternate:
-                        ason_Bmode = not ason_Bmode
-                    ason_beta = ason_beta * ason_betascale
+                    ason_Bmode = not ason_Bmode # Alternate A/B acceleration
                 elif len(ason_X) > 1 and error > preverror:
                     ason_X = []
                     ason_G = []
@@ -466,18 +448,14 @@ def mcr_als(sp, initial_A, *, maxiters, nonnegative=(True, True),
                         ason_X.pop(0)
                     Garr = np.asarray(ason_G)
                     try:
-                    #     gamma = scipy.linalg.lstsq(Garr.T, ason_g)[0]
-                    # except scipy.linalg.LinAlgError:
                         gamma = np.linalg.lstsq(Garr.T, ason_g, rcond=None)[0]
+                        print("gamma", gamma.shape)
                     except np.linalg.LinAlgError:
                         print('lstsq failed to converge; '
                               'restart at iter %d' % it)
-                        # print('nans', np.isnan(Garr).sum(),
-                        #       np.isnan(ason_g).sum())
                         ason_X = []
                         ason_G = []
                     else:
-                        gamma = ason_beta * gamma
                         dx = ason_g - gamma @ (np.asarray(ason_X) + Garr)
                         ason_X.append(dx)
                         if ba:
