@@ -216,20 +216,21 @@ def clustersubtract(data, components, skewness=100, power=2, verbose=False):
 
 def numpy_scipy_threading_fix_(func):
     """
-    This decorator for mcr_als prevents threading in BLAS if scipy's NNLS
+    This decorator for mcr_als prevents threading in BLAS if scipy's old NNLS
     is used, because for some reason NNLS won't be parallelized if called
     shortly after lstsq or @. This makes a *massive* difference to the
     time needed for Anderson acceleration, where the BLAS calls themselves
     take negligible time. For mixed NNLS/lstsq solving (of MCR-ALS on
     derivatives) it's less obvious whether NNSL or lstsq should be allowed
     to be parallelized.
-    Note: This issue is seen on my Linux setup and might be highly version-
-    dependent. More investigation is needed.
-    Update 2025: The problem persists but 2 threads seems like a better
-    limit to minimize wall clock time (at surprisingly high CPU time cost).
+    Note: This issue is seen on my Linux setups and might be highly version-
+    dependent.
+    Update 2025: The rewritten non-Fortran NNLS doesn't have this problem
+    but is slower overall. Solution: Numba and numba_nnls,
+    https://github.com/Nin17/numba-nnls
     """
     def check(*args, **kwargs):
-        th = kwargs.get('blas_threads', 2)
+        th = kwargs.get('blas_threads', 1)
         kwargs.pop('blas_threads', None)
         if (('nonnegative' not in kwargs or np.any(kwargs['nonnegative']))
             and th):
@@ -241,11 +242,55 @@ def numpy_scipy_threading_fix_(func):
             return func(*args, **kwargs)
     return check
 
+try:
+    import numba
+    import numba_nnls
+    nnls = numba_nnls.nnls_007_111
+    use_numba = True
+except:
+    nnls = scipy.optimize.nnls
+    use_numba = False
+
+if use_numba:
+    @numba.jit
+    def multi_nnls(A : np.ndarray, bs : np.ndarray, out : np.ndarray):
+        err2 = 0
+        # for i in numba.prange(len(out)):
+        for i in range(len(out)):
+            out[i, :], res = numba_nnls.nnls_007_111(A, bs[i, :])
+            err2 = err2 + res * res
+        return err2
+else:
+    def multi_nnls(A : np.ndarray, bs : np.ndarray, out : np.ndarray):
+        """
+        Run NNLS on multiple vectors.
+
+        Parameters
+        ----------
+        A : np.ndarray
+            (m, n) input to nnls.
+        bs : np.ndarray
+            (k, m) set of k vectors.
+        out : np.ndarray
+            (k, n) set of k solution vectors.
+        Returns
+        -------
+        err2 : float
+            Sum of all squared residuals.
+        """
+        err2 = 0
+        for i in range(len(bs)):
+            out[i, :], res = scipy.optimize.nnls(A, bs[i, :])
+            err2 = err2 + res * res
+        return err2
+
+
 @numpy_scipy_threading_fix_
 def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
             tol_abs_error=0, tol_rel_improv=None, tol_iters_after_best=None,
             maxtime=None, callback=None, acceleration=None, normalize=None,
-            fixed_components_a=0, filter_function=None, filter_lambda=None,
+            fixed_components_a=0,
+            fixed_components_b=None, filter_function=None, filter_lambda=None,
             contrast_weight=None, return_time=False):
     """
     Perform MCR-ALS nonnegative matrix decomposition on the matrix sp.
@@ -289,6 +334,10 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
         Which matrix to l2 normalize: None, 'A' or 'B'
     fixed_components_a : int
         Number of components of A that are kept as-is.
+    fixed_components_b : None or ???
+        Components of B that are kept as-is.
+    constant_components : ????
+        How ?
     contrast_weight : (str, float), optional
         Increase contrast in one matrix by mixing the other, named matrix
         ('A' or 'B') with the mean of its vectors. If A is spectra,
@@ -340,7 +389,6 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
         else:
             raise ValueError("contrast_weight must be ('A'|'B', [0-1])")
 
-
     if acceleration == 'Anderson':
         ason_m = 2 # Memory depth
         ason_Bmode = False # Currently accelerating B steps?
@@ -367,15 +415,23 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
                 prevA = newA
                 if cw > 0:
                     newA = (1 - cw) * newA + cw * newA.mean(1)[:,None]
+                if fixed_components_b > 0:
+                    tmpsp = sp - (newA[:fixed_components_b, :] @
+                                  B[:, :fixed_components_b]).T
+                else:
+                    tmpsp = sp
                 if nonnegative[1]:
-                    error = 0
                     if not retry:
                         B = np.empty_like(B)
-                    for i in range(nrow):
-                        B[:, i], res = scipy.optimize.nnls(newA, sp[i, :])
-                        error = error + res * res
+                    error = multi_nnls(newA[:, fixed_components_b:],
+                                       tmpsp, B[fixed_components_b:, :].T)
+                    # error = multi_nnls(newA, sp, B.T)
                 else:
-                    B, res, _, _ = np.linalg.lstsq(newA, sp.T, rcond=-1)
+                    tmpB, res, _, _ = np.linalg.lstsq(
+                        newA[:, fixed_components_b:],
+                        tmpsp, rcond=-1)
+                    B[fixed_components_b:, :] = tmpB
+                    # B, res, _, _ = np.linalg.lstsq(newA, sp.T, rcond=-1)
                     error = res.sum()
                 if filter_function is not None:
                     B = filter_function(it, 'B', B)
@@ -396,23 +452,25 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
                 else:
                     tmpsp = sp
                 if nonnegative[0]:
-                    error = 0
                     if not retry:
-                        # A = np.empty_like(A)
                         A = A.copy()
-                    for i in range(ncol):
-                        A[i, fixed_components_a:], res = scipy.optimize.nnls(
-                            newB[fixed_components_a:, :].T,
-                            tmpsp[:, i])
-                        error = error + res * res
+                    error = multi_nnls(newB[fixed_components_a:, :].T,
+                                        tmpsp.T, A[:, fixed_components_a:])
+
+                    # for i in range(ncol):
+                    #     A[i, fixed_components_a:], res = scipy.optimize.nnls(
+                    #         newB[fixed_components_a:, :].T,
+                    #         tmpsp[:, i])
+                    #     error = error + res * res
                 else:
                     tmpA, res, _, _ = np.linalg.lstsq(
                         newB[fixed_components_a:, :].T,
                         tmpsp, rcond=-1)
                     A[:, fixed_components_a:] = tmpA.T
-                    # A, res, _, _ = np.linalg.lstsq(newB.T, sp, rcond=-1)
-                    # A = A.T
                     error = res.sum()
+                # if dddd:
+                    # ...
+
                 if filter_function is not None:
                     A = filter_function(it, 'A', A)
                     # TODO: Check if error needs to be recomputed
@@ -449,8 +507,9 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
                     Garr = np.asarray(ason_G)
                     try:
                         gamma = np.linalg.lstsq(Garr.T, ason_g, rcond=None)[0]
-                        print("gamma", gamma.shape)
                     except np.linalg.LinAlgError:
+                    #     gamma = scipy.linalg.lstsq(Garr.T, ason_g)[0]
+                    # except scipy.linalg.LinAlgError:
                         print('lstsq failed to converge; '
                               'restart at iter %d' % it)
                         ason_X = []

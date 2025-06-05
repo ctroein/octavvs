@@ -65,14 +65,22 @@ def load_reference(wn, what=None, filename=None):
 
 def nonnegative(y, fracspectra=0, fracvalues=0):
     """
-    Make a matrix of spectral data nonnegative by shifting all the spectra up by the same computed
-    amount, followed by setting negative values to 0. The shift is chosen such that at most
-    fracspectra of the spectra get more than fracvalues of their intensities set to zero.
-    Parameters:
-    y: array of intensities for (pixel, wavenumber)
-    fracspectra: unheeded fraction of the spectra
-    fracvalues: maximal fraction of points to clip at 0
-    Returns: shifted spectra in the same format as y
+    Make a matrix of spectral data nonnegative by shifting all the spectra
+    up by the same computed amount, followed by setting negative values to 0.
+    The shift is chosen such that at most fracspectra of the spectra get more
+    than fracvalues of their intensities set to zero.
+    Parameters
+    ----------
+    y : ndarray(pixel, wavenumber)
+        Intensities.
+    fracspectra : float
+        Unheeded fraction of the spectra.
+    fracvalues : float
+        Maximal fraction of points to clip at 0.
+    Returns
+    -------
+    out : ndarray(pixel, wavenumber)
+        Shifted spectra in the same format as y.
     """
     s = int(fracspectra * y.shape[0])
     v = int(fracvalues * y.shape[1])
@@ -84,17 +92,30 @@ def nonnegative(y, fracspectra=0, fracvalues=0):
     a = np.partition(yp, s)[s]
     return np.maximum(y - a if a < 0 else y, 0)
 
-def pca_nipals(x, ncomp, tol=1e-5, max_iter=1000, copy=True, explainedvariance=None):
+def pca_nipals(x, ncomp, tol=1e-5, max_iter=1000, copy=True,
+               explainedvariance=None):
     """
     NIPALS algorithm for PCA, based on the code in statmodels.multivariate
     but with optimizations as in Bassan's Matlab implementation to
     sacrifice some accuracy for speed.
-    x: ndarray of data, will be altered
-    ncomp: number of PCA components to return
-    tol: tolerance
-    copy: If false, destroy the input matrix x
-    explainedvariance: If >0, stop after this fraction of the total variance is explained
-    returns: PCA loadings as rows
+
+    Parameters
+    ----------
+    x : ndarray(samples, features)
+        Data.
+    ncomp : int
+        Number of PCA components to return.
+    tol : float
+        Relative tolerance.
+    copy : bool
+        If false, destroy the input matrix x.
+    explainedvariance : None or float
+        Stop after this fraction of the total variance is explained.
+
+    Returns
+    ----------
+    vecs : int
+        PCA loadings as rows
     """
     if copy:
         x = x.copy()
@@ -123,12 +144,19 @@ def pca_nipals(x, ncomp, tol=1e-5, max_iter=1000, copy=True, explainedvariance=N
 
 def find_wn_ranges(wn, ranges):
     """
-    Find indexes corresponding to the beginning and end of a list of ranges of wavenumbers. The
-    wavenumbers have to be sorted in either direction.
-    Parameters:
-    wn: array of wavenumbers
-    ranges: numpy array of shape (n, 2) with desired wavenumber ranges in order [low,high]
-    Returns: numpy array of shape (n, 2) with indexes of the wavenumbers delimiting those ranges
+    Find indexes corresponding to the beginning and end of a list of ranges
+    of wavenumbers. The wavenumbers have to be sorted in either direction.
+
+    Parameters
+    ----------
+    wn : ndarray
+        Wavenumbers
+    ranges : ndarray(n, 2)
+        Desired wavenumber ranges in order [low, high]
+    Returns
+    -------
+    indexes : ndarray(n, 2)
+        Indexes of wavenumbers delimiting the input ranges
     """
     if isinstance(ranges, list):
         ranges = np.array(ranges)
