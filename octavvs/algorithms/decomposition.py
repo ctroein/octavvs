@@ -10,9 +10,23 @@ import numpy as np
 import scipy, scipy.optimize, scipy.spatial.distance
 import math
 import time
+import os
 from threadpoolctl import threadpool_limits
 from functools import partial
 from .util import pca_nipals
+
+try:
+    # os.environ["NUMBA_DISABLE_INTEL_SVML"] = "1"
+    import numba
+    import numba_nnls
+    nnls = numba_nnls.nnls_007_111
+    # nnls = numba_nnls.nnls_112_114 # crashes? icc_rt?
+    use_numba = True
+except ModuleNotFoundError:
+    nnls = scipy.optimize.nnls
+    use_numba = False
+    print("INFO: numba_nnls not found; for improved MCR-ALS performance "
+          "consider installing https://github.com/Nin17/numba-nnls")
 
 def simplisma(d, nr, f):
     """
@@ -127,7 +141,7 @@ def simplisma_with_reference(data, nr, f, refdata):
 
     s_init = []
     for i in range(s_data.shape[1]):
-        r, _ = scipy.optimize.nnls(c_other.T, s_data[:, i])
+        r, _ = nnls(c_other.T, s_data[:, i])
         s_init.append(r)
     s_init = np.array(s_init).T
     s_init = s_init / s_init.mean(1, keepdims=True)
@@ -242,24 +256,12 @@ def numpy_scipy_threading_fix_(func):
             return func(*args, **kwargs)
     return check
 
-try:
-    import numba
-    import numba_nnls
-    nnls = numba_nnls.nnls_007_111
-    # nnls = numba_nnls.nnls_112_114
-    use_numba = True
-except ModuleNotFoundError:
-    nnls = scipy.optimize.nnls
-    use_numba = False
-    print("INFO: numba_nnls not found; for improved MCR-ALS performance "
-          "consider installing https://github.com/Nin17/numba-nnls")
-
 if use_numba:
     @numba.jit
     def multi_nnls(A : np.ndarray, bs : np.ndarray, out : np.ndarray):
         err2 = 0
         for i in range(len(bs)):
-            out[i], res = numba_nnls.nnls_007_111(A, bs[i])
+            out[i], res = nnls(A, bs[i])
             err2 = err2 + res * res
         return err2
 else:
@@ -282,12 +284,12 @@ else:
         """
         err2 = 0
         for i in range(len(bs)):
-            out[i], res = scipy.optimize.nnls(A, bs[i])
+            out[i], res = nnls(A, bs[i])
             err2 = err2 + res * res
         return err2
 
 
-@numpy_scipy_threading_fix_
+# @numpy_scipy_threading_fix_
 def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
             tol_abs_error=0, tol_rel_improv=None, tol_rel_iters=10,
             tol_iters_after_best=None,
@@ -323,7 +325,7 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
         Stop after this many iterations since last best error.
     maxtime : float, optional
         Stop after this many seconds of process time have elapsed
-    callback : func(it : int, err : float, A : array, B : array)
+    callback : func(it : int, err : list(float), A : array, B : array)
         Progress callback for every iteration.
     acceleration : str, optional
         None or 'Anderson'.
@@ -333,10 +335,11 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
         better.
     normalize : str, optional
         Which matrix to l2 normalize: None, 'A' or 'B'
-    fixed_components_A : int or array(nfixed_a, nfeatures), optional
-        Components of A that are kept as-is; e.g. n endmembers for unmixing.
-        If int, keep fixed that many of the first components in initial_A.
-        The nfixed_a components will be included in the returned A and B.
+    fixed_components_A : int, optional
+        Number of components of initial_A that are kept as-is; e.g.
+        n endmembers for unmixing. The first n components are kept unchanged
+        and will be present in the returned A and B. The caller will have to
+        reorder the input/output as needed.
     fixed_features_A : int, optional
         Number of initial features of sp and A that are kept as-is. These
         features will typically be used to push B in a desired direction.
@@ -376,20 +379,16 @@ def mcr_als(sp, initial_A, *, maxiters=100, nonnegative=(True, True),
     ncomp = initial_A.shape[0]
 
     if initial_A.shape[1] != nfeat:
-        raise ValueError("Mismatching size of data and initial vectors")
+        raise ValueError("Mismatching size of data and initial vectors; "
+                         f"{sp.shape} vs {initial_A.shape}")
     iAT = initial_A.T
     nfixed_a = 0
     if fixed_components_A is not None:
-        if np.isscalar(fixed_components_A):
-            nfixed_a = fixed_components_A
-        elif len(fixed_components_A) > 0:
-            if fixed_components_A.shape[1] != nfeat:
-                raise ValueError("Wrong feature count in fixed_components_A")
-            nfixed_a = len(fixed_components_A)
-            iAT = np.hstack((fixed_components_A.T, iAT))
+        nfixed_a = fixed_components_A
     if nfixed_a > ncomp:
-        raise ValueError("The number of fixed components of A cannot exceed"
-                         " the total number of components")
+        raise ValueError(
+            f"The number of fixed components of A ({nfixed_a}) "
+            f"cannot exceed the total number of components ({ncomp})")
     nfreeze = 0
     if fixed_features_A is not None:
         nfreeze = fixed_features_A
@@ -642,7 +641,7 @@ def mcr_als_freeze(sp, initial_A, *, maxiters=100,
         Maximum number of iterations.
     tol_rel_improv : float, optional
         Stop at average relative improvement of less than tol_rel_improv.
-    callback : func(it : int, err : float, A : array, B : array), optional
+    callback : func(it : int, err : list(float), A : array, B : array), optional
         Progress callback for every iteration.
     freeze_components_B : int or [int] or {int: [range, ...]}
         Components that are to be made constant across samples by means of
@@ -728,8 +727,9 @@ def mcr_als_freeze(sp, initial_A, *, maxiters=100,
         res = sp - B.T @ A
         pca = pca_nipals(res, add_residual_components)
         A = np.vstack((A, pca * A.max() / pca.max(1, keepdims=True)))
-        ncomp = len(A)
         B = np.vstack((B, np.zeros((add_residual_components, nsamp))))
+    # Components may have been added
+    ncomp = len(A)
 
     nfreeze = len(f_ranges)
     fsp = np.hstack((np.zeros((nsamp, nfreeze)), sp.copy()))
