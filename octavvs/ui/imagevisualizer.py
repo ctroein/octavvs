@@ -3,7 +3,7 @@ import os.path
 import numpy as np
 #import fnmatch
 #import traceback
-from pkg_resources import resource_filename
+import importlib
 
 #from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt5 import uic
@@ -15,7 +15,8 @@ from octavvs.ui import NoRepeatStyle
 from scipy.spatial import KDTree
 
 ImageVisualizerUi = uic.loadUiType(
-    resource_filename(__name__, "imagevisualizer.ui"))[0]
+    importlib.resources.files("octavvs").joinpath(
+        "ui", "imagevisualizer.ui"))[0]
 
 class ImageVisualizerWidget(QWidget, ImageVisualizerUi):
     """

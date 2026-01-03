@@ -10,7 +10,7 @@ import os
 import os.path
 import fnmatch
 import traceback
-from pkg_resources import resource_filename
+import importlib
 
 from PyQt5.QtWidgets import QWidget, QInputDialog
 from PyQt5.QtWidgets import QMessageBox
@@ -19,7 +19,9 @@ from PyQt5 import uic
 
 from . import NoRepeatStyle
 
-FileLoaderUi = uic.loadUiType(resource_filename(__name__, "fileloader.ui"))[0]
+FileLoaderUi = uic.loadUiType(
+    importlib.resources.files("octavvs").joinpath(
+        "ui", "fileloader.ui"))[0]
 
 class FileLoaderWidget(QWidget, FileLoaderUi):
     """

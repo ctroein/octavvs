@@ -7,7 +7,7 @@ Created on Wed Mar  4 16:24:50 2020
 """
 
 import os.path
-from pkg_resources import resource_filename
+import importlib
 import numpy as np
 from scipy.interpolate import PchipInterpolator
 #from scipy.io import loadmat
@@ -43,8 +43,8 @@ def load_reference(wn, what=None, filename=None):
     if (what is None) == (filename is None):
         raise ValueError("Either 'what' or 'filename' must be specified")
     if what is not None:
-        filename = resource_filename(
-            'octavvs.reference_spectra', what + ".mat")
+        filename = importlib.resources.files("octavvs").joinpath(
+            "reference_spectra", what + ".mat")
     if os.path.splitext(filename)[1].lower() == ".mat":
         ref = read_mat(filename)['AB']
     else:

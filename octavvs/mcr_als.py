@@ -11,7 +11,7 @@ from sklearn.cluster import MiniBatchKMeans
 #import traceback
 from os.path import basename, dirname
 from datetime import datetime
-from pkg_resources import resource_filename
+import importlib
 import argparse
 from scipy.optimize import nnls as nnls
 
@@ -35,9 +35,10 @@ from .mcr import ftir_function as ff
 from octavvs.algorithms import correction as mc
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
-Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/mcr_final_loc.ui"))[0]
-Ui_MainWindow2 = uic.loadUiType(resource_filename(__name__, "mcr/mcr_roi_sub.ui"))[0]
-Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"),
+uidir = importlib.resources.files("octavvs").joinpath("mcr")
+Ui_MainWindow = uic.loadUiType(uidir.joinpath("mcr_final_loc.ui"))[0]
+Ui_MainWindow2 = uic.loadUiType(uidir.joinpath("mcr_roi_sub.ui"))[0]
+Ui_DialogAbout = uic.loadUiType(uidir.joinpath("about.ui"),
                                 from_imports=True, import_from='octavvs')[0]
 
 class DialogAbout(QDialog, Ui_DialogAbout):
@@ -143,7 +144,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.spinBoxWlength.valueChanged.connect(self.VisSpectra)
         self.spinBoxPoly.valueChanged.connect(self.VisSpectra)
 
-        
+
 
         self.spinBoxWlength.hide()
         self.spinBoxPoly.hide()
@@ -188,8 +189,8 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             dire = pickle.load(infile)
             infile.close()
         except:
-            dire = os.path.dirname(__file__) 
-        
+            dire = os.path.dirname(__file__)
+
         if self.comboBoxSingMult.currentIndex() == 1:
             self.pushButtonLocal.setEnabled(False)
             options = QFileDialog.Options()
@@ -221,7 +222,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 outfile = open(self.default_dir,'wb')
                 pickle.dump(dirname(filename),outfile)
                 outfile.close()
-                
+
                 self.allnames = [filename]
                 self.coord = []
                 self.clear_prev()
@@ -382,7 +383,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.ExpandSpecU()
         self.ExpandPurSpU()
         # self.ExpandInitSpectU()
-        
+
         self.plot_specta.Invert()
         self.plot_specta.canvas.fig.tight_layout()
         self.plot_specta.canvas.draw()
@@ -564,7 +565,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             # plt.close("SVD Plot")
             fig = plt.figure("SVD Plot",tight_layout={'pad':.5})
             fig.clear()
-            ax = fig.gca() 
+            ax = fig.gca()
             ax.plot(self.xplot,self.splot,'-o')
             fig.show()
         else:
@@ -585,7 +586,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def ExpandInitSpect(self):
         # plt.close("Initial")
         fig = plt.figure("Initial",tight_layout={'pad':.5})
-        ax = fig.gca() 
+        ax = fig.gca()
         if len(self.insp) != 1:
             if self.comboBoxInitial.currentIndex() == 0:
                 ax.plot(self.wavenumber,self.insp.T)

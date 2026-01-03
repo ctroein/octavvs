@@ -6,7 +6,7 @@ import pandas as pd
 import collections
 import traceback
 from os.path import basename, dirname
-from pkg_resources import resource_filename
+import importlib
 import argparse
 import io
 #from PyQt5.QtCore import *
@@ -32,10 +32,11 @@ from octavvs.mcr import ftir_function as ff
 from octavvs.algorithms import correction as mc
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow, NoRepeatStyle, uitools)
 
-Ui_MainWindow = uic.loadUiType(resource_filename(__name__, "mcr/clustering_ui.ui"))[0]
-Ui_table = uic.loadUiType(resource_filename(__name__, "mcr/table_ui.ui"),
+uidir = importlib.resources.files("octavvs").joinpath("mcr")
+Ui_MainWindow = uic.loadUiType(uidir.joinpath("clustering_ui.ui"))[0]
+Ui_table = uic.loadUiType(uidir.joinpath("table_ui.ui"),
                           from_imports=True, import_from='octavvs')[0]
-Ui_DialogAbout = uic.loadUiType(resource_filename(__name__, "mcr/about.ui"),
+Ui_DialogAbout = uic.loadUiType(uidir.joinpath("about.ui"),
                                 from_imports=True, import_from='octavvs')[0]
 
 class DialogAbout(QDialog, Ui_DialogAbout):
@@ -147,7 +148,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
     def __init__(self,parent=None):
         super().__init__(parent)
-        
+
         self.default_dir =  os.path.dirname(__file__) + "\\mcr\\"+'dat.initi'
         self.pushButtonLoadSpec.clicked.connect(self.Load_chose)
         self.lock_un(False)
@@ -191,7 +192,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.post_setup()
 
         self.checkBoxinvert.toggled.connect(self.Inverting)
-        
+
         self.comboBoxImp.currentIndexChanged.connect(self.Select_spectra)
         self.spinBoxWlength.valueChanged.connect(self.Select_spectra)
         self.spinBoxPoly.valueChanged.connect(self.Select_spectra)
@@ -221,7 +222,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def Load_chose(self):
-        try:    
+        try:
             infile = open(self.default_dir,'rb')
             dire = pickle.load(infile)
             infile.close()
@@ -238,7 +239,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 outfile = open(self.default_dir,'wb')
                 pickle.dump(self.foldername,outfile)
                 outfile.close()
-                
+
                 self.SearchUp.emit(self.foldername)
                 self.pushButtonNext.setEnabled(True)
                 self.pushButtonPrevious.setEnabled(True)
@@ -278,9 +279,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                  for key, val in sorted(name.items(), key=lambda item: item[1]):
 #                    for key, val in sorted(name.items()):
                      w.writerow([key, val])
-                     
+
                  self.lineEditTotal.setText(str(count))
-                 self.lineEditFileNum.setText(str(1))   
+                 self.lineEditFileNum.setText(str(1))
                  self.pushButtonNext.setEnabled(True)
                  self.pushButtonPrevious.setEnabled(True)
                  self.Onefile.emit(name[0])
@@ -296,13 +297,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
     def LoadSpec(self):
-        try:    
+        try:
             infile = open(self.default_dir,'rb')
             dire = pickle.load(infile)
             infile.close()
         except:
             dire = os.path.dirname(__file__)
-            
+
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         self.fileName, __ = QFileDialog.getOpenFileName(self,"Open Matrix File", dire,"Matrix File (*.mat)")#, options=options)
@@ -310,7 +311,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             outfile = open(self.default_dir,'wb')
             pickle.dump(dirname(self.fileName),outfile)
             outfile.close()
-            
+
             self.foldername = dirname(self.fileName)
             self.lineEditFileNum.setText('1')
             self.lineEditTotal.setText('1')
@@ -478,22 +479,22 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             pass
 
 
-        
+
         # self.index = np.random.randint(0,int(self.sx*self.sy),(20))
         kmeans = MiniBatchKMeans(n_clusters=8, random_state=0).fit(self.spo.T)
-        
+
         self.raw = kmeans.cluster_centers_
         self.raw = self.raw.T
 
-        
+
         self.Select_spectra()
-        
+
         self.clear_all()
         self.lock_un(True)
         self.lineEditFilename.setText((basename(fileName).replace('.mat','')))
         self.lineEditDirSpectra.setText(fileName)
 
-        
+
 
 
         self.PlotSpectraSample()
@@ -503,14 +504,14 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.lineEditLength.setText(str(len(self.wavenumber)))
         self.lineEditWavenumber.setText(str("%.2f" % np.min(self.wavenumber)))
 
- 
+
         self.ProjUp.emit()
 
         if self.img is not None:
             self.plot_White.canvas.ax.clear()
             self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
-            self.plot_White.canvas.ax.set_axis_off() 
+            self.plot_White.canvas.ax.set_axis_off()
             self.plot_White.canvas.draw()
 
 
@@ -551,20 +552,20 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         if self.comboBoxImp.currentIndex() == 0:
             self.sp = self.spo.copy()
             self.sp = mc.nonnegative(self.sp)
-            self.p = self.pin.copy() 
+            self.p = self.pin.copy()
         elif self.comboBoxImp.currentIndex() == 1:
             self.sp = savgol_filter(self.spo.T,win, polyorder = pol,deriv=1)
             self.sp = self.sp.T
             self.sp = mc.nonnegative(self.sp)
             self.p = self.sp.reshape(np.shape(self.pin),order='C')
-                
+
         elif self.comboBoxImp.currentIndex() == 2:
             self.sp = savgol_filter(self.spo.T,win, polyorder = pol,deriv=2)
             self.sp = self.sp.T
             self.sp = mc.nonnegative(self.sp)
             self.p = self.sp.reshape(np.shape(self.pin),order='C')
-            
-          
+
+
         try:
             x = int(self.lineEditHeight.text())
             y = int(self.lineEditWidth.text())
@@ -585,32 +586,32 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
     def PlotSpectraSample(self):
         win = int(self.spinBoxWlength.value())
         pol = int(self.spinBoxPoly.value())
-        
+
         if self.comboBoxImp.currentIndex() == 0:
             self.yvis = self.raw.copy()
             self.spinBoxWlength.hide()
             self.spinBoxPoly.hide()
-            
+
             self.spinBoxWlength.hide()
             self.spinBoxPoly.hide()
             self.labelWl.hide()
             self.labelPl.hide()
 
-            
+
         elif self.comboBoxImp.currentIndex() == 1:
             self.yvis= savgol_filter(self.raw.T,win, polyorder = pol,deriv=1)
             self.yvis= self.yvis.T
-            
+
             self.spinBoxWlength.show()
             self.spinBoxPoly.show()
 
             self.spinBoxWlength.show()
             self.spinBoxPoly.show()
-            
+
             self.labelWl.show()
             self.labelPl.show()
 
-            
+
         else:
             self.yvis= savgol_filter(self.raw.T,win, polyorder = pol,deriv=2)
             self.yvis= self.yvis.T
@@ -621,9 +622,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
 
         self.DataUpdated.emit(np.column_stack((self.wavenumber,self.yvis)),0,['0'])
-        
+
         self.yvis = mc.nonnegative(self.yvis)
-        
+
         self.plot_specta.canvas.ax.clear()
         self.plot_specta.canvas.ax.plot(self.wavenumber,self.yvis)
         if self.checkBoxinvert.isChecked():
@@ -644,15 +645,15 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
             self.lineEditDirPurest.setText(filepurest)
             dfpurest = pd.read_csv(filepurest, header= None)
-            
+
             #Old System Before implementing First or Second Derivatives
             if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
                 self.compen = 0
                 self.comboBoxImp.setCurrentIndex(0)
-            
+
             #Old System after implementing First or Second Derivatives, but error
-            #if  nr = 2, but mostly we never use nr = 2, but I keep this to read 
-            #old data                
+            #if  nr = 2, but mostly we never use nr = 2, but I keep this to read
+            #old data
             elif (int(self.lineEditLength.text())+int(self.sx*self.sy)) + 1 == len(dfpurest):
                 self.compen = 1
                 self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
@@ -669,9 +670,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
                 self.Select_spectra()
 
-                                 
-                        
-            
+
+
+
             self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+self.compen,:]
             self.df_conc = dfpurest.iloc[self.compen+int(self.lineEditLength.text()):,:]
             self.ClusUp.emit()
@@ -679,20 +680,20 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             for comp1 in range(0,len(self.df_conc.T)):
                 self.comboBoxVisualize.addItem("component_"+str(comp1+1))
 
-    def AutoLoad(self,filepurest):       
+    def AutoLoad(self,filepurest):
         self.comboBoxVisualize.clear()
         self.comboBoxVisualize.addItem('Spectra and White Light Image')
         self.lineEditDirPurest.setText(filepurest)
         dfpurest = pd.read_csv(filepurest, header= None)
-        
+
         #Old System Before implementing First or Second Derivatives
         if (int(self.lineEditLength.text())+int(self.sx*self.sy)) == len(dfpurest):
             self.compen = 0
             self.comboBoxImp.setCurrentIndex(0)
 
         #Old System after implementing First or Second Derivatives, but error
-        #if  nr = 2, but mostly we never use nr = 2, but I keep this to read 
-        #old data                
+        #if  nr = 2, but mostly we never use nr = 2, but I keep this to read
+        #old data
         if (int(self.lineEditLength.text())+int(self.sx*self.sy)) + 1 == len(dfpurest):
             self.compen = 1
             self.spinBoxWlength.setValue(int(dfpurest.iloc[0,1]))
@@ -707,9 +708,9 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.spinBoxPoly.setValue(int(dfpurest.iloc[2,0]))
             self.comboBoxImp.setCurrentIndex(int(dfpurest.iloc[0,0]))
             self.Select_spectra()
-        
-        
-        
+
+
+
         self.df_spec = dfpurest.iloc[self.compen:int(self.lineEditLength.text())+self.compen,:]
         self.df_conc = dfpurest.iloc[self.compen+int(self.lineEditLength.text()):,:]
 
@@ -729,7 +730,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plot_White.canvas.ax.clear()
             self.plot_White.canvas.ax.imshow(self.img)
             self.plot_White.canvas.fig.tight_layout()
-            self.plot_White.canvas.ax.set_axis_off() 
+            self.plot_White.canvas.ax.set_axis_off()
             self.plot_White.canvas.draw()
             # self.Cvisualize()
             self.VisUp.emit()
@@ -836,7 +837,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plotCluster.canvas.ax.clear()
         self.plotCluster.canvas.ax.imshow(self.mapping,cmap=self.cmap)
         self.plotCluster.canvas.fig.tight_layout()
-        self.plotCluster.canvas.ax.set_axis_off() 
+        self.plotCluster.canvas.ax.set_axis_off()
         self.plotCluster.canvas.draw()
 
 
@@ -868,7 +869,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         else:
             self.plotAverage.canvas.fig.tight_layout()
 
-        self.ExpandAveU()   
+        self.ExpandAveU()
 
         self.plotAverage.canvas.draw()
         anotclus=len(set(self.clis))
@@ -905,7 +906,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             ax.set_ylabel("Absorption(arb. units)",fontsize=14)
             ax.tick_params(axis='both',direction='in', length=8, width=1)
             ax.tick_params(axis='both',which='major',labelsize=14)
-            fig.canvas.draw_idle()    
+            fig.canvas.draw_idle()
         else:
             pass
 
@@ -946,13 +947,13 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
 
             if self.checkBoxinvert.isChecked():
                 ax.invert_xaxis()
-                
+
             ax.set_xlabel("Wavenumber(1/cm)")#,fontsize=24)
             ax.set_ylabel("Absorption(arb. units)")#,fontsize=24)
             ax.tick_params(axis='both',direction='in', length=8, width=1)
             ax.tick_params(axis='both',which='major')#,labelsize=24)
             fig.canvas.draw_idle()
-            
+
         else:
             pass
 
@@ -982,7 +983,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
-        self.plot_visual.canvas.ax.set_axis_off() 
+        self.plot_visual.canvas.ax.set_axis_off()
         self.plot_visual.canvas.draw()
         self.VisUp.emit()
         self.ExpandProjU()
@@ -1007,7 +1008,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
-        self.plot_visual.canvas.ax.set_axis_off() 
+        self.plot_visual.canvas.ax.set_axis_off()
         self.plot_visual.canvas.draw()
 
         self.ExpandProjU()
@@ -1026,7 +1027,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
         self.plot_visual.canvas.ax.clear()
         self.plot_visual.canvas.ax.imshow(self.projection,str(self.comboBoxCmaps.currentText()))
         self.plot_visual.canvas.fig.tight_layout()
-        self.plot_visual.canvas.ax.set_axis_off() 
+        self.plot_visual.canvas.ax.set_axis_off()
         self.plot_visual.canvas.draw()
 
         self.ExpandProjU()
@@ -1040,7 +1041,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
                 self.plotMultiVisual.canvas.ax.clear()
                 self.plotMultiVisual.canvas.ax.imshow(self.img)
                 self.plotMultiVisual.canvas.fig.tight_layout()
-                self.plotMultiVisual.canvas.ax.set_axis_off() 
+                self.plotMultiVisual.canvas.ax.set_axis_off()
                 self.plotMultiVisual.canvas.draw()
 
             self.PlotSpectraSample()
@@ -1060,7 +1061,7 @@ class MyMainWindow(OctavvsMainWindow, Ui_MainWindow):
             self.plotMultiVisual.canvas.ax.clear()
             self.plotMultiVisual.canvas.ax.imshow(self.component,str(self.comboBoxCmaps.currentText()))
             self.plotMultiVisual.canvas.fig.tight_layout()
-            self.plotMultiVisual.canvas.ax.set_axis_off() 
+            self.plotMultiVisual.canvas.ax.set_axis_off()
             self.plotMultiVisual.canvas.draw()
 
             self.datas = self.df_spec.iloc[:,val].to_numpy()

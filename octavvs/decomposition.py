@@ -1,7 +1,7 @@
 import os
 import traceback
 from functools import partial
-from pkg_resources import resource_filename
+import importlib
 import argparse
 
 from PyQt5.QtWidgets import QMessageBox, QStyle, \
@@ -26,11 +26,9 @@ from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
                         NoRepeatStyle)
 
 
-
-DecompositionMainWindow = uic.loadUiType(resource_filename(
-    __name__, "decomp/decomposition.ui"))[0]
-SettingsTableWindow = uic.loadUiType(resource_filename(
-    __name__, "decomp/settings_table.ui"))[0]
+uidir = importlib.resources.files("octavvs").joinpath("decomp")
+DecompositionMainWindow = uic.loadUiType(uidir.joinpath("decomposition.ui"))[0]
+SettingsTableWindow = uic.loadUiType(uidir.joinpath("settings_table.ui"))[0]
 
 class DialogSettingsTable(QDialog, SettingsTableWindow):
     def __init__(self, parent=None):

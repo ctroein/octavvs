@@ -2,7 +2,7 @@ import os
 import traceback
 from functools import partial
 # from os.path import basename, dirname
-from pkg_resources import resource_filename
+import importlib
 import argparse
 
 from PyQt5.QtWidgets import QDialog, QMessageBox, QMenu, QAction
@@ -22,15 +22,12 @@ from octavvs.io import SpectralData
 from octavvs.ui import (FileLoader, ImageVisualizer, OctavvsMainWindow,
                         NoRepeatStyle, uitools)
 
-
-Ui_MainWindow = uic.loadUiType(resource_filename(
-    __name__, "prep/preprocessing_ui.ui"))[0]
-Ui_DialogSCAdvanced = uic.loadUiType(resource_filename(
-    __name__, "prep/scadvanced.ui"))[0]
-Ui_DialogMCAdvanced = uic.loadUiType(resource_filename(
-    __name__, "prep/mcadvanced.ui"))[0]
-Ui_DialogCreateReference = uic.loadUiType(resource_filename(
-    __name__, "prep/create_reference.ui"))[0]
+uidir = importlib.resources.files("octavvs").joinpath("prep")
+Ui_MainWindow = uic.loadUiType(uidir.joinpath("preprocessing_ui.ui"))[0]
+Ui_DialogSCAdvanced = uic.loadUiType(uidir.joinpath("scadvanced.ui"))[0]
+Ui_DialogMCAdvanced = uic.loadUiType(uidir.joinpath("mcadvanced.ui"))[0]
+Ui_DialogCreateReference = uic.loadUiType(
+    uidir.joinpath("create_reference.ui"))[0]
 
 
 class DialogSCAdvanced(QDialog, Ui_DialogSCAdvanced):

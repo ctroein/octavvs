@@ -18,7 +18,7 @@ from scipy.signal import hilbert
 #from scipy.io import loadmat, savemat
 
 from pymatreader import read_mat
-from pkg_resources import resource_filename
+import importlib
 from scipy.interpolate import RectBivariateSpline
 
 import matplotlib
@@ -193,8 +193,8 @@ def compute_model(wn, ref, model='konevskikh', n_components=7,
             nim = nim / -nmin
 
         if not hasattr(compute_model, 'qtable'):
-            qtable = read_mat(resource_filename(
-                'octavvs.reference_spectra', "Q_table.mat"))
+            qtable = read_mat(importlib.resources.files("octavvs").joinpath(
+                "reference_spectra", "Q_table.mat"))
             compute_model.qtable = RectBivariateSpline(
                 qtable['x_table'], qtable['n_table'],
                 qtable['Qsca_table'])
