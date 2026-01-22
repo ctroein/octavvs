@@ -166,13 +166,14 @@ class OctavvsMainWindow(QMainWindow):
 
 
     @staticmethod
-    def choose_font(families, point_size=10):
+    def choose_font(families):
         db = QFontDatabase()
         for family in families:
             if family in db.families():
-                font = QFont(family, point_size)
-                font.setStyleHint(QFont.SansSerif)
-                font.setStyleStrategy(QFont.PreferAntialias | QFont.NoFontMerging)
+                font = QFont(family)
+                font.setStyleHint(QFont.SansSerif, QFont.PreferDefault)
+                font.setStyleStrategy(
+                    QFont.PreferAntialias | QFont.NoFontMerging)
                 return font
         return QFont()  # system default
 
@@ -202,9 +203,6 @@ class OctavvsMainWindow(QMainWindow):
                 app = QApplication(sys.argv)
                 font = OctavvsMainWindow.choose_font(
                     ["Segoe UI", "Arial", "Nimbus Sans"])
-                font.setStyleHint(QFont.SansSerif, QFont.PreferDefault)
-                font.setStyleStrategy(
-                    QFont.PreferAntialias | QFont.NoFontMerging)
                 app.setFont(font)
             add_clipboard_to_figures()
             window = windowclass()
