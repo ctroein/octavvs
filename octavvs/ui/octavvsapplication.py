@@ -15,6 +15,7 @@ import signal
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog
 from PyQt5.QtWidgets import QErrorMessage, QMessageBox #, QInputDialog, QDialog
 from PyQt5.QtCore import Qt, QSettings
+from PyQt5.QtGui import QFontDatabase, QFont
 from PyQt5.Qt import qApp
 
 from .exceptiondialog import ExceptionDialog
@@ -163,6 +164,18 @@ class OctavvsMainWindow(QMainWindow):
             return 'cm<sup>-1</sup>'
         return self.units
 
+
+    @staticmethod
+    def choose_font(families, point_size=10):
+        db = QFontDatabase()
+        for family in families:
+            if family in db.families():
+                font = QFont(family, point_size)
+                font.setStyleHint(QFont.SansSerif)
+                font.setStyleStrategy(QFont.PreferAntialias | QFont.NoFontMerging)
+                return font
+        return QFont()  # system default
+
     @classmethod
     def run_octavvs_application(windowclass, parser=None, parameters=[],
                                 isChild=False):
@@ -187,6 +200,12 @@ class OctavvsMainWindow(QMainWindow):
             app = QApplication.instance()
             if not app:
                 app = QApplication(sys.argv)
+                font = OctavvsMainWindow.choose_font(
+                    ["Segoe UI", "Arial", "Nimbus Sans"])
+                font.setStyleHint(QFont.SansSerif, QFont.PreferDefault)
+                font.setStyleStrategy(
+                    QFont.PreferAntialias | QFont.NoFontMerging)
+                app.setFont(font)
             add_clipboard_to_figures()
             window = windowclass()
             window.show()
