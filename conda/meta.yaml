@@ -38,14 +38,14 @@ build:
 requirements:
   host:
     - pip
-    - python>=3.7
+    - python>=3.9,<3.13
   run:
     - matplotlib
     - numpy>=1.17
     - pyqt
     - pandas
     - pillow
-    - python>=3.7
+    - python>=3.9
     - scipy
     - scikit-learn
     - scikit-image
@@ -54,6 +54,11 @@ requirements:
     - dill
     - h5py
     - threadpoolctl
+  build:
+    - python=3.12
+    - pip
+    - setuptools
+    - wheel
 
 test:
   imports:

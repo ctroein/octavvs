@@ -13,9 +13,9 @@ import multiprocessing
 import signal
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog
-from PyQt5.QtWidgets import QErrorMessage, QMessageBox #, QInputDialog, QDialog
-from PyQt5.QtCore import Qt, QSettings
-from PyQt5.QtGui import QFontDatabase, QFont
+from PyQt5.QtWidgets import QErrorMessage, QMessageBox, QStyleFactory
+from PyQt5.QtCore import Qt, QSettings, QLocale
+from PyQt5.QtGui import QFontDatabase, QFont, QFontInfo
 from PyQt5.Qt import qApp
 
 from .exceptiondialog import ExceptionDialog
@@ -183,17 +183,29 @@ class OctavvsMainWindow(QMainWindow):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         res = 1
         try:
-            progver = 'OCTAVVS %s %s' % (windowclass.program_name(),
-                                         octavvs_version)
+            progver = f"OCTAVVS {windowclass.program_name()} {octavvs_version}"
             windowparams = {}
+            fontsize = 11
+            native_style = True
             if parser is not None:
                 parser.add_argument('--version', action='version',
                                     version=progver)
+                parser.add_argument('--font-size', metavar="pts",
+                                    help="font size in points",
+                                    default=fontsize,
+                                    type=int)
+                parser.add_argument('--native-style',
+                                    help="don't switch to Fusion QStyle",
+                                    action='store_true')
                 selmp = multiprocessing.get_start_method(
                     allow_none=True) is None
                 if selmp:
-                    parser.add_argument('--mpmethod', help='')
+                    parser.add_argument(
+                        '--mpmethod', help="method used to start child"
+                        " processes: 'fork', 'spawn' or 'forkserver'")
                 args = parser.parse_args()
+                fontsize = args.font_size
+                native_style = args.native_style
                 windowparams = { k: args.__dict__[k] for k in parameters }
                 if selmp and args.mpmethod:
                     multiprocessing.set_start_method(args.mpmethod)
@@ -201,9 +213,17 @@ class OctavvsMainWindow(QMainWindow):
             app = QApplication.instance()
             if not app:
                 app = QApplication(sys.argv)
+                if not native_style:
+                    QLocale.setDefault(QLocale.c())
+                    app.setStyle(QStyleFactory.create("Fusion"))
                 font = OctavvsMainWindow.choose_font(
-                    ["Segoe UI", "Arial", "Nimbus Sans"])
+                    ["Segoe UI", "Noto Sans", "Arial"])
+                font.setPointSize(fontsize)
                 app.setFont(font)
+                i = QFontInfo(font)
+                print(f"OCTAVVS GUI font set to {i.family()}, {i.pointSize()}"
+                      f" ({i.pixelSize()} px)")
+
             add_clipboard_to_figures()
             window = windowclass()
             window.show()

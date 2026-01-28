@@ -208,6 +208,14 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
         self.lineEditMinwn.editingFinished.connect(self.srMinEdit)
         self.lineEditMaxwn.editingFinished.connect(self.srMaxEdit)
 
+        if True:
+            i = self.spinBoxWindowLength.lineEdit().fontInfo()
+            print(f"  spinbox font {i.family()}, {i.pointSize()}"
+                  f" ({i.pixelSize()} px)")
+            i = self.lineEditMinwn.fontInfo()
+            print(f"  lineEdit font {i.family()}, {i.pointSize()}"
+                  f" ({i.pixelSize()} px)")
+
         self.plot_SR.updated.connect(self.updateBC)
         self.plot_BC.clicked.connect(self.plot_BC.popOut)
         self.comboBoxBaseline.currentIndexChanged.connect(self.bcMethod)
@@ -532,14 +540,16 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
     # AC, Atmospheric correction
     def loadACReference(self, custom):
-        startdir = resource_filename('octavvs', "reference_spectra")
+        startdir = str(importlib.resources.files("octavvs").joinpath(
+            "reference_spectra"))
         what = "custom background" if custom else "H2O+CO2 reference"
         ref = self.getLoadFileName(
             f"Load {what} spectrum",
             filter="2-column spectrum (*.mat *.csv);;"
                 "Matlab AB file (*.mat);;"
                 "CSV file (*.csv *.txt);;All files (*)",
-            settingname='atmRefDir', settingdefault=startdir)
+            directory=startdir)
+            # settingname='atmRefDir', settingdefault=startdir)
         if not ref:
             return
         self.checkBoxSpline.setEnabled(not custom)
@@ -602,7 +612,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
 
     # SC, Scattering correction
     def loadOtherReference(self):
-        startdir = resource_filename('octavvs', "reference_spectra")
+        startdir = str(importlib.resources.files("octavvs").joinpath(
+            "reference_spectra"))
         ref = self.getLoadFileName(
             "Load reference spectrum for CRMieSC",
             filter="Matrix file (*.mat)",
@@ -1245,7 +1256,8 @@ class MyMainWindow(ImageVisualizer, FileLoader, OctavvsMainWindow, Ui_MainWindow
             return
         params = self.getParameters()
 
-        startdir = resource_filename('octavvs', "reference_spectra")
+        startdir = str(importlib.resources.files("octavvs").joinpath(
+            "reference_spectra"))
         filename = self.getLoadFileName(
             "Save reference spectrum",
             savesuffix='mat',
